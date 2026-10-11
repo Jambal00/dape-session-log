@@ -317,11 +317,14 @@ function entryView(){
   return h;
 }
 
-function inPeriod(x){return S.period==='all'||x.date>=shift(today(),-(+S.period))}
+function inPeriod(x){if(S.period==='all')return true;
+  if(S.period==='custom')return (!S.pFrom||x.date>=S.pFrom)&&(!S.pTo||x.date<=S.pTo);
+  return x.date>=shift(today(),-(+S.period))}
 function progressBody(s){
   var hs=history(s.id).filter(inPeriod);
-  var h='<label>Period<select id="prog-period">'+[['30','Last 30 days'],['90','Last 90 days'],['all','All entries']].map(function(o){
+  var h='<label>Period<select id="prog-period">'+[['30','Last 30 days'],['90','Last 90 days'],['all','All entries'],['custom','Custom dates']].map(function(o){
       return '<option value="'+o[0]+'"'+(S.period===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></label>';
+  if(S.period==='custom')h+='<div class="row"><label>From<input type="date" id="prog-from" value="'+esc(S.pFrom||'')+'"></label><label>To<input type="date" id="prog-to" value="'+esc(S.pTo||'')+'"></label></div>';
   if(!hs.length)return h+'<span class="muted small">No logged sessions in this period yet. Charts and the SpedForms summary appear after the first one.</span>';
   s.goals.forEach(function(g){
     var pts=hs.filter(function(x){return !x.absent&&x.values&&num(x.values[g.id])}).map(function(x){return{d:x.date,v:x.values[g.id]}});
@@ -576,7 +579,9 @@ document.addEventListener('change',function(e){var t=e.target;
   if(t.dataset.leg){var lp={};lp[t.dataset.f]=t.value===''||!isFinite(+t.value)?null:+t.value;saveLeg(t.dataset.leg,lp);return}
   if(t.id==='date-pick'&&t.value){S.date=t.value;render()}
   else if(t.id==='prog-student'){S.progId=t.value;render()}
-  else if(t.id==='prog-period'){S.period=t.value;render()}});
+  else if(t.id==='prog-period'){S.period=t.value;if(t.value==='custom'&&!S.pFrom){var ps=student(S.editId);S.pFrom=(ps&&ps.iepLast)||shift(today(),-30);S.pTo=today()}render()}
+  else if(t.id==='prog-from'){S.pFrom=t.value;render()}
+  else if(t.id==='prog-to'){S.pTo=t.value;render()}});
 window.DAPE_START=start;
 })();
 </script>
