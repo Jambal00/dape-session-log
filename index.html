@@ -235,7 +235,7 @@ function todayView(){
     var sub=[o.sl?'':schoolLabel(s),o.sl?o.sl.min+' direct'+(s.indirect?' / '+s.indirect+' indirect':''):'',o.sl&&grp[(s.schoolId||'')+'|'+o.sl.time]>1?'group':'',extra?'+'+extra+' other indirect':''].filter(Boolean).join(' · ');
     return '<button class="item" data-act="open" data-id="'+esc(s.id)+'">'+(o.sl?'<span class="time">'+esc(fmtTime(o.sl.time))+'</span>':'')+
       '<span class="nm">'+esc(s.name)+(sub?'<br><span class="sub">'+esc(sub)+'</span>':'')+'</span>'+pill+'</button>'}
-  /* the day as a series of hops: home, each school in the order she reaches it, home */
+  /* the day as a series of hops: home, then each school in the order she reaches it. The drive home is not paid, so it is not tracked. */
   var stops=[],by={},loose=[];
   sched.forEach(function(o){var sc=school(o.s.schoolId);if(!sc){loose.push(o);return}
     if(!by[sc.id]){by[sc.id]={sc:sc,rows:[]};stops.push(by[sc.id])}by[sc.id].rows.push(o)});
@@ -246,7 +246,6 @@ function todayView(){
       (cl?'<span class="banner">School closed this day'+(cl.label?': '+esc(cl.label):'')+'</span>':'')+
       '<div class="list">'+st.rows.map(rowHtml).join('')+'</div></div>';
   });
-  if(stops.length)h+=legCard(stops[stops.length-1].sc,null);
   if(loose.length)h+='<h2>No school set</h2><div class="list">'+loose.map(rowHtml).join('')+'</div>';
   if(other.length)h+=(sched.length||S.students.some(function(s){return s.slots.length})?'<span class="eyebrow">Not scheduled this day</span>':'')+'<div class="list">'+other.map(rowHtml).join('')+'</div>';
   return h+dayPanel();
@@ -257,7 +256,7 @@ function dayMinutes(date){var d=0,i=0;
 function hrs(m){return Math.round(m/60*100)/100}
 function dayPanel(){
   var m=dayMinutes(S.date),dd=dayDoc(S.date),cm=0,mi=0;
-  if(dd&&dd.legs)Object.keys(dd.legs).forEach(function(k){var l=dd.legs[k];if(num(l.min))cm+=l.min;if(num(l.miles))mi+=l.miles});
+  if(dd&&dd.legs)Object.keys(dd.legs).forEach(function(k){if(/>home$/.test(k))return;var l=dd.legs[k];if(num(l.min))cm+=l.min;if(num(l.miles))mi+=l.miles});
   var h='<div class="panel stack"><span class="eyebrow">Day total</span>'+
     '<div class="row" style="gap:20px;align-items:flex-start"><div><div class="stat">'+hrs(m.d+m.i)+'</div><span class="muted small">student hours<br>'+m.d+' direct + '+m.i+' indirect min</span></div>'+
     '<div><div class="stat">'+hrs(cm)+'</div><span class="muted small">commute hours<br>'+(Math.round(mi*10)/10)+' miles</span></div>'+
