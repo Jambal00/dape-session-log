@@ -69,6 +69,10 @@ input,select,textarea{font-size:16px;max-width:100%}
 input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;display:block;text-align:left}
 input::-webkit-date-and-time-value{text-align:left}
 html,body{max-width:100%;overflow-x:hidden}
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+button,input,select,textarea,label{touch-action:manipulation}
+.tabs.typing{display:none}
+.tabs button{max-width:200px}
 .row>label{align-self:flex-end}
 .sec{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
 .sechead{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;padding:12px;border:0;background:var(--bg);color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:52px}
@@ -176,17 +180,16 @@ function saveDoc(coll,o,patch,msg){var d=Object.assign({},o,patch);delete d.id;
 
 /* ---------- views ---------- */
 function render(){
-  tabs.innerHTML=[['schools','Schools'],['students','Students'],['today','Sessions'],['progress','Progress']].map(function(t){
+  tabs.innerHTML=[['today','Today'],['schools','Schools']].map(function(t){
     return '<button data-act="tab" data-v="'+t[0]+'" class="'+(S.view===t[0]?'on':'')+'">'+t[1]+'</button>'}).join('');
   var h='';
   if(S.dbState==='none')h+='<div class="banner">Could not reach your data. Check your connection, then close and reopen the app.</div>';
   if(S.view==='today')h+=S.open?entryView():todayView();
-  else if(S.view==='progress')h+=progressView();
-  else if(S.view==='students')h+=studentsView();
   else h+=schoolsView();
-  app.innerHTML=h;
+  var y=window.scrollY;app.innerHTML=h;
+  if(S.top){S.top=false;window.scrollTo(0,0)}else window.scrollTo(0,y);
 }
-function emptyRoster(){return '<div class="list"><div class="empty">'+(S.loaded?'No students yet. Add your caseload on the Students tab, with the goals you track for each.':'Loading your caseload…')+'</div></div>'}
+function emptyRoster(){return '<div class="list"><div class="empty">'+(S.loaded?'No students yet. Open a school on the Schools tab to add its students.':'Loading your caseload…')+'</div></div>'}
 
 function comingUp(){
   var t=today(),out=[];
@@ -257,13 +260,13 @@ function minutesPanel(s,d){
 function entryView(){
   var s=student(S.open),d=S.draft; if(!s){S.open=null;return todayView()}
   var sl=slotOn(s,S.date),where=[schoolLabel(s),sl?fmtTime(sl.time):'',(s.direct||s.indirect)?'IEP '+(s.direct||0)+' direct / '+(s.indirect||0)+' indirect':'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · ');
-  var h='<div class="row spread"><button class="btn ghost" data-act="back">‹ All students</button><span class="muted small">'+esc(md(S.date))+'</span></div>'+
+  var h='<div class="row spread"><button class="btn ghost" data-act="back">‹ Back</button><span class="muted small">'+esc(md(S.date))+'</span></div>'+
     '<div><h1>'+esc(s.name)+'</h1>'+(where?'<span class="muted">'+esc(where)+'</span>':'')+'</div>'+
     '<h2>Lesson plan</h2>'+minutesPanel(s,d)+'<button class="btn" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
     '<button class="btn '+(d.absent?'on':'')+'" data-act="absent" aria-pressed="'+!!d.absent+'">'+(d.absent?'Marked absent':'Mark absent')+'</button>';
   if(!d.absent){
     h+='<div class="panel">';
-    if(!s.goals.length)h+='<p class="muted" style="margin:0">No goals set up for this student yet. Add them on the Students tab, or just leave a note below.</p>';
+    if(!s.goals.length)h+='<p class="muted" style="margin:0">No goals set up for this student yet. Add them in this student\'s folder under Schools, or just leave a note below.</p>';
     s.goals.forEach(function(g){
       var v=d.values[g.id],last=lastVal(s.id,g.id,S.date),m=num(v)?met(g,v):null;
       h+='<div class="goal stack"><div class="row spread"><strong>'+esc(g.label)+'</strong>'+
@@ -286,19 +289,14 @@ function entryView(){
 }
 
 function inPeriod(x){return S.period==='all'||x.date>=shift(today(),-(+S.period))}
-function progressView(){
-  var h='<div class="stack"><span class="eyebrow">Progress</span><h1>Goal data over time</h1></div>';
-  if(!S.students.length)return h+emptyRoster();
-  if(!student(S.progId))S.progId=S.students[0].id;
-  var s=student(S.progId),hs=history(s.id).filter(inPeriod);
-  h+='<div class="row"><label>Student<select id="prog-student">'+S.students.map(function(x){
-      return '<option value="'+esc(x.id)+'"'+(x.id===s.id?' selected':'')+'>'+esc(x.name)+'</option>'}).join('')+'</select></label>'+
-    '<label>Period<select id="prog-period">'+[['30','Last 30 days'],['90','Last 90 days'],['all','All entries']].map(function(o){
-      return '<option value="'+o[0]+'"'+(S.period===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></label></div>';
-  if(!hs.length)return h+'<div class="list"><div class="empty">No entries for '+esc(s.name)+' in this period. Charts and the SpedForms summary appear here after the first saved session.</div></div>';
+function progressBody(s){
+  var hs=history(s.id).filter(inPeriod);
+  var h='<label>Period<select id="prog-period">'+[['30','Last 30 days'],['90','Last 90 days'],['all','All entries']].map(function(o){
+      return '<option value="'+o[0]+'"'+(S.period===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></label>';
+  if(!hs.length)return h+'<span class="muted small">No logged sessions in this period yet. Charts and the SpedForms summary appear after the first one.</span>';
   s.goals.forEach(function(g){
     var pts=hs.filter(function(x){return !x.absent&&x.values&&num(x.values[g.id])}).map(function(x){return{d:x.date,v:x.values[g.id]}});
-    h+='<div class="panel stack"><div class="row spread"><h2>'+esc(g.label)+'</h2>'+
+    h+='<div class="stack" style="border-top:1px solid var(--line);padding-top:12px"><div class="row spread"><h2>'+esc(g.label)+'</h2>'+
       (num(g.target)?'<span class="pill">'+(g.dir==='max'?'at most ':'target ')+g.target+' '+esc(g.unit)+'</span>':'')+'</div>';
     if(!pts.length)h+='<span class="muted small">No data recorded for this goal yet.</span>';
     else{var st=stats(g,pts);
@@ -307,9 +305,21 @@ function progressView(){
         (st.metN!=null?'<div><div class="stat">'+st.metN+'/'+pts.length+'</div><span class="muted small">sessions at target</span></div>':'')+'</div>'+chart(g,pts)}
     h+='</div>';
   });
-  h+='<div class="panel stack"><div class="row spread"><h2>Summary for SpedForms</h2><button class="btn" data-act="copy">Copy</button></div><pre class="sum" id="sum">'+esc(summary(s,hs))+'</pre></div>';
+  h+='<div class="stack" style="border-top:1px solid var(--line);padding-top:12px"><div class="row spread"><h2>Summary for SpedForms</h2><button class="btn" data-act="copy">Copy</button></div><pre class="sum" id="sum">'+esc(summary(s,hs))+'</pre></div>';
   return h;
 }
+function sessionsOf(s){return S.sessions.filter(function(x){return x.studentId===s.id}).sort(function(a,b){return a.date<b.date?1:-1})}
+function sessionsBody(s){
+  var all=sessionsOf(s);
+  if(!all.length)return '<span class="muted small">No sessions yet. They appear here as you plan and log them on the Today tab.</span>';
+  return '<div class="list">'+all.slice(0,60).map(function(x){
+    var vals=s.goals.filter(function(g){return x.values&&num(x.values[g.id])}).map(function(g){return g.label+' '+x.values[g.id]}).join(' · ');
+    var pill=x.status==='planned'?'<span class="pill">Planned</span>':x.absent?'<span class="pill abs">Absent</span>':'<span class="pill done">Logged</span>';
+    var extra=[vals,x.note].filter(Boolean).join(' · ');
+    return '<button class="item" data-act="opensess" data-id="'+esc(s.id)+'" data-date="'+esc(x.date)+'"><span class="nm">'+esc(longDate(x.date)+', '+x.date.slice(0,4))+(extra?'<br><span class="sub">'+esc(extra)+'</span>':'')+'</span>'+pill+'</button>'}).join('')+'</div>'+
+    (all.length>60?'<span class="muted small">Showing the latest 60 of '+all.length+'.</span>':'');
+}
+function leaveEntry(){S.open=null;S.top=true;if(S.from){S.view='schools';S.editId=S.from;S.sec='sessions';S.from=null;S.date=S.fromDate||S.date}}
 function stats(g,pts){var vs=pts.map(function(p){return p.v}),sum=vs.reduce(function(a,b){return a+b},0);
   return{avg:r1(sum/vs.length),min:Math.min.apply(null,vs),max:Math.max.apply(null,vs),
     metN:num(g.target)?pts.filter(function(p){return met(g,p.v)}).length:null}}
@@ -352,75 +362,84 @@ function schoolOptions(sel){return '<option value="">No school set</option>'+S.s
 function section(k,key,title,summary,body){var open=S[k]===key;
   return '<div class="sec"><button class="sechead" data-act="sec" data-k="'+k+'" data-v="'+key+'" aria-expanded="'+open+'"><span class="nm"><strong>'+title+'</strong>'+(summary?'<br><span class="sub">'+esc(summary)+'</span>':'')+'</span><span class="chev" aria-hidden="true">'+(open?'−':'+')+'</span></button>'+
     (open?'<div class="stack secbody">'+body+'</div>':'')+'</div>'}
-function studentsView(){
-  var h='<div class="stack"><span class="eyebrow">Caseload</span><h1>Students, schedules and goals</h1></div>';
-  if(!S.loaded)return h+emptyRoster();
-  h+=S.students.length?'<div class="list">'+S.students.map(function(s){
-    var open=S.editId===s.id,sub=[schoolLabel(s),s.grade?'grade '+s.grade:'',s.codes?'code '+s.codes:'',s.slots.length?s.slots.map(function(sl){return DAYS[sl.day]}).join(', '):'no schedule'].filter(Boolean).join(' · ');
-    var o='<button class="item" data-act="edit" data-id="'+esc(s.id)+'" aria-expanded="'+open+'"><span class="nm">'+esc(s.name)+'<br><span class="sub">'+esc(sub)+'</span></span><span class="pill">'+s.goals.length+' goal'+(s.goals.length===1?'':'s')+'</span></button>';
-    if(open){var id=esc(s.id);
-      var details='<div class="row"><label>Initials or nickname<input id="st-name" value="'+esc(s.name)+'"></label><label>Grade<input id="st-grade" value="'+esc(s.grade||'')+'"></label></div>'+
-        '<label>School<select id="st-school">'+schoolOptions(s.schoolId)+'</select></label>'+
-        '<div class="row"><label>Last IEP meeting<input type="date" id="st-last" value="'+esc(s.iepLast||'')+'"></label><label>Next IEP meeting<input type="date" id="st-next" value="'+esc(s.iepNext||'')+'"></label></div>'+
-        '<div class="row"><label>Direct minutes per session<input type="number" inputmode="numeric" id="st-direct" value="'+(num(s.direct)?s.direct:'')+'"></label><label>Indirect minutes per session<input type="number" inputmode="numeric" id="st-ind" value="'+(num(s.indirect)?s.indirect:'')+'"></label></div>'+
-        '<button class="btn primary" data-act="savestudent" data-id="'+id+'">Save details</button>';
-      var codes='<div class="row">'+CODES.map(function(c){var on=(s.codes||'').split('/').indexOf(c[0])>=0;
-          return '<button class="chip '+(on?'on':'')+'" data-act="code" data-id="'+id+'" data-v="'+c[0]+'" title="'+esc(c[2])+'" aria-pressed="'+on+'">'+c[0]+' '+esc(c[1])+'</button>'}).join('')+'</div><span class="muted small">Tap a code to add or remove it. It saves straight away.</span>';
-      var sched=(s.slots.length?s.slots.map(function(sl,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(slotText(sl))+'</span><button class="chip" data-act="rmslot" data-id="'+id+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No time slots yet. Add each day you see this student.</span>')+
-        '<div class="row"><label>Day<select id="sl-day">'+(function(){var sc=school(s.schoolId),ds=sc&&sc.days&&sc.days.length?sc.days:[0,1,2,3,4,5,6];return ds.map(function(i){return '<option value="'+i+'">'+DAYS[i]+'</option>'}).join('')})()+'</select></label>'+
-        '<label>Start time<input type="time" id="sl-time"></label></div>'+
-        '<div class="row"><label>Minutes<input type="number" inputmode="numeric" id="sl-min" value="'+(num(s.direct)?s.direct:20)+'"></label><label>How often<select id="sl-every"><option value="1">Every week</option><option value="2">Every 2 weeks</option></select></label></div>'+
-        '<label>First date, only for every 2 weeks<input type="date" id="sl-anchor" value="'+S.date+'"></label>'+
-        '<button class="btn primary" data-act="addslot" data-id="'+id+'">Add time slot</button>';
-      var goals=s.goals.map(function(g){
-        return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(g.label)+' <span class="muted small">'+esc(g.unit)+(num(g.target)?', '+(g.dir==='max'?'at most ':'target ')+g.target:'')+'</span></span>'+
-          '<button class="chip" data-act="rmgoal" data-id="'+id+'" data-g="'+esc(g.id)+'">Remove</button></div>'}).join('')+
-        '<label>New goal (short name)<input id="g-label" placeholder="e.g. Plank hold"></label>'+
-        '<label>Objective wording from the IEP (optional, with the alias in place of the name)<textarea id="g-text"></textarea></label>'+
-        '<div class="row"><label>Unit<input id="g-unit" placeholder="reps, sec, min"></label><label>Target<input id="g-target" type="number" inputmode="decimal" placeholder="optional"></label></div>'+
-        '<div class="row"><label>Direction<select id="g-dir"><option value="min">At least</option><option value="max">At most</option></select></label>'+
-        '<label>How it is measured<select id="g-kind"><option value="count">A count or a time</option><option value="ratio">Successes out of tries</option></select></label></div>'+
-        '<label>Options to tag (comma separated)<input id="g-variants" placeholder="e.g. Wall, Incline, Knee"></label>'+
-        '<button class="btn primary" data-act="addgoal" data-id="'+id+'">Add goal</button>';
-      var iep=[s.iepNext?'next IEP '+md(s.iepNext):'',(num(s.direct)||num(s.indirect))?(s.direct||0)+' direct / '+(s.indirect||0)+' indirect min':''].filter(Boolean).join(' · ');
-      o+='<div class="stack edit">'+
-        section('sec','details','Details',iep||'School, grade, IEP dates and minutes',details)+
-        section('sec','codes','Disability codes',s.codes?s.codes.split('/').join(', '):'None picked',codes)+
-        section('sec','schedule','Schedule',s.slots.length?s.slots.map(slotText).join('; '):'No time slots yet',sched)+
-        section('sec','goals','Goals',s.goals.length?s.goals.map(function(g){return g.label}).join(', '):'No goals yet',goals)+'</div>'}
-    return o}).join('')+'</div>':'<div class="list"><div class="empty">No students yet. Add the first one below.</div></div>';
-  h+='<div class="panel stack"><h2>Add a student</h2><div class="row"><label>Initials or nickname<input id="s-name" placeholder="Never the real name"></label>'+
-    '<label>School<select id="s-school">'+schoolOptions('')+'</select></label></div>'+
-    '<button class="btn primary" data-act="addstudent">Add student</button></div>';
-  return h;
+function studentRow(s){
+  var sub=[s.grade?'grade '+s.grade:'',s.codes?'code '+s.codes:'',s.slots.length?s.slots.map(function(sl){return DAYS[sl.day]+' '+fmtTime(sl.time)}).join(', '):'no schedule'].filter(Boolean).join(' · ');
+  return '<button class="item" data-act="edit" data-id="'+esc(s.id)+'"><span class="nm">'+esc(s.name)+'<br><span class="sub">'+esc(sub)+'</span></span><span class="pill">'+s.goals.length+' goal'+(s.goals.length===1?'':'s')+'</span></button>'}
+
+function studentPage(s){
+  var id=esc(s.id),sc=school(s.schoolId);
+  var details='<div class="row"><label>Initials or nickname<input id="st-name" value="'+esc(s.name)+'"></label><label>Grade<input id="st-grade" value="'+esc(s.grade||'')+'"></label></div>'+
+    '<label>School<select id="st-school">'+schoolOptions(s.schoolId)+'</select></label>'+
+    '<div class="row"><label>Last IEP meeting<input type="date" id="st-last" value="'+esc(s.iepLast||'')+'"></label><label>Next IEP meeting<input type="date" id="st-next" value="'+esc(s.iepNext||'')+'"></label></div>'+
+    '<div class="row"><label>Direct minutes per session<input type="number" inputmode="numeric" id="st-direct" value="'+(num(s.direct)?s.direct:'')+'"></label><label>Indirect minutes per session<input type="number" inputmode="numeric" id="st-ind" value="'+(num(s.indirect)?s.indirect:'')+'"></label></div>'+
+    '<button class="btn primary" data-act="savestudent" data-id="'+id+'">Save details</button>';
+  var codes='<div class="row">'+CODES.map(function(c){var on=(s.codes||'').split('/').indexOf(c[0])>=0;
+      return '<button class="chip '+(on?'on':'')+'" data-act="code" data-id="'+id+'" data-v="'+c[0]+'" title="'+esc(c[2])+'" aria-pressed="'+on+'">'+c[0]+' '+esc(c[1])+'</button>'}).join('')+'</div><span class="muted small">Tap a code to add or remove it. It saves straight away.</span>';
+  var sched=(s.slots.length?s.slots.map(function(sl,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(slotText(sl))+'</span><button class="chip" data-act="rmslot" data-id="'+id+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No time slots yet. Add each day you see this student.</span>')+
+    '<div class="row"><label>Day<select id="sl-day">'+(function(){var ds=sc&&sc.days&&sc.days.length?sc.days:[0,1,2,3,4,5,6];return ds.map(function(i){return '<option value="'+i+'">'+DAYS[i]+'</option>'}).join('')})()+'</select></label>'+
+    '<label>Start time<input type="time" id="sl-time"></label></div>'+
+    '<div class="row"><label>Minutes<input type="number" inputmode="numeric" id="sl-min" value="'+(num(s.direct)?s.direct:20)+'"></label><label>How often<select id="sl-every"><option value="1">Every week</option><option value="2">Every 2 weeks</option></select></label></div>'+
+    '<label>First date, only for every 2 weeks<input type="date" id="sl-anchor" value="'+S.date+'"></label>'+
+    '<button class="btn primary" data-act="addslot" data-id="'+id+'">Add time slot</button>';
+  var goals=s.goals.map(function(g){
+    return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(g.label)+' <span class="muted small">'+esc(g.unit)+(num(g.target)?', '+(g.dir==='max'?'at most ':'target ')+g.target:'')+'</span></span>'+
+      '<button class="chip" data-act="rmgoal" data-id="'+id+'" data-g="'+esc(g.id)+'">Remove</button></div>'}).join('')+
+    '<label>New goal (short name)<input id="g-label" placeholder="e.g. Plank hold"></label>'+
+    '<label>Objective wording from the IEP (optional, with the alias in place of the name)<textarea id="g-text"></textarea></label>'+
+    '<div class="row"><label>Unit<input id="g-unit" placeholder="reps, sec, min"></label><label>Target<input id="g-target" type="number" inputmode="decimal" placeholder="optional"></label></div>'+
+    '<div class="row"><label>Direction<select id="g-dir"><option value="min">At least</option><option value="max">At most</option></select></label>'+
+    '<label>How it is measured<select id="g-kind"><option value="count">A count or a time</option><option value="ratio">Successes out of tries</option></select></label></div>'+
+    '<label>Options to tag (comma separated)<input id="g-variants" placeholder="e.g. Wall, Incline, Knee"></label>'+
+    '<button class="btn primary" data-act="addgoal" data-id="'+id+'">Add goal</button>';
+  var iep=[s.iepNext?'next IEP '+md(s.iepNext):'',(num(s.direct)||num(s.indirect))?(s.direct||0)+' direct / '+(s.indirect||0)+' indirect min':''].filter(Boolean).join(' · ');
+  return '<div class="row"><button class="btn ghost" data-act="backschool">‹ '+esc(sc?(sc.alias||sc.name):'All schools')+'</button></div>'+
+    '<div class="stack"><span class="eyebrow">Student'+(sc?' at '+esc(sc.alias||sc.name):'')+'</span><h1>'+esc(s.name)+'</h1></div>'+
+    section('sec','details','Details',iep||'School, grade, IEP dates and minutes',details)+
+    section('sec','codes','Disability codes',s.codes?s.codes.split('/').join(', '):'None picked',codes)+
+    section('sec','schedule','Schedule',s.slots.length?s.slots.map(slotText).join('; '):'No time slots yet',sched)+
+    section('sec','goals','Goals',s.goals.length?s.goals.map(function(g){return g.label}).join(', '):'No goals yet',goals)+
+    (function(){var all=sessionsOf(s);return section('sec','sessions','Sessions',all.length?all.length+' on file, latest '+md(all[0].date):'None yet',sessionsBody(s))})()+
+    section('sec','progress','Progress','Charts and the summary for SpedForms',progressBody(s));
+}
+
+function schoolPage(sc){
+  var id=esc(sc.id),cl=sc.closed||[],rp=sc.reports||[],dy=sc.days||[],kids=S.students.filter(function(s){return s.schoolId===sc.id});
+  var details='<div class="row"><label>School name<input id="sc-name" value="'+esc(sc.name)+'"></label><label>Short name<input id="sc-alias" value="'+esc(sc.alias||'')+'"></label></div>'+
+    '<label>Address<input id="sc-addr" value="'+esc(sc.address||'')+'"></label>'+
+    '<button class="btn primary" data-act="saveschool" data-id="'+id+'">Save details</button>';
+  var days='<div class="row">'+DAYS.map(function(dn,di){var on=dy.indexOf(di)>=0;
+    return '<button class="chip '+(on?'on':'')+'" data-act="scday" data-id="'+id+'" data-i="'+di+'" aria-pressed="'+on+'">'+dn+'</button>'}).join('')+'</div><span class="muted small">Tap a day to add or remove it. It saves straight away.</span>';
+  var off=(cl.length?cl.map(function(c,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(md(c.from)+(c.to&&c.to!==c.from?' to '+md(c.to):'')+(c.label?', '+c.label:''))+'</span><button class="chip" data-act="rmclosed" data-id="'+id+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">Holidays and breaks show on the session list as school closed.</span>')+
+    '<div class="row"><label>From<input type="date" id="c-from"></label><label>To (optional)<input type="date" id="c-to"></label></div>'+
+    '<label>What it is<input id="c-label" placeholder="e.g. Fall break"></label>'+
+    '<button class="btn primary" data-act="addclosed" data-id="'+id+'">Add days off</button>';
+  var reps=(rp.length?rp.map(function(r,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(mdy(r.date)+(r.label?', '+r.label:''))+'</span><button class="chip" data-act="rmreport" data-id="'+id+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">Due dates appear under Coming up three weeks ahead.</span>')+
+    '<div class="row"><label>Due date<input type="date" id="r-date"></label><label>What is due<input id="r-label" placeholder="e.g. Q1 progress reports"></label></div>'+
+    '<button class="btn primary" data-act="addreport" data-id="'+id+'">Add due date</button>';
+  return '<div class="row"><button class="btn ghost" data-act="backschools">‹ All schools</button></div>'+
+    '<div class="stack"><span class="eyebrow">School</span><h1>'+esc(sc.name)+'</h1>'+(sc.address?'<span class="muted">'+esc(sc.address)+'</span>':'')+'</div>'+
+    '<h2>Students</h2>'+
+    (kids.length?'<div class="list">'+kids.map(studentRow).join('')+'</div>':'<div class="list"><div class="empty">No students at this school yet. Add the first one below.</div></div>')+
+    '<div class="panel stack"><label>Add a student (initials or nickname, never the real name)<input id="s-name"></label>'+
+    '<button class="btn primary" data-act="addstudent" data-sc="'+id+'">Add student to '+esc(sc.alias||sc.name)+'</button></div>'+
+    '<h2 style="margin-top:8px">School settings</h2>'+
+    section('scSec','details','Name and address',sc.address||'No address entered',details)+
+    section('scSec','days','Days you are here',dy.length?dy.map(function(i){return DAYS[i]}).join(', '):'None picked',days)+
+    section('scSec','off','Days off',cl.length?cl.length+' entered':'None entered',off)+
+    section('scSec','reports','Reports due',rp.length?rp.map(function(r){return md(r.date)}).join(', '):'None entered',reps);
 }
 
 function schoolsView(){
-  var h='<div class="stack"><span class="eyebrow">Schools</span><h1>Calendars and report dates</h1></div>';
-  if(!S.loaded)return h+'<div class="list"><div class="empty">Loading schools…</div></div>';
+  if(!S.loaded)return '<div class="stack"><span class="eyebrow">Schools</span><h1>Your schools</h1></div><div class="list"><div class="empty">Loading schools…</div></div>';
+  var st=S.editId&&student(S.editId);if(st)return studentPage(st);
+  var open=S.schoolEdit&&school(S.schoolEdit);if(open)return schoolPage(open);
+  var h='<div class="stack"><span class="eyebrow">Schools</span><h1>Your schools and their students</h1></div>';
   h+=S.schools.length?'<div class="list">'+S.schools.map(function(sc){
-    var open=S.schoolEdit===sc.id,n=S.students.filter(function(s){return s.schoolId===sc.id}).length;
-    var o='<button class="item" data-act="editschool" data-id="'+esc(sc.id)+'" aria-expanded="'+open+'"><span class="nm">'+esc(sc.name)+(sc.alias&&sc.alias!==sc.name?' <span class="sub">('+esc(sc.alias)+')</span>':'')+
-      (sc.address?'<br><span class="sub">'+esc(sc.address)+'</span>':'')+'</span><span class="pill">'+n+' student'+(n===1?'':'s')+'</span></button>';
-    if(open){var id=esc(sc.id),cl=sc.closed||[],rp=sc.reports||[],dy=sc.days||[];
-      var details='<div class="row"><label>School name<input id="sc-name" value="'+esc(sc.name)+'"></label><label>Short name<input id="sc-alias" value="'+esc(sc.alias||'')+'"></label></div>'+
-        '<label>Address<input id="sc-addr" value="'+esc(sc.address||'')+'"></label>'+
-        '<button class="btn primary" data-act="saveschool" data-id="'+id+'">Save details</button>';
-      var days='<div class="row">'+DAYS.map(function(dn,di){var on=dy.indexOf(di)>=0;
-        return '<button class="chip '+(on?'on':'')+'" data-act="scday" data-id="'+id+'" data-i="'+di+'" aria-pressed="'+on+'">'+dn+'</button>'}).join('')+'</div><span class="muted small">Tap a day to add or remove it. It saves straight away.</span>';
-      var off=(cl.length?cl.map(function(c,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(md(c.from)+(c.to&&c.to!==c.from?' to '+md(c.to):'')+(c.label?', '+c.label:''))+'</span><button class="chip" data-act="rmclosed" data-id="'+id+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">Holidays and breaks show on the session list as school closed.</span>')+
-        '<div class="row"><label>From<input type="date" id="c-from"></label><label>To (optional)<input type="date" id="c-to"></label></div>'+
-        '<label>What it is<input id="c-label" placeholder="e.g. Fall break"></label>'+
-        '<button class="btn primary" data-act="addclosed" data-id="'+id+'">Add days off</button>';
-      var reps=(rp.length?rp.map(function(r,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(mdy(r.date)+(r.label?', '+r.label:''))+'</span><button class="chip" data-act="rmreport" data-id="'+id+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">Due dates appear under Coming up three weeks ahead.</span>')+
-        '<div class="row"><label>Due date<input type="date" id="r-date"></label><label>What is due<input id="r-label" placeholder="e.g. Q1 progress reports"></label></div>'+
-        '<button class="btn primary" data-act="addreport" data-id="'+id+'">Add due date</button>';
-      o+='<div class="stack edit">'+
-        section('scSec','details','Details',sc.address||'Name and address',details)+
-        section('scSec','days','Days you are here',dy.length?dy.map(function(i){return DAYS[i]}).join(', '):'None picked',days)+
-        section('scSec','off','Days off',cl.length?cl.length+' entered':'None entered',off)+
-        section('scSec','reports','Reports due',rp.length?rp.map(function(r){return md(r.date)}).join(', '):'None entered',reps)+'</div>'}
-    return o}).join('')+'</div>':'<div class="list"><div class="empty">No schools yet. Add the first one below.</div></div>';
+    var n=S.students.filter(function(s){return s.schoolId===sc.id}).length,dy=sc.days||[];
+    return '<button class="item" data-act="editschool" data-id="'+esc(sc.id)+'"><span class="nm">'+esc(sc.name)+'<br><span class="sub">'+esc(dy.length?dy.map(function(i){return DAYS[i]}).join(', '):'no days set')+'</span></span><span class="pill">'+n+' student'+(n===1?'':'s')+'</span></button>'}).join('')+'</div>'
+    :'<div class="list"><div class="empty">No schools yet. Add the first one below, then open it to add its students.</div></div>';
+  var loose=S.students.filter(function(s){return !school(s.schoolId)});
+  if(loose.length)h+='<h2>Students with no school set</h2><div class="list">'+loose.map(studentRow).join('')+'</div>';
   h+='<div class="panel stack"><h2>Add a school</h2><div class="row"><label>School name<input id="n-name"></label><label>Short name<input id="n-alias" placeholder="optional"></label></div>'+
     '<label>Address<input id="n-addr"></label><button class="btn primary" data-act="addschool">Add school</button></div>'+
     '<button class="btn ghost" data-act="signout">Sign out</button>';
@@ -440,11 +459,14 @@ function byDate(k){return function(a,b){return a[k]<b[k]?-1:a[k]>b[k]?1:0}}
 
 document.addEventListener('click',function(e){
   var b=e.target.closest('[data-act]');if(!b)return;var a=b.dataset.act,d=S.draft,g=b.dataset.g,s,sc,i=+b.dataset.i;
-  if(a==='tab'){S.view=b.dataset.v;S.open=null}
+  if(a==='tab'){S.view=b.dataset.v;S.open=null;S.from=null;S.editId=null;S.schoolEdit=null;S.top=true}
   else if(a==='day'){S.date=shift(S.date,+b.dataset.n)}
   else if(a==='todaybtn'){S.date=today()}
-  else if(a==='open'){openEntry(b.dataset.id)}
-  else if(a==='back'){S.open=null}
+  else if(a==='open'){openEntry(b.dataset.id);S.top=true}
+  else if(a==='opensess'){S.from=b.dataset.id;S.fromDate=S.date;S.date=b.dataset.date;S.view='today';openEntry(b.dataset.id);S.top=true}
+  else if(a==='back'){leaveEntry()}
+  else if(a==='backschools'){S.schoolEdit=null;S.top=true}
+  else if(a==='backschool'){var bs=student(S.editId);S.schoolEdit=bs&&school(bs.schoolId)?bs.schoolId:null;S.editId=null;S.top=true}
   else if(a==='absent'){d.absent=!d.absent}
   else if(a==='step'){var cur=d.values[g];d.values[g]=num(cur)?Math.max(0,r1(cur+(+b.dataset.n))):(+b.dataset.n>0?1:0)}
   else if(a==='variant'){if(d.variants[g]===b.dataset.v)delete d.variants[g];else d.variants[g]=b.dataset.v}
@@ -456,10 +478,10 @@ document.addEventListener('click',function(e){
     doc.min=d.absent?0:(num(d.min)?d.min:0);doc.indirect=num(d.indirect)?d.indirect:0;doc.acts=d.absent?[]:d.acts;doc.outof=d.absent?{}:d.outof;doc.help=d.absent?{}:d.help;
     var x0=sess(S.open,S.date);doc.status=(a==='save'||(x0&&x0.status!=='planned'))?'logged':'planned';
     S.saving=true;render();
-    write(function(){return S.db.doc('sessions/'+S.open+'_'+S.date).set(doc)}).then(function(){S.saving=false;S.open=null;toast(doc.status==='planned'?'Plan saved':'Saved');render()},function(){S.saving=false;render()});
+    write(function(){return S.db.doc('sessions/'+S.open+'_'+S.date).set(doc)}).then(function(){S.saving=false;leaveEntry();toast(doc.status==='planned'?'Plan saved':'Saved');render()},function(){S.saving=false;render()});
     return}
   else if(a==='del'){if(!S.confirmDel){S.confirmDel=true}else{var sid=S.open;
-    write(function(){return S.db.doc('sessions/'+sid+'_'+S.date).delete()}).then(function(){S.open=null;toast('Entry deleted');render()},function(){});return}}
+    write(function(){return S.db.doc('sessions/'+sid+'_'+S.date).delete()}).then(function(){leaveEntry();toast('Entry deleted');render()},function(){});return}}
   else if(a==='copy'){var t=document.getElementById('sum').textContent;
     (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast('Copied')},function(){
       var r=document.createRange();r.selectNodeContents(document.getElementById('sum'));var sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast('Selected. Use Copy from the menu.')});return}
@@ -480,10 +502,10 @@ document.addEventListener('click',function(e){
     if(ci<0)cs.push(b.dataset.v);else cs.splice(ci,1);saveDoc('students',s,{codes:cs.sort().join('/')},'Codes saved');return}
   else if(a==='signout'){if(window.DAPE_SIGNOUT)window.DAPE_SIGNOUT();return}
   else if(a==='sec'){S[b.dataset.k]=S[b.dataset.k]===b.dataset.v?'':b.dataset.v}
-  else if(a==='edit'){S.editId=S.editId===b.dataset.id?null:b.dataset.id;S.sec='details'}
-  else if(a==='editschool'){S.schoolEdit=S.schoolEdit===b.dataset.id?null:b.dataset.id;S.scSec='details'}
+  else if(a==='edit'){S.editId=b.dataset.id;S.sec='';S.top=true}
+  else if(a==='editschool'){S.schoolEdit=b.dataset.id;S.scSec='';S.top=true}
   else if(a==='addstudent'){var n=val('s-name');if(!n){toast('Enter initials or a nickname first');return}
-    write(function(){return S.db.doc('students/s_'+rid()).set({name:n,schoolId:val('s-school'),goals:[],slots:[],order:S.students.length})}).then(function(){toast('Student added');render()},function(){});return}
+    write(function(){return S.db.doc('students/s_'+rid()).set({name:n,schoolId:b.dataset.sc||'',goals:[],slots:[],order:S.students.length})}).then(function(){toast('Student added');render()},function(){});return}
   else if(a==='savestudent'){s=student(b.dataset.id);if(!s)return;if(!val('st-name')){toast('Initials or a nickname are required');return}
     saveDoc('students',s,{name:val('st-name'),grade:val('st-grade'),schoolId:val('st-school'),iepLast:val('st-last'),iepNext:val('st-next'),direct:nv('st-direct'),indirect:nv('st-ind')},'Details saved');return}
   else if(a==='addslot'){s=student(b.dataset.id);var tm=val('sl-time'),mn=+val('sl-min');if(!s)return;
@@ -517,6 +539,9 @@ document.addEventListener('input',function(e){var t=e.target;
   else if((t.id==='e-min'||t.id==='e-ind')&&S.draft){var k=t.id==='e-min'?'min':'indirect';if(t.value===''||!isFinite(+t.value))delete S.draft[k];else S.draft[k]=+t.value}
   else if(t.dataset.x&&S.draft){if(t.value===''||!isFinite(+t.value))delete S.draft[t.dataset.x][t.dataset.g];else S.draft[t.dataset.x][t.dataset.g]=+t.value}
   else if(t.dataset.g&&S.draft){if(t.value===''||!isFinite(+t.value))delete S.draft.values[t.dataset.g];else S.draft.values[t.dataset.g]=+t.value}});
+function typingField(el){return el&&(el.tagName==='TEXTAREA'||(el.tagName==='INPUT'&&!/^(date|time|checkbox|radio)$/.test(el.type)))}
+document.addEventListener('focusin',function(e){if(typingField(e.target))tabs.classList.add('typing')});
+document.addEventListener('focusout',function(){setTimeout(function(){if(!typingField(document.activeElement))tabs.classList.remove('typing')},50)});
 document.addEventListener('change',function(e){var t=e.target;
   if(t.id==='date-pick'&&t.value){S.date=t.value;render()}
   else if(t.id==='prog-student'){S.progId=t.value;render()}
