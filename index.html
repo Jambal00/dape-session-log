@@ -64,7 +64,18 @@ button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 input,select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;min-height:44px;width:100%;min-width:0}
 textarea{min-height:76px;resize:vertical}
-label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;flex:1 1 120px;min-width:0}
+/* 16px stops phones zooming in when a field is tapped; the date and time rules stop iPhone fields spilling out of their column */
+input,select,textarea{font-size:16px;max-width:100%}
+input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;display:block;text-align:left}
+input::-webkit-date-and-time-value{text-align:left}
+html,body{max-width:100%;overflow-x:hidden}
+.row>label{align-self:flex-end}
+.sec{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.sechead{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;padding:12px;border:0;background:var(--bg);color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:52px}
+.sechead .sub{font-size:14px;color:var(--muted)}
+.secbody{padding:12px}
+.chev{font:700 24px/1 var(--display);color:var(--accent);flex:none}
+label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;flex:1 1 130px;min-width:0}
 .stepper{display:flex;align-items:center;gap:8px}
 .stepper button{width:52px;height:52px;border-radius:50%;border:1px solid var(--line);background:var(--bg);font:700 26px var(--display);cursor:pointer}
 .stepper input{width:84px;text-align:center;font:700 30px var(--display);font-variant-numeric:tabular-nums;height:52px;padding:4px}
@@ -102,7 +113,7 @@ pre.sum{white-space:pre-wrap;word-break:break-word;font:14px/1.45 var(--body);ma
 
 <script>
 (function(){
-var S={view:'today',date:today(),students:[],schools:[],sessions:[],activities:[],indirect:[],days:[],indForm:false,loaded:false,db:null,dbState:'wait',
+var S={view:'today',date:today(),students:[],schools:[],sessions:[],activities:[],indirect:[],days:[],indForm:false,sec:'details',scSec:'details',loaded:false,db:null,dbState:'wait',
        open:null,draft:null,progId:null,period:'all',editId:null,schoolEdit:null,saving:false};
 var DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var HELP=['Independent','Verbal cue','Demonstration','Hands-on help'];
@@ -338,38 +349,45 @@ function summary(s,hs){
 
 function schoolOptions(sel){return '<option value="">No school set</option>'+S.schools.map(function(sc){
   return '<option value="'+esc(sc.id)+'"'+(sc.id===sel?' selected':'')+'>'+esc(sc.alias||sc.name)+'</option>'}).join('')}
+function section(k,key,title,summary,body){var open=S[k]===key;
+  return '<div class="sec"><button class="sechead" data-act="sec" data-k="'+k+'" data-v="'+key+'" aria-expanded="'+open+'"><span class="nm"><strong>'+title+'</strong>'+(summary?'<br><span class="sub">'+esc(summary)+'</span>':'')+'</span><span class="chev" aria-hidden="true">'+(open?'−':'+')+'</span></button>'+
+    (open?'<div class="stack secbody">'+body+'</div>':'')+'</div>'}
 function studentsView(){
   var h='<div class="stack"><span class="eyebrow">Caseload</span><h1>Students, schedules and goals</h1></div>';
   if(!S.loaded)return h+emptyRoster();
   h+=S.students.length?'<div class="list">'+S.students.map(function(s){
     var open=S.editId===s.id,sub=[schoolLabel(s),s.grade?'grade '+s.grade:'',s.codes?'code '+s.codes:'',s.slots.length?s.slots.map(function(sl){return DAYS[sl.day]}).join(', '):'no schedule'].filter(Boolean).join(' · ');
     var o='<button class="item" data-act="edit" data-id="'+esc(s.id)+'" aria-expanded="'+open+'"><span class="nm">'+esc(s.name)+'<br><span class="sub">'+esc(sub)+'</span></span><span class="pill">'+s.goals.length+' goal'+(s.goals.length===1?'':'s')+'</span></button>';
-    if(open){o+='<div class="stack edit">'+
-        '<div class="row"><label>Initials or nickname<input id="st-name" value="'+esc(s.name)+'"></label><label>Grade<input id="st-grade" value="'+esc(s.grade||'')+'"></label></div>'+
+    if(open){var id=esc(s.id);
+      var details='<div class="row"><label>Initials or nickname<input id="st-name" value="'+esc(s.name)+'"></label><label>Grade<input id="st-grade" value="'+esc(s.grade||'')+'"></label></div>'+
         '<label>School<select id="st-school">'+schoolOptions(s.schoolId)+'</select></label>'+
         '<div class="row"><label>Last IEP meeting<input type="date" id="st-last" value="'+esc(s.iepLast||'')+'"></label><label>Next IEP meeting<input type="date" id="st-next" value="'+esc(s.iepNext||'')+'"></label></div>'+
-        '<div class="row"><label>IEP direct min per session<input type="number" inputmode="numeric" id="st-direct" value="'+(num(s.direct)?s.direct:'')+'"></label><label>IEP indirect min per session<input type="number" inputmode="numeric" id="st-ind" value="'+(num(s.indirect)?s.indirect:'')+'"></label></div>'+
-        '<h2 style="margin-top:8px">Disability codes</h2><div class="row">'+CODES.map(function(c){var on=(s.codes||'').split('/').indexOf(c[0])>=0;
-          return '<button class="chip '+(on?'on':'')+'" data-act="code" data-id="'+esc(s.id)+'" data-v="'+c[0]+'" title="'+esc(c[2])+'" aria-pressed="'+on+'">'+c[0]+' '+esc(c[1])+'</button>'}).join('')+'</div>'+
-        '<button class="btn primary" data-act="savestudent" data-id="'+esc(s.id)+'">Save details</button>'+
-        '<h2 style="margin-top:8px">Schedule</h2>'+
-        (s.slots.length?s.slots.map(function(sl,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(slotText(sl))+'</span><button class="chip" data-act="rmslot" data-id="'+esc(s.id)+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No time slots yet. Add each day she sees this student.</span>')+
+        '<div class="row"><label>Direct minutes per session<input type="number" inputmode="numeric" id="st-direct" value="'+(num(s.direct)?s.direct:'')+'"></label><label>Indirect minutes per session<input type="number" inputmode="numeric" id="st-ind" value="'+(num(s.indirect)?s.indirect:'')+'"></label></div>'+
+        '<button class="btn primary" data-act="savestudent" data-id="'+id+'">Save details</button>';
+      var codes='<div class="row">'+CODES.map(function(c){var on=(s.codes||'').split('/').indexOf(c[0])>=0;
+          return '<button class="chip '+(on?'on':'')+'" data-act="code" data-id="'+id+'" data-v="'+c[0]+'" title="'+esc(c[2])+'" aria-pressed="'+on+'">'+c[0]+' '+esc(c[1])+'</button>'}).join('')+'</div><span class="muted small">Tap a code to add or remove it. It saves straight away.</span>';
+      var sched=(s.slots.length?s.slots.map(function(sl,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(slotText(sl))+'</span><button class="chip" data-act="rmslot" data-id="'+id+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No time slots yet. Add each day you see this student.</span>')+
         '<div class="row"><label>Day<select id="sl-day">'+(function(){var sc=school(s.schoolId),ds=sc&&sc.days&&sc.days.length?sc.days:[0,1,2,3,4,5,6];return ds.map(function(i){return '<option value="'+i+'">'+DAYS[i]+'</option>'}).join('')})()+'</select></label>'+
-        '<label>Time<input type="time" id="sl-time"></label><label>Minutes<input type="number" inputmode="numeric" id="sl-min" value="20"></label></div>'+
-        '<div class="row"><label>How often<select id="sl-every"><option value="1">Every week</option><option value="2">Every 2 weeks</option></select></label>'+
-        '<label>First date (for every 2 weeks)<input type="date" id="sl-anchor" value="'+S.date+'"></label></div>'+
-        '<button class="btn" data-act="addslot" data-id="'+esc(s.id)+'">Add time slot</button>'+
-        '<h2 style="margin-top:8px">Goals</h2>'+
-        s.goals.map(function(g){
+        '<label>Start time<input type="time" id="sl-time"></label></div>'+
+        '<div class="row"><label>Minutes<input type="number" inputmode="numeric" id="sl-min" value="'+(num(s.direct)?s.direct:20)+'"></label><label>How often<select id="sl-every"><option value="1">Every week</option><option value="2">Every 2 weeks</option></select></label></div>'+
+        '<label>First date, only for every 2 weeks<input type="date" id="sl-anchor" value="'+S.date+'"></label>'+
+        '<button class="btn primary" data-act="addslot" data-id="'+id+'">Add time slot</button>';
+      var goals=s.goals.map(function(g){
         return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(g.label)+' <span class="muted small">'+esc(g.unit)+(num(g.target)?', '+(g.dir==='max'?'at most ':'target ')+g.target:'')+'</span></span>'+
-          '<button class="chip" data-act="rmgoal" data-id="'+esc(s.id)+'" data-g="'+esc(g.id)+'">Remove</button></div>'}).join('')+
+          '<button class="chip" data-act="rmgoal" data-id="'+id+'" data-g="'+esc(g.id)+'">Remove</button></div>'}).join('')+
         '<label>New goal (short name)<input id="g-label" placeholder="e.g. Plank hold"></label>'+
         '<label>Objective wording from the IEP (optional, with the alias in place of the name)<textarea id="g-text"></textarea></label>'+
-        '<div class="row"><label>Unit<input id="g-unit" placeholder="reps, sec, min"></label><label>Target<input id="g-target" type="number" inputmode="decimal" placeholder="optional"></label>'+
-        '<label>Direction<select id="g-dir"><option value="min">At least</option><option value="max">At most</option></select></label></div>'+
-        '<label>How it is measured<select id="g-kind"><option value="count">A count or a time</option><option value="ratio">Successes out of tries</option></select></label>'+
+        '<div class="row"><label>Unit<input id="g-unit" placeholder="reps, sec, min"></label><label>Target<input id="g-target" type="number" inputmode="decimal" placeholder="optional"></label></div>'+
+        '<div class="row"><label>Direction<select id="g-dir"><option value="min">At least</option><option value="max">At most</option></select></label>'+
+        '<label>How it is measured<select id="g-kind"><option value="count">A count or a time</option><option value="ratio">Successes out of tries</option></select></label></div>'+
         '<label>Options to tag (comma separated)<input id="g-variants" placeholder="e.g. Wall, Incline, Knee"></label>'+
-        '<button class="btn" data-act="addgoal" data-id="'+esc(s.id)+'">Add goal</button></div>'}
+        '<button class="btn primary" data-act="addgoal" data-id="'+id+'">Add goal</button>';
+      var iep=[s.iepNext?'next IEP '+md(s.iepNext):'',(num(s.direct)||num(s.indirect))?(s.direct||0)+' direct / '+(s.indirect||0)+' indirect min':''].filter(Boolean).join(' · ');
+      o+='<div class="stack edit">'+
+        section('sec','details','Details',iep||'School, grade, IEP dates and minutes',details)+
+        section('sec','codes','Disability codes',s.codes?s.codes.split('/').join(', '):'None picked',codes)+
+        section('sec','schedule','Schedule',s.slots.length?s.slots.map(slotText).join('; '):'No time slots yet',sched)+
+        section('sec','goals','Goals',s.goals.length?s.goals.map(function(g){return g.label}).join(', '):'No goals yet',goals)+'</div>'}
     return o}).join('')+'</div>':'<div class="list"><div class="empty">No students yet. Add the first one below.</div></div>';
   h+='<div class="panel stack"><h2>Add a student</h2><div class="row"><label>Initials or nickname<input id="s-name" placeholder="Never the real name"></label>'+
     '<label>School<select id="s-school">'+schoolOptions('')+'</select></label></div>'+
@@ -384,21 +402,24 @@ function schoolsView(){
     var open=S.schoolEdit===sc.id,n=S.students.filter(function(s){return s.schoolId===sc.id}).length;
     var o='<button class="item" data-act="editschool" data-id="'+esc(sc.id)+'" aria-expanded="'+open+'"><span class="nm">'+esc(sc.name)+(sc.alias&&sc.alias!==sc.name?' <span class="sub">('+esc(sc.alias)+')</span>':'')+
       (sc.address?'<br><span class="sub">'+esc(sc.address)+'</span>':'')+'</span><span class="pill">'+n+' student'+(n===1?'':'s')+'</span></button>';
-    if(open){o+='<div class="stack edit">'+
-      '<div class="row"><label>School name<input id="sc-name" value="'+esc(sc.name)+'"></label><label>Short name<input id="sc-alias" value="'+esc(sc.alias||'')+'"></label></div>'+
-      '<label>Address<input id="sc-addr" value="'+esc(sc.address||'')+'"></label>'+
-      '<button class="btn primary" data-act="saveschool" data-id="'+esc(sc.id)+'">Save details</button>'+
-      '<h2 style="margin-top:8px">Days you are here</h2><div class="row">'+DAYS.map(function(dn,di){var on=(sc.days||[]).indexOf(di)>=0;
-        return '<button class="chip '+(on?'on':'')+'" data-act="scday" data-id="'+esc(sc.id)+'" data-i="'+di+'" aria-pressed="'+on+'">'+dn+'</button>'}).join('')+'</div>'+
-      '<h2 style="margin-top:8px">Days off</h2>'+
-      ((sc.closed||[]).length?sc.closed.map(function(c,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(md(c.from)+(c.to&&c.to!==c.from?' to '+md(c.to):'')+(c.label?', '+c.label:''))+'</span><button class="chip" data-act="rmclosed" data-id="'+esc(sc.id)+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No days off entered. Holidays and breaks show on the session list as school closed.</span>')+
-      '<div class="row"><label>From<input type="date" id="c-from"></label><label>To (optional)<input type="date" id="c-to"></label></div>'+
-      '<label>What it is<input id="c-label" placeholder="e.g. Fall break"></label>'+
-      '<button class="btn" data-act="addclosed" data-id="'+esc(sc.id)+'">Add days off</button>'+
-      '<h2 style="margin-top:8px">Reports due</h2>'+
-      ((sc.reports||[]).length?sc.reports.map(function(r,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(mdy(r.date)+(r.label?', '+r.label:''))+'</span><button class="chip" data-act="rmreport" data-id="'+esc(sc.id)+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No due dates entered. They appear under Coming up three weeks ahead.</span>')+
-      '<div class="row"><label>Due date<input type="date" id="r-date"></label><label>What is due<input id="r-label" placeholder="e.g. Q1 progress reports"></label></div>'+
-      '<button class="btn" data-act="addreport" data-id="'+esc(sc.id)+'">Add due date</button></div>'}
+    if(open){var id=esc(sc.id),cl=sc.closed||[],rp=sc.reports||[],dy=sc.days||[];
+      var details='<div class="row"><label>School name<input id="sc-name" value="'+esc(sc.name)+'"></label><label>Short name<input id="sc-alias" value="'+esc(sc.alias||'')+'"></label></div>'+
+        '<label>Address<input id="sc-addr" value="'+esc(sc.address||'')+'"></label>'+
+        '<button class="btn primary" data-act="saveschool" data-id="'+id+'">Save details</button>';
+      var days='<div class="row">'+DAYS.map(function(dn,di){var on=dy.indexOf(di)>=0;
+        return '<button class="chip '+(on?'on':'')+'" data-act="scday" data-id="'+id+'" data-i="'+di+'" aria-pressed="'+on+'">'+dn+'</button>'}).join('')+'</div><span class="muted small">Tap a day to add or remove it. It saves straight away.</span>';
+      var off=(cl.length?cl.map(function(c,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(md(c.from)+(c.to&&c.to!==c.from?' to '+md(c.to):'')+(c.label?', '+c.label:''))+'</span><button class="chip" data-act="rmclosed" data-id="'+id+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">Holidays and breaks show on the session list as school closed.</span>')+
+        '<div class="row"><label>From<input type="date" id="c-from"></label><label>To (optional)<input type="date" id="c-to"></label></div>'+
+        '<label>What it is<input id="c-label" placeholder="e.g. Fall break"></label>'+
+        '<button class="btn primary" data-act="addclosed" data-id="'+id+'">Add days off</button>';
+      var reps=(rp.length?rp.map(function(r,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(mdy(r.date)+(r.label?', '+r.label:''))+'</span><button class="chip" data-act="rmreport" data-id="'+id+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">Due dates appear under Coming up three weeks ahead.</span>')+
+        '<div class="row"><label>Due date<input type="date" id="r-date"></label><label>What is due<input id="r-label" placeholder="e.g. Q1 progress reports"></label></div>'+
+        '<button class="btn primary" data-act="addreport" data-id="'+id+'">Add due date</button>';
+      o+='<div class="stack edit">'+
+        section('scSec','details','Details',sc.address||'Name and address',details)+
+        section('scSec','days','Days you are here',dy.length?dy.map(function(i){return DAYS[i]}).join(', '):'None picked',days)+
+        section('scSec','off','Days off',cl.length?cl.length+' entered':'None entered',off)+
+        section('scSec','reports','Reports due',rp.length?rp.map(function(r){return md(r.date)}).join(', '):'None entered',reps)+'</div>'}
     return o}).join('')+'</div>':'<div class="list"><div class="empty">No schools yet. Add the first one below.</div></div>';
   h+='<div class="panel stack"><h2>Add a school</h2><div class="row"><label>School name<input id="n-name"></label><label>Short name<input id="n-alias" placeholder="optional"></label></div>'+
     '<label>Address<input id="n-addr"></label><button class="btn primary" data-act="addschool">Add school</button></div>'+
@@ -458,8 +479,9 @@ document.addEventListener('click',function(e){
   else if(a==='code'){s=student(b.dataset.id);if(!s)return;var cs=(s.codes||'').split('/').filter(Boolean),ci=cs.indexOf(b.dataset.v);
     if(ci<0)cs.push(b.dataset.v);else cs.splice(ci,1);saveDoc('students',s,{codes:cs.sort().join('/')},'Codes saved');return}
   else if(a==='signout'){if(window.DAPE_SIGNOUT)window.DAPE_SIGNOUT();return}
-  else if(a==='edit'){S.editId=S.editId===b.dataset.id?null:b.dataset.id}
-  else if(a==='editschool'){S.schoolEdit=S.schoolEdit===b.dataset.id?null:b.dataset.id}
+  else if(a==='sec'){S[b.dataset.k]=S[b.dataset.k]===b.dataset.v?'':b.dataset.v}
+  else if(a==='edit'){S.editId=S.editId===b.dataset.id?null:b.dataset.id;S.sec='details'}
+  else if(a==='editschool'){S.schoolEdit=S.schoolEdit===b.dataset.id?null:b.dataset.id;S.scSec='details'}
   else if(a==='addstudent'){var n=val('s-name');if(!n){toast('Enter initials or a nickname first');return}
     write(function(){return S.db.doc('students/s_'+rid()).set({name:n,schoolId:val('s-school'),goals:[],slots:[],order:S.students.length})}).then(function(){toast('Student added');render()},function(){});return}
   else if(a==='savestudent'){s=student(b.dataset.id);if(!s)return;if(!val('st-name')){toast('Initials or a nickname are required');return}
@@ -533,6 +555,7 @@ function makeDb(uid){
       delete:function(){return sb.from('dape_docs').delete().eq('user_id',uid).eq('coll',a[0]).eq('id',a[1]).then(function(r){
         if(r.error)throw r.error;if(cache[a[0]])delete cache[a[0]][a[1]];notify(a[0])})}}}};
 }
+try{var last=localStorage.getItem('dape_email');if(last)$('auth-email').value=last}catch(e){}
 function begin(session){if(started)return;started=true;show(true);window.DAPE_START(makeDb(session.user.id))}
 window.DAPE_SIGNOUT=function(){sb.auth.signOut().then(function(){location.reload()},function(){location.reload()})};
 sb.auth.getSession().then(function(r){if(r.data&&r.data.session)begin(r.data.session);else show(false)},function(){show(false)});
@@ -542,6 +565,7 @@ $('auth-form').addEventListener('submit',function(e){e.preventDefault();var emai
   $('auth-go').disabled=true;msg.textContent='Signing in…';
   sb.auth.signInWithPassword({email:email,password:pass}).then(function(r){$('auth-go').disabled=false;
     if(r.error){msg.textContent=/invalid login/i.test(r.error.message)?'That email or password is not right. Try again, or ask Pete to reset it.':'Could not sign in: '+r.error.message;return}
+    try{localStorage.setItem('dape_email',email)}catch(e){}
     msg.textContent='';if(r.data&&r.data.session)begin(r.data.session)},function(){$('auth-go').disabled=false;msg.textContent='Could not sign in. Check your connection and try again.'})});
 })();
 </script>
