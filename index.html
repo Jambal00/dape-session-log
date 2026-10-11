@@ -89,14 +89,10 @@ pre.sum{white-space:pre-wrap;word-break:break-word;font:14px/1.45 var(--body);ma
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <div class="wrap" id="auth" hidden>
   <div class="stack"><span class="eyebrow">DAPE Session Log</span><h1>Sign in</h1></div>
-  <form class="panel stack" id="auth-email-form">
-    <label>Your email<input type="email" id="auth-email" autocomplete="email" inputmode="email" required></label>
-    <button class="btn primary" type="submit" id="auth-send">Email me a sign-in code</button>
-  </form>
-  <form class="panel stack" id="auth-code-form" hidden>
-    <label>Code from the email<input id="auth-code" inputmode="numeric" autocomplete="one-time-code" required></label>
-    <button class="btn primary" type="submit" id="auth-verify">Sign in</button>
-    <button class="btn ghost" type="button" id="auth-back">Use a different email</button>
+  <form class="panel stack" id="auth-form">
+    <label>Email<input type="email" id="auth-email" autocomplete="username" inputmode="email" required></label>
+    <label>Password<input type="password" id="auth-pass" autocomplete="current-password" required></label>
+    <button class="btn primary" type="submit" id="auth-go">Sign in</button>
   </form>
   <p class="muted" id="auth-msg" role="status"></p>
 </div>
@@ -513,7 +509,7 @@ window.DAPE_START=start;
 var SUPABASE_URL='https://yqkgglqlikkerkifmdzq.supabase.co';
 var SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlxa2dnbHFsaWtrZXJraWZtZHpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3Mzc2MjYsImV4cCI6MjEwNzMxMzYyNn0.UcdUU24d0C4IVepzIizyr5FhSkP_5e4cXEoUMEUO8sc';
 function $(id){return document.getElementById(id)}
-var auth=$('auth'),app=$('app'),tabs=$('tabs'),msg=$('auth-msg'),started=false,email='';
+var auth=$('auth'),app=$('app'),tabs=$('tabs'),msg=$('auth-msg'),started=false;
 function show(signedIn){auth.hidden=signedIn;app.hidden=!signedIn;tabs.hidden=!signedIn}
 if(!(window.supabase&&window.supabase.createClient)){show(false);msg.textContent='The app could not finish loading. Check your connection and reload.';return}
 var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
@@ -542,17 +538,11 @@ window.DAPE_SIGNOUT=function(){sb.auth.signOut().then(function(){location.reload
 sb.auth.getSession().then(function(r){if(r.data&&r.data.session)begin(r.data.session);else show(false)},function(){show(false)});
 sb.auth.onAuthStateChange(function(ev,session){if(session)begin(session)});
 
-$('auth-email-form').addEventListener('submit',function(e){e.preventDefault();email=$('auth-email').value.trim();if(!email)return;
-  $('auth-send').disabled=true;msg.textContent='Sending…';
-  sb.auth.signInWithOtp({email:email,options:{shouldCreateUser:false}}).then(function(r){$('auth-send').disabled=false;
-    if(r.error){msg.textContent=/signups not allowed/i.test(r.error.message)?'That email is not set up for this app. Ask Pete to add it.':'Could not send the code: '+r.error.message;return}
-    $('auth-email-form').hidden=true;$('auth-code-form').hidden=false;msg.textContent='Check '+email+' for a code and type it here.';$('auth-code').focus()})});
-$('auth-code-form').addEventListener('submit',function(e){e.preventDefault();var code=$('auth-code').value.trim();if(!code)return;
-  $('auth-verify').disabled=true;msg.textContent='Checking…';
-  sb.auth.verifyOtp({email:email,token:code,type:'email'}).then(function(r){$('auth-verify').disabled=false;
-    if(r.error){msg.textContent='That code did not work. Check it, or ask for a new one.';return}
-    msg.textContent='';if(r.data&&r.data.session)begin(r.data.session)})});
-$('auth-back').addEventListener('click',function(){$('auth-code-form').hidden=true;$('auth-email-form').hidden=false;msg.textContent=''});
+$('auth-form').addEventListener('submit',function(e){e.preventDefault();var email=$('auth-email').value.trim(),pass=$('auth-pass').value;if(!email||!pass)return;
+  $('auth-go').disabled=true;msg.textContent='Signing in…';
+  sb.auth.signInWithPassword({email:email,password:pass}).then(function(r){$('auth-go').disabled=false;
+    if(r.error){msg.textContent=/invalid login/i.test(r.error.message)?'That email or password is not right. Try again, or ask Pete to reset it.':'Could not sign in: '+r.error.message;return}
+    msg.textContent='';if(r.data&&r.data.session)begin(r.data.session)},function(){$('auth-go').disabled=false;msg.textContent='Could not sign in. Check your connection and try again.'})});
 })();
 </script>
 </body>

@@ -12,15 +12,14 @@ No identifiable student data. Students are entered as initials or a nickname onl
 
 - One static page: `index.html` holds the markup, styles and script. `manifest.webmanifest` and `icons/` make it installable to a phone's home screen.
 - Hosted on GitHub Pages from the `main` branch; a push to `main` is a release.
-- Supabase provides sign-in by emailed code and storage. Sign-ups are turned off, so only people added in the Supabase dashboard can sign in. Each person's rows are private to them through row-level security.
+- Supabase provides sign-in by email and password, and storage. Sign-ups are turned off, so only people added in the Supabase dashboard can sign in. Each person's rows are private to them through row-level security.
 - No build step. The only dependency is the Supabase client, loaded from a CDN.
 
 ## Setup
 
 1. Run `setup.sql` in the Supabase SQL Editor.
-2. In Supabase Authentication, turn off new sign-ups and add each user by email.
-3. Make sure the sign-in email template includes the code (`{{ .Token }}`).
-4. Turn on GitHub Pages for the `main` branch.
+2. In Supabase Authentication, turn off new sign-ups and add each user with an email and password.
+3. Turn on GitHub Pages for the `main` branch.
 
 ## Running it locally
 
