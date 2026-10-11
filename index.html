@@ -176,7 +176,7 @@ function saveDoc(coll,o,patch,msg){var d=Object.assign({},o,patch);delete d.id;
 
 /* ---------- views ---------- */
 function render(){
-  tabs.innerHTML=[['today','Sessions'],['progress','Progress'],['students','Students'],['schools','Schools']].map(function(t){
+  tabs.innerHTML=[['schools','Schools'],['students','Students'],['today','Sessions'],['progress','Progress']].map(function(t){
     return '<button data-act="tab" data-v="'+t[0]+'" class="'+(S.view===t[0]?'on':'')+'">'+t[1]+'</button>'}).join('');
   var h='';
   if(S.dbState==='none')h+='<div class="banner">Could not reach your data. Check your connection, then close and reopen the app.</div>';
