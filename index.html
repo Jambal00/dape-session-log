@@ -74,6 +74,7 @@ button,input,select,textarea,label{touch-action:manipulation}
 .tabs.typing{display:none}
 .tabs button{max-width:200px}
 .row>label{align-self:flex-end}
+.leg{border:1.5px dashed var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
 .sec{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
 .sechead{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;padding:12px;border:0;background:var(--bg);color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:52px}
 .sechead .sub{font-size:14px;color:var(--muted)}
@@ -200,28 +201,53 @@ function comingUp(){
   return '<div class="panel stack"><span class="eyebrow">Coming up</span>'+out.map(function(o){
     return '<div class="row"><span class="time">'+esc(md(o.d))+'</span><span style="flex:1;min-width:0">'+esc(o.t)+'</span></div>'}).join('')+'</div>';
 }
+function placeName(sc){return sc?(sc.alias||sc.name):'Home'}
+function legKey(a,b){return (a?a.id:'home')+'>'+(b?b.id:'home')}
+function dayDoc(date){return S.days.filter(function(x){return x.id===date})[0]}
+function lastLeg(key,before){var best=null;S.days.forEach(function(d){var l=d.legs&&d.legs[key];if(d.id<before&&l&&(num(l.min)||num(l.miles))&&(!best||d.id>best.id))best=d});return best?best.legs[key]:null}
+function saveLeg(key,patch){
+  var d=dayDoc(S.date);if(!d){d={id:S.date,legs:{}};S.days.push(d)}
+  var legs=Object.assign({},d.legs);legs[key]=Object.assign({},legs[key],patch);d.legs=legs;var date=S.date;
+  return write(function(){return S.db.doc('days/'+date).set({legs:legs})}).then(function(){toast('Commute saved')},function(){})}
+function legCard(from,to){
+  var key=legKey(from,to),d=dayDoc(S.date),v=(d&&d.legs&&d.legs[key])||{},last=lastLeg(key,S.date),empty=!num(v.min)&&!num(v.miles);
+  return '<div class="leg"><div class="row spread"><strong>'+esc(placeName(from))+' to '+esc(placeName(to))+'</strong><span class="eyebrow">Commute</span></div>'+
+    '<div class="row"><label>Minutes<input type="number" inputmode="numeric" id="leg-min-'+esc(key)+'" data-leg="'+esc(key)+'" data-f="min" value="'+(num(v.min)?v.min:'')+'"></label>'+
+    '<label>Miles<input type="number" inputmode="decimal" step="0.1" id="leg-mi-'+esc(key)+'" data-leg="'+esc(key)+'" data-f="miles" value="'+(num(v.miles)?v.miles:'')+'"></label></div>'+
+    (empty&&last?'<div><button class="chip" data-act="legsame" data-leg="'+esc(key)+'">Same as last time: '+(last.min||0)+' min, '+(last.miles||0)+' mi</button></div>':'')+'</div>'}
 function todayView(){
   var sched=[],other=[],grp={};
   S.students.forEach(function(s){var sl=slotOn(s,S.date);if(sl){sched.push({s:s,sl:sl});var k=(s.schoolId||'')+'|'+sl.time;grp[k]=(grp[k]||0)+1}else other.push({s:s})});
   sched.sort(function(a,b){return a.sl.time<b.sl.time?-1:a.sl.time>b.sl.time?1:0});
   var done=sched.filter(function(o){var x=sess(o.s.id,S.date);return x&&x.status!=='planned'}).length;
-  var here=S.schools.filter(function(sc){return (sc.days||[]).indexOf(dow(S.date))>=0}).map(function(sc){return sc.alias||sc.name});
-  var h='<div class="stack"><span class="eyebrow">Session log</span><h1>'+esc(longDate(S.date))+'</h1>'+
+  var h='<div class="stack"><span class="eyebrow">Your day</span><h1>'+esc(longDate(S.date))+'</h1>'+
     '<div class="row"><button class="btn" data-act="day" data-n="-1" aria-label="Previous day">‹</button>'+
     '<input type="date" id="date-pick" value="'+S.date+'" style="flex:1;width:auto">'+
     '<button class="btn" data-act="day" data-n="1" aria-label="Next day">›</button>'+
     (S.date!==today()?'<button class="btn" data-act="todaybtn">Today</button>':'')+'</div>'+
-    (here.length?'<strong>At '+esc(here.join(' and '))+'</strong>':'')+
     (S.students.length?'<span class="muted small">'+(sched.length?done+' of '+sched.length+' scheduled sessions logged':'Nothing scheduled this day')+'</span>':'')+'</div>';
   if(S.date===today())h+=comingUp();
   if(!S.students.length)return h+emptyRoster();
   function rowHtml(o){
-    var s=o.s,x=sess(s.id,S.date),pill='<span class="pill">Not logged</span>',sc=school(s.schoolId),cl=sc&&closedOn(sc,S.date);
+    var s=o.s,x=sess(s.id,S.date),pill='<span class="pill">Not logged</span>',extra=0;
+    S.indirect.forEach(function(i){if(i.studentId===s.id&&i.date===S.date&&num(i.min))extra+=i.min});
     if(x)pill=x.status==='planned'?'<span class="pill">Planned</span>':x.absent?'<span class="pill abs">Absent</span>':'<span class="pill done">Logged</span>';
-    var sub=[schoolLabel(s),o.sl?o.sl.min+' direct'+(s.indirect?' / '+s.indirect+' indirect':''):'',o.sl&&grp[(s.schoolId||'')+'|'+o.sl.time]>1?'group':'',cl?'school closed'+(cl.label?' ('+cl.label+')':''):''].filter(Boolean).join(' · ');
+    var sub=[o.sl?'':schoolLabel(s),o.sl?o.sl.min+' direct'+(s.indirect?' / '+s.indirect+' indirect':''):'',o.sl&&grp[(s.schoolId||'')+'|'+o.sl.time]>1?'group':'',extra?'+'+extra+' other indirect':''].filter(Boolean).join(' · ');
     return '<button class="item" data-act="open" data-id="'+esc(s.id)+'">'+(o.sl?'<span class="time">'+esc(fmtTime(o.sl.time))+'</span>':'')+
       '<span class="nm">'+esc(s.name)+(sub?'<br><span class="sub">'+esc(sub)+'</span>':'')+'</span>'+pill+'</button>'}
-  if(sched.length)h+='<div class="list">'+sched.map(rowHtml).join('')+'</div>';
+  /* the day as a series of hops: home, each school in the order she reaches it, home */
+  var stops=[],by={},loose=[];
+  sched.forEach(function(o){var sc=school(o.s.schoolId);if(!sc){loose.push(o);return}
+    if(!by[sc.id]){by[sc.id]={sc:sc,rows:[]};stops.push(by[sc.id])}by[sc.id].rows.push(o)});
+  stops.forEach(function(st,i){
+    var cl=closedOn(st.sc,S.date);
+    h+=legCard(i?stops[i-1].sc:null,st.sc)+
+      '<div class="stack"><div class="row spread"><h2>'+esc(st.sc.name)+'</h2><span class="muted small">'+st.rows.length+' student'+(st.rows.length===1?'':'s')+'</span></div>'+
+      (cl?'<span class="banner">School closed this day'+(cl.label?': '+esc(cl.label):'')+'</span>':'')+
+      '<div class="list">'+st.rows.map(rowHtml).join('')+'</div></div>';
+  });
+  if(stops.length)h+=legCard(stops[stops.length-1].sc,null);
+  if(loose.length)h+='<h2>No school set</h2><div class="list">'+loose.map(rowHtml).join('')+'</div>';
   if(other.length)h+=(sched.length||S.students.some(function(s){return s.slots.length})?'<span class="eyebrow">Not scheduled this day</span>':'')+'<div class="list">'+other.map(rowHtml).join('')+'</div>';
   return h+dayPanel();
 }
@@ -230,18 +256,21 @@ function dayMinutes(date){var d=0,i=0;
   S.indirect.forEach(function(x){if(x.date===date&&num(x.min))i+=x.min});return{d:d,i:i}}
 function hrs(m){return Math.round(m/60*100)/100}
 function dayPanel(){
-  var m=dayMinutes(S.date),dd=S.days.filter(function(x){return x.id===S.date})[0],tr=dd&&num(dd.travel)?dd.travel:0;
+  var m=dayMinutes(S.date),dd=dayDoc(S.date),cm=0,mi=0;
+  if(dd&&dd.legs)Object.keys(dd.legs).forEach(function(k){var l=dd.legs[k];if(num(l.min))cm+=l.min;if(num(l.miles))mi+=l.miles});
   var h='<div class="panel stack"><span class="eyebrow">Day total</span>'+
-    '<div class="row" style="gap:22px"><div><div class="stat">'+hrs(m.d+m.i)+'</div><span class="muted small">student hours<br>'+m.d+' direct + '+m.i+' indirect min</span></div>'+
-    '<div><div class="stat">'+hrs(m.d+m.i+tr*60)+'</div><span class="muted small">total hours<br>with travel</span></div></div>'+
-    '<div class="row end"><label>Travel time (hours)<input type="number" inputmode="decimal" step="0.25" id="travel" value="'+(tr||'')+'" placeholder="0"></label><button class="btn" data-act="savetravel">Save travel</button></div>';
-  S.indirect.filter(function(x){return x.date===S.date}).forEach(function(x){var st=student(x.studentId);
-    h+='<div class="row spread"><span style="min-width:0;flex:1">'+esc((st?st.name:'Removed student')+', '+x.min+' indirect min'+(x.note?', '+x.note:''))+'</span><button class="chip" data-act="rmind" data-id="'+esc(x.id)+'">Remove</button></div>'});
-  if(S.indForm)h+='<div class="row"><label>Student<select id="ind-student"><option value="">Pick a student</option>'+S.students.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'}).join('')+'</select></label>'+
-    '<label>Indirect minutes<input type="number" inputmode="numeric" id="ind-min"></label></div>'+
-    '<label>What it was<input id="ind-note" placeholder="Phone call, meeting, talking with a para. No real names."></label>'+
+    '<div class="row" style="gap:20px;align-items:flex-start"><div><div class="stat">'+hrs(m.d+m.i)+'</div><span class="muted small">student hours<br>'+m.d+' direct + '+m.i+' indirect min</span></div>'+
+    '<div><div class="stat">'+hrs(cm)+'</div><span class="muted small">commute hours<br>'+(Math.round(mi*10)/10)+' miles</span></div>'+
+    '<div><div class="stat">'+hrs(m.d+m.i+cm)+'</div><span class="muted small">total hours</span></div></div>';
+  return h+'</div>';
+}
+function indirectBlock(s){
+  var list=S.indirect.filter(function(x){return x.studentId===s.id&&x.date===S.date});
+  var h='<div class="panel stack"><div class="row spread"><strong>Other indirect time</strong>'+(S.indForm?'':'<button class="chip" data-act="indform">Add</button>')+'</div>';
+  if(!list.length&&!S.indForm)h+='<span class="muted small">A call, meeting or other time spent on this student outside the session.</span>';
+  list.forEach(function(x){h+='<div class="row spread"><span style="min-width:0;flex:1">'+esc(x.min+' min'+(x.note?', '+x.note:''))+'</span><button class="chip" data-act="rmind" data-id="'+esc(x.id)+'">Remove</button></div>'});
+  if(S.indForm)h+='<div class="row"><label>Minutes<input type="number" inputmode="numeric" id="ind-min"></label><label>What it was<input id="ind-note" placeholder="Call, meeting, para"></label></div>'+
     '<div class="row"><button class="btn primary" style="flex:1" data-act="addind">Save indirect time</button><button class="btn" data-act="indform">Cancel</button></div>';
-  else h+='<button class="btn" data-act="indform">Add indirect time outside a session</button>';
   return h+'</div>';
 }
 function extraInputs(g,d){var h='';
@@ -262,7 +291,7 @@ function entryView(){
   var sl=slotOn(s,S.date),where=[schoolLabel(s),sl?fmtTime(sl.time):'',(s.direct||s.indirect)?'IEP '+(s.direct||0)+' direct / '+(s.indirect||0)+' indirect':'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · ');
   var h='<div class="row spread"><button class="btn ghost" data-act="back">‹ Back</button><span class="muted small">'+esc(md(S.date))+'</span></div>'+
     '<div><h1>'+esc(s.name)+'</h1>'+(where?'<span class="muted">'+esc(where)+'</span>':'')+'</div>'+
-    '<h2>Lesson plan</h2>'+minutesPanel(s,d)+'<button class="btn" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
+    indirectBlock(s)+'<h2>Lesson plan</h2>'+minutesPanel(s,d)+'<button class="btn" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
     '<button class="btn '+(d.absent?'on':'')+'" data-act="absent" aria-pressed="'+!!d.absent+'">'+(d.absent?'Marked absent':'Mark absent')+'</button>';
   if(!d.absent){
     h+='<div class="panel">';
@@ -462,7 +491,8 @@ document.addEventListener('click',function(e){
   if(a==='tab'){S.view=b.dataset.v;S.open=null;S.from=null;S.editId=null;S.schoolEdit=null;S.top=true}
   else if(a==='day'){S.date=shift(S.date,+b.dataset.n)}
   else if(a==='todaybtn'){S.date=today()}
-  else if(a==='open'){openEntry(b.dataset.id);S.top=true}
+  else if(a==='open'){openEntry(b.dataset.id);S.indForm=false;S.top=true}
+  else if(a==='legsame'){var ll=lastLeg(b.dataset.leg,S.date);if(ll)saveLeg(b.dataset.leg,{min:num(ll.min)?ll.min:null,miles:num(ll.miles)?ll.miles:null})}
   else if(a==='opensess'){S.from=b.dataset.id;S.fromDate=S.date;S.date=b.dataset.date;S.view='today';openEntry(b.dataset.id);S.top=true}
   else if(a==='back'){leaveEntry()}
   else if(a==='backschools'){S.schoolEdit=null;S.top=true}
@@ -494,7 +524,7 @@ document.addEventListener('click',function(e){
     if(ex)an=String(ex.name);else write(function(){return S.db.doc('activities/a_'+rid()).set({name:an})}).catch(function(){});
     if(d.acts.indexOf(an)<0)d.acts.push(an)}
   else if(a==='indform'){S.indForm=!S.indForm}
-  else if(a==='addind'){var im=+val('ind-min'),is=val('ind-student');if(!is){toast('Pick a student');return} if(!(im>0)){toast('Enter the minutes');return}
+  else if(a==='addind'){var im=+val('ind-min'),is=S.open;if(!is)return; if(!(im>0)){toast('Enter the minutes');return}
     write(function(){return S.db.doc('indirect/i_'+rid()).set({studentId:is,date:S.date,min:im,note:val('ind-note')})}).then(function(){S.indForm=false;toast('Indirect time added');render()},function(){});return}
   else if(a==='rmind'){var iid=b.dataset.id;write(function(){return S.db.doc('indirect/'+iid).delete()}).then(function(){toast('Removed');render()},function(){});return}
   else if(a==='savetravel'){var tv=val('travel'),td=S.date;write(function(){return S.db.doc('days/'+td).set({travel:tv!==''&&isFinite(+tv)?+tv:0})}).then(function(){toast('Travel time saved');render()},function(){});return}
@@ -543,6 +573,7 @@ function typingField(el){return el&&(el.tagName==='TEXTAREA'||(el.tagName==='INP
 document.addEventListener('focusin',function(e){if(typingField(e.target))tabs.classList.add('typing')});
 document.addEventListener('focusout',function(){setTimeout(function(){if(!typingField(document.activeElement))tabs.classList.remove('typing')},50)});
 document.addEventListener('change',function(e){var t=e.target;
+  if(t.dataset.leg){var lp={};lp[t.dataset.f]=t.value===''||!isFinite(+t.value)?null:+t.value;saveLeg(t.dataset.leg,lp);return}
   if(t.id==='date-pick'&&t.value){S.date=t.value;render()}
   else if(t.id==='prog-student'){S.progId=t.value;render()}
   else if(t.id==='prog-period'){S.period=t.value;render()}});
