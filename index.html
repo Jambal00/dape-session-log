@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f6b4a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<title>DAPE Session Log</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: single phone column, sticky tab bar at the bottom, one student per row like her paper sheet. */
+:root{
+  --bg:#f3f5f2; --surface:#ffffff; --ink:#17231d; --muted:#5d6b63; --line:#d5dbd6;
+  --accent:#1f6b4a; --accent-ink:#ffffff; --accent-soft:#dcebe2;
+  --good:#1f6b4a; --warn:#a85d00; --bad:#a3322a;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#111815; --surface:#1a231f; --ink:#e8efea; --muted:#9aa9a0; --line:#2f3b35;
+  --accent:#58c08f; --accent-ink:#0c1511; --accent-soft:#1f3329;
+  --good:#58c08f; --warn:#e0a44a; --bad:#ef8279; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#111815; --surface:#1a231f; --ink:#e8efea; --muted:#9aa9a0; --line:#2f3b35;
+  --accent:#58c08f; --accent-ink:#0c1511; --accent-soft:#1f3329;
+  --good:#58c08f; --warn:#e0a44a; --bad:#ef8279; color-scheme:dark }
+*{box-sizing:border-box}
+html{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 var(--body)}
+.wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:16px 96px;display:flex;flex-direction:column;gap:16px}
+h1{font:700 28px/1.1 var(--display);margin:0;letter-spacing:.01em;text-wrap:balance}
+h2{font:700 20px/1.15 var(--display);margin:0}
+.eyebrow{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)} .small{font-size:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row.end{align-items:flex-end}
+.spread{justify-content:space-between}
+.stack{display:flex;flex-direction:column;gap:10px}
+.stack>label,.wrap>label{flex:0 0 auto}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.item{display:flex;gap:12px;align-items:center;justify-content:space-between;width:100%;padding:14px;border:0;border-top:1px solid var(--line);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:56px}
+.item:first-child{border-top:0}
+.item .nm{font-weight:600;min-width:0;flex:1}
+.item .sub{font-weight:400;font-size:14px;color:var(--muted)}
+.time{font:700 18px/1 var(--display);font-variant-numeric:tabular-nums;min-width:68px}
+.pill{font:600 12px var(--body);padding:3px 9px;border-radius:99px;white-space:nowrap;border:1px solid var(--line);color:var(--muted)}
+.pill.done{background:var(--accent-soft);color:var(--good);border-color:transparent}
+.pill.abs{color:var(--warn)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.edit{padding:0 14px 14px;border-top:1px dashed var(--line);padding-top:12px}
+button,input,select,textarea{font:inherit;color:inherit}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 14px;min-height:44px;cursor:pointer;font-weight:600}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ghost{background:none}
+.btn.danger{color:var(--bad)}
+.btn.on{background:var(--accent-soft);border-color:var(--accent);color:var(--good)}
+.btn:disabled{opacity:.5}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;min-height:44px;width:100%;min-width:0}
+textarea{min-height:76px;resize:vertical}
+label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;flex:1 1 120px;min-width:0}
+.stepper{display:flex;align-items:center;gap:8px}
+.stepper button{width:52px;height:52px;border-radius:50%;border:1px solid var(--line);background:var(--bg);font:700 26px var(--display);cursor:pointer}
+.stepper input{width:84px;text-align:center;font:700 30px var(--display);font-variant-numeric:tabular-nums;height:52px;padding:4px}
+.goal{padding-block:12px;border-top:1px solid var(--line)}
+.goal:first-of-type{border-top:0;padding-top:0}
+.chip{border:1px solid var(--line);background:none;border-radius:99px;padding:6px 12px;min-height:36px;cursor:pointer;font-size:14px}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs button{flex:1;max-width:150px;border:0;background:none;padding:14px 2px;font:700 15px var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);cursor:pointer;border-top:3px solid transparent}
+.tabs button.on{color:var(--accent);border-top-color:var(--accent)}
+.banner{border:1px solid var(--warn);color:var(--warn);border-radius:8px;padding:10px 12px;font-size:14px}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(76px + env(safe-area-inset-bottom,0px));margin:auto;max-width:400px;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:8px;text-align:center;font-weight:600}
+.stat{font:700 26px/1 var(--display);font-variant-numeric:tabular-nums}
+svg{display:block;width:100%;height:auto}
+svg text{font:500 11px var(--body);fill:var(--muted)}
+pre.sum{white-space:pre-wrap;word-break:break-word;font:14px/1.45 var(--body);margin:0;user-select:all}
+.empty{padding:22px 14px;text-align:center;color:var(--muted)}
+</style>
+
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<div class="wrap" id="auth" hidden>
+  <div class="stack"><span class="eyebrow">DAPE Session Log</span><h1>Sign in</h1></div>
+  <form class="panel stack" id="auth-email-form">
+    <label>Your email<input type="email" id="auth-email" autocomplete="email" inputmode="email" required></label>
+    <button class="btn primary" type="submit" id="auth-send">Email me a sign-in code</button>
+  </form>
+  <form class="panel stack" id="auth-code-form" hidden>
+    <label>Code from the email<input id="auth-code" inputmode="numeric" autocomplete="one-time-code" required></label>
+    <button class="btn primary" type="submit" id="auth-verify">Sign in</button>
+    <button class="btn ghost" type="button" id="auth-back">Use a different email</button>
+  </form>
+  <p class="muted" id="auth-msg" role="status"></p>
+</div>
+<div class="wrap" id="app" hidden></div>
+<nav class="tabs" id="tabs" hidden></nav>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+var S={view:'today',date:today(),students:[],schools:[],sessions:[],activities:[],indirect:[],days:[],indForm:false,loaded:false,db:null,dbState:'wait',
+       open:null,draft:null,progId:null,period:'all',editId:null,schoolEdit:null,saving:false};
+var DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+var HELP=['Independent','Verbal cue','Demonstration','Hands-on help'];
+var CODES=[['401','S/LI','Speech/Language Impaired'],['402','DCD-MM','Developmental Cognitive Disabilities: Mild-Moderate'],['403','DCD-SP','Developmental Cognitive Disabilities: Severe-Profound'],
+  ['404','PI','Physically Impaired'],['405','D/HH','Deaf/Hard of Hearing'],['406','B/VI','Blind/Visually Impaired'],['407','SLD','Specific Learning Disabilities'],
+  ['408','EBD','Emotional or Behavioral Disorders'],['410','OHD','Other Health Disabilities'],['411','ASD','Autism Spectrum Disorders'],['412','D/D','Developmentally Delayed'],
+  ['414','TBI','Traumatic Brain Injury'],['416','SMI','Severely Multiply Impaired'],['420','Aggregate','Special Education Aggregate (three or more disabilities)'],['422','Non-disabled','Non-Disabled (no IEP/IFSP)']];
+var app=document.getElementById('app'),tabs=document.getElementById('tabs'),toastEl=document.getElementById('toast');
+
+function today(){var d=new Date();return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
+function p2(n){return (n<10?'0':'')+n}
+function parts(s){var a=s.split('-');return[+a[0],+a[1],+a[2]]}
+function md(s){var a=parts(s);return a[1]+'/'+a[2]}
+function mdy(s){var a=parts(s);return a[1]+'/'+a[2]+'/'+a[0]}
+function longDate(s){var a=parts(s);return new Date(a[0],a[1]-1,a[2]).toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'})}
+function shift(s,n){var a=parts(s),d=new Date(a[0],a[1]-1,a[2]+n);return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
+function dow(s){var a=parts(s);return new Date(a[0],a[1]-1,a[2]).getDay()}
+function wk(s){var a=parts(s);return Math.floor((Date.UTC(a[0],a[1]-1,a[2])/864e5+4)/7)} /* Sunday-start week number */
+function fmtTime(t){if(!t)return '';var a=t.split(':'),h=+a[0];return ((h+11)%12+1)+':'+a[1]+(h<12?' am':' pm')}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function rid(){return Math.random().toString(36).slice(2,9)}
+function num(v){return typeof v==='number'&&isFinite(v)}
+function r1(n){return Math.round(n*10)/10}
+function toast(t){toastEl.textContent=t;toastEl.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){toastEl.hidden=true},2600)}
+function student(id){return S.students.filter(function(s){return s.id===id})[0]}
+function school(id){return S.schools.filter(function(s){return s.id===id})[0]}
+function schoolLabel(s){var sc=school(s.schoolId);return sc?(sc.alias||sc.name):(s.site||'')}
+function closedOn(sc,date){return (sc.closed||[]).filter(function(c){return date>=c.from&&date<=(c.to||c.from)})[0]}
+function slotOn(s,date){var d=dow(date);return (s.slots||[]).filter(function(sl){
+  return sl.day===d&&(sl.every!==2||!sl.anchor||(wk(date)-wk(sl.anchor))%2===0)})[0]}
+function slotText(sl){return DAYS[sl.day]+' '+fmtTime(sl.time)+', '+sl.min+' min'+(sl.every===2?', every 2 weeks':'')}
+function sess(sid,date){return S.sessions.filter(function(x){return x.studentId===sid&&x.date===date})[0]}
+function history(sid){return S.sessions.filter(function(x){return x.studentId===sid&&x.status!=='planned'}).sort(function(a,b){return a.date<b.date?-1:1})}
+function lastVal(sid,gid,before){var h=history(sid),i;for(i=h.length-1;i>=0;i--){if(h[i].date<before&&h[i].values&&num(h[i].values[gid]))return h[i]}return null}
+function met(g,v){return !num(g.target)?null:(g.dir==='max'?v<=g.target:v>=g.target)}
+
+/* ---------- data ---------- */
+function start(db){
+  render();
+  (function(){
+    S.db=db;S.dbState='ok';var got={};
+    function fail(){S.dbState='none';S.loaded=true;render()}
+    function sub(name,q,fn){q.onSnapshot(function(snap){fn(snap.docs.map(function(d){var o=Object.assign({},d.data());o.id=d.id;return o}));
+      got[name]=1;if(got.students&&got.schools&&got.sessions)S.loaded=true;softRender()},fail)}
+    sub('students',db.collection('students'),function(a){a.forEach(function(o){o.goals=o.goals||[];o.slots=o.slots||[]});
+      S.students=a.sort(function(x,y){return (x.order||0)-(y.order||0)||String(x.name).localeCompare(y.name)})});
+    sub('schools',db.collection('schools'),function(a){S.schools=a.sort(function(x,y){return String(x.name).localeCompare(y.name)})});
+    sub('sessions',db.collection('sessions').limit(1000),function(a){S.sessions=a});
+    sub('activities',db.collection('activities'),function(a){S.activities=a.sort(function(x,y){return String(x.name).localeCompare(String(y.name))})});
+    sub('indirect',db.collection('indirect').limit(1000),function(a){S.indirect=a});
+    sub('days',db.collection('days').limit(1000),function(a){S.days=a});
+  })();
+}
+/* Don't redraw under her thumbs while an entry or form is open. */
+function softRender(){var a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;render()}
+function write(p){ if(!S.db){toast('Saving is not available in this view');return Promise.reject()}
+  return p().catch(function(e){toast(e&&e.code==='quota_exceeded'?'Storage is full. Delete old entries.':'Could not save. Check your connection and try again.');throw e})}
+function saveDoc(coll,o,patch,msg){var d=Object.assign({},o,patch);delete d.id;
+  write(function(){return S.db.doc(coll+'/'+o.id).set(d)}).then(function(){toast(msg);render()},function(){})}
+
+/* ---------- views ---------- */
+function render(){
+  tabs.innerHTML=[['today','Sessions'],['progress','Progress'],['students','Students'],['schools','Schools']].map(function(t){
+    return '<button data-act="tab" data-v="'+t[0]+'" class="'+(S.view===t[0]?'on':'')+'">'+t[1]+'</button>'}).join('');
+  var h='';
+  if(S.dbState==='none')h+='<div class="banner">Could not reach your data. Check your connection, then close and reopen the app.</div>';
+  if(S.view==='today')h+=S.open?entryView():todayView();
+  else if(S.view==='progress')h+=progressView();
+  else if(S.view==='students')h+=studentsView();
+  else h+=schoolsView();
+  app.innerHTML=h;
+}
+function emptyRoster(){return '<div class="list"><div class="empty">'+(S.loaded?'No students yet. Add your caseload on the Students tab, with the goals you track for each.':'Loading your caseload…')+'</div></div>'}
+
+function comingUp(){
+  var t=today(),out=[];
+  S.students.forEach(function(s){if(s.iepNext&&s.iepNext>=t&&s.iepNext<=shift(t,30))out.push({d:s.iepNext,t:'IEP meeting, '+s.name})});
+  S.schools.forEach(function(sc){(sc.reports||[]).forEach(function(r){if(r.date>=t&&r.date<=shift(t,21))out.push({d:r.date,t:'Report due, '+(sc.alias||sc.name)+(r.label?' ('+r.label+')':'')})})});
+  if(!out.length)return '';
+  out.sort(function(a,b){return a.d<b.d?-1:1});
+  return '<div class="panel stack"><span class="eyebrow">Coming up</span>'+out.map(function(o){
+    return '<div class="row"><span class="time">'+esc(md(o.d))+'</span><span style="flex:1;min-width:0">'+esc(o.t)+'</span></div>'}).join('')+'</div>';
+}
+function todayView(){
+  var sched=[],other=[],grp={};
+  S.students.forEach(function(s){var sl=slotOn(s,S.date);if(sl){sched.push({s:s,sl:sl});var k=(s.schoolId||'')+'|'+sl.time;grp[k]=(grp[k]||0)+1}else other.push({s:s})});
+  sched.sort(function(a,b){return a.sl.time<b.sl.time?-1:a.sl.time>b.sl.time?1:0});
+  var done=sched.filter(function(o){var x=sess(o.s.id,S.date);return x&&x.status!=='planned'}).length;
+  var here=S.schools.filter(function(sc){return (sc.days||[]).indexOf(dow(S.date))>=0}).map(function(sc){return sc.alias||sc.name});
+  var h='<div class="stack"><span class="eyebrow">Session log</span><h1>'+esc(longDate(S.date))+'</h1>'+
+    '<div class="row"><button class="btn" data-act="day" data-n="-1" aria-label="Previous day">‹</button>'+
+    '<input type="date" id="date-pick" value="'+S.date+'" style="flex:1;width:auto">'+
+    '<button class="btn" data-act="day" data-n="1" aria-label="Next day">›</button>'+
+    (S.date!==today()?'<button class="btn" data-act="todaybtn">Today</button>':'')+'</div>'+
+    (here.length?'<strong>At '+esc(here.join(' and '))+'</strong>':'')+
+    (S.students.length?'<span class="muted small">'+(sched.length?done+' of '+sched.length+' scheduled sessions logged':'Nothing scheduled this day')+'</span>':'')+'</div>';
+  if(S.date===today())h+=comingUp();
+  if(!S.students.length)return h+emptyRoster();
+  function rowHtml(o){
+    var s=o.s,x=sess(s.id,S.date),pill='<span class="pill">Not logged</span>',sc=school(s.schoolId),cl=sc&&closedOn(sc,S.date);
+    if(x)pill=x.status==='planned'?'<span class="pill">Planned</span>':x.absent?'<span class="pill abs">Absent</span>':'<span class="pill done">Logged</span>';
+    var sub=[schoolLabel(s),o.sl?o.sl.min+' direct'+(s.indirect?' / '+s.indirect+' indirect':''):'',o.sl&&grp[(s.schoolId||'')+'|'+o.sl.time]>1?'group':'',cl?'school closed'+(cl.label?' ('+cl.label+')':''):''].filter(Boolean).join(' · ');
+    return '<button class="item" data-act="open" data-id="'+esc(s.id)+'">'+(o.sl?'<span class="time">'+esc(fmtTime(o.sl.time))+'</span>':'')+
+      '<span class="nm">'+esc(s.name)+(sub?'<br><span class="sub">'+esc(sub)+'</span>':'')+'</span>'+pill+'</button>'}
+  if(sched.length)h+='<div class="list">'+sched.map(rowHtml).join('')+'</div>';
+  if(other.length)h+=(sched.length||S.students.some(function(s){return s.slots.length})?'<span class="eyebrow">Not scheduled this day</span>':'')+'<div class="list">'+other.map(rowHtml).join('')+'</div>';
+  return h+dayPanel();
+}
+function dayMinutes(date){var d=0,i=0;
+  S.sessions.forEach(function(x){if(x.date===date&&x.status!=='planned'){if(!x.absent&&num(x.min))d+=x.min;if(num(x.indirect))i+=x.indirect}});
+  S.indirect.forEach(function(x){if(x.date===date&&num(x.min))i+=x.min});return{d:d,i:i}}
+function hrs(m){return Math.round(m/60*100)/100}
+function dayPanel(){
+  var m=dayMinutes(S.date),dd=S.days.filter(function(x){return x.id===S.date})[0],tr=dd&&num(dd.travel)?dd.travel:0;
+  var h='<div class="panel stack"><span class="eyebrow">Day total</span>'+
+    '<div class="row" style="gap:22px"><div><div class="stat">'+hrs(m.d+m.i)+'</div><span class="muted small">student hours<br>'+m.d+' direct + '+m.i+' indirect min</span></div>'+
+    '<div><div class="stat">'+hrs(m.d+m.i+tr*60)+'</div><span class="muted small">total hours<br>with travel</span></div></div>'+
+    '<div class="row end"><label>Travel time (hours)<input type="number" inputmode="decimal" step="0.25" id="travel" value="'+(tr||'')+'" placeholder="0"></label><button class="btn" data-act="savetravel">Save travel</button></div>';
+  S.indirect.filter(function(x){return x.date===S.date}).forEach(function(x){var st=student(x.studentId);
+    h+='<div class="row spread"><span style="min-width:0;flex:1">'+esc((st?st.name:'Removed student')+', '+x.min+' indirect min'+(x.note?', '+x.note:''))+'</span><button class="chip" data-act="rmind" data-id="'+esc(x.id)+'">Remove</button></div>'});
+  if(S.indForm)h+='<div class="row"><label>Student<select id="ind-student"><option value="">Pick a student</option>'+S.students.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'}).join('')+'</select></label>'+
+    '<label>Indirect minutes<input type="number" inputmode="numeric" id="ind-min"></label></div>'+
+    '<label>What it was<input id="ind-note" placeholder="Phone call, meeting, talking with a para. No real names."></label>'+
+    '<div class="row"><button class="btn primary" style="flex:1" data-act="addind">Save indirect time</button><button class="btn" data-act="indform">Cancel</button></div>';
+  else h+='<button class="btn" data-act="indform">Add indirect time outside a session</button>';
+  return h+'</div>';
+}
+function extraInputs(g,d){var h='';
+  if(g.kind==='ratio')h+='<div class="row"><label style="flex:0 1 200px">Out of how many tries<input type="number" inputmode="numeric" id="of-'+esc(g.id)+'" data-g="'+esc(g.id)+'" data-x="outof" value="'+(num(d.outof[g.id])?d.outof[g.id]:'')+'"></label></div>';
+  return h+'<div class="row">'+HELP.map(function(v){return '<button class="chip '+(d.help[g.id]===v?'on':'')+'" data-act="help" data-g="'+esc(g.id)+'" data-v="'+v+'">'+v+'</button>'}).join('')+'</div>'}
+function minutesPanel(s,d){
+  var h='<div class="panel stack"><div class="row"><label>Direct minutes<input type="number" inputmode="numeric" id="e-min" value="'+(num(d.min)?d.min:'')+'"'+(d.absent?' disabled':'')+'></label>'+
+    '<label>Indirect minutes<input type="number" inputmode="numeric" id="e-ind" value="'+(num(d.indirect)?d.indirect:'')+'"></label></div></div>';
+  if(d.absent)return h;
+  var names=S.activities.map(function(a){return String(a.name)});d.acts.forEach(function(n){if(names.indexOf(n)<0)names.push(n)});
+  return h+'<div class="panel stack"><strong>Activities</strong>'+
+    (names.length?'<div class="row">'+names.map(function(n){return '<button class="chip '+(d.acts.indexOf(n)>=0?'on':'')+'" data-act="act" data-v="'+esc(n)+'">'+esc(n)+'</button>'}).join('')+'</div>':'<span class="muted small">No activities in the list yet. Add the first one below.</span>')+
+    '<div class="row end"><label>New activity<input id="act-new" placeholder="Invented one? Add it here"></label><button class="btn" data-act="addact">Add</button></div></div>';
+}
+
+function entryView(){
+  var s=student(S.open),d=S.draft; if(!s){S.open=null;return todayView()}
+  var sl=slotOn(s,S.date),where=[schoolLabel(s),sl?fmtTime(sl.time):'',(s.direct||s.indirect)?'IEP '+(s.direct||0)+' direct / '+(s.indirect||0)+' indirect':'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · ');
+  var h='<div class="row spread"><button class="btn ghost" data-act="back">‹ All students</button><span class="muted small">'+esc(md(S.date))+'</span></div>'+
+    '<div><h1>'+esc(s.name)+'</h1>'+(where?'<span class="muted">'+esc(where)+'</span>':'')+'</div>'+
+    '<h2>Lesson plan</h2>'+minutesPanel(s,d)+'<button class="btn" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
+    '<button class="btn '+(d.absent?'on':'')+'" data-act="absent" aria-pressed="'+!!d.absent+'">'+(d.absent?'Marked absent':'Mark absent')+'</button>';
+  if(!d.absent){
+    h+='<div class="panel">';
+    if(!s.goals.length)h+='<p class="muted" style="margin:0">No goals set up for this student yet. Add them on the Students tab, or just leave a note below.</p>';
+    s.goals.forEach(function(g){
+      var v=d.values[g.id],last=lastVal(s.id,g.id,S.date),m=num(v)?met(g,v):null;
+      h+='<div class="goal stack"><div class="row spread"><strong>'+esc(g.label)+'</strong>'+
+        (num(g.target)?'<span class="pill '+(m?'done':'')+'">'+(g.dir==='max'?'at most ':'target ')+g.target+' '+esc(g.unit)+'</span>':'')+'</div>'+
+        '<div class="stepper"><button data-act="step" data-g="'+esc(g.id)+'" data-n="-1" aria-label="Less">−</button>'+
+        '<input type="number" inputmode="decimal" id="val-'+esc(g.id)+'" data-g="'+esc(g.id)+'" value="'+(num(v)?v:'')+'" placeholder="–" aria-label="'+esc(g.label)+'">'+
+        '<button data-act="step" data-g="'+esc(g.id)+'" data-n="1" aria-label="More">+</button><span class="muted">'+esc(g.unit)+'</span></div>'+extraInputs(g,d);
+      if(g.variants&&g.variants.length)h+='<div class="row">'+g.variants.map(function(vr){
+        return '<button class="chip '+(d.variants[g.id]===vr?'on':'')+'" data-act="variant" data-g="'+esc(g.id)+'" data-v="'+esc(vr)+'">'+esc(vr)+'</button>'}).join('')+'</div>';
+      if(last)h+='<div><button class="chip" data-act="same" data-g="'+esc(g.id)+'">Same as '+esc(md(last.date))+': '+last.values[g.id]+
+        (last.variants&&last.variants[g.id]?' ('+esc(last.variants[g.id])+')':'')+'</button></div>';
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+  h+='<label>Notes<textarea id="note" placeholder="Other activities, behavior, anything worth remembering. Use initials or nicknames, never a real name.">'+esc(d.note)+'</textarea></label>'+
+    '<div class="row"><button class="btn primary" style="flex:1" data-act="save"'+(S.saving?' disabled':'')+'>Save results</button>'+
+    (sess(s.id,S.date)?'<button class="btn danger" data-act="del">'+(S.confirmDel?'Tap again to delete':'Delete')+'</button>':'')+'</div>';
+  return h;
+}
+
+function inPeriod(x){return S.period==='all'||x.date>=shift(today(),-(+S.period))}
+function progressView(){
+  var h='<div class="stack"><span class="eyebrow">Progress</span><h1>Goal data over time</h1></div>';
+  if(!S.students.length)return h+emptyRoster();
+  if(!student(S.progId))S.progId=S.students[0].id;
+  var s=student(S.progId),hs=history(s.id).filter(inPeriod);
+  h+='<div class="row"><label>Student<select id="prog-student">'+S.students.map(function(x){
+      return '<option value="'+esc(x.id)+'"'+(x.id===s.id?' selected':'')+'>'+esc(x.name)+'</option>'}).join('')+'</select></label>'+
+    '<label>Period<select id="prog-period">'+[['30','Last 30 days'],['90','Last 90 days'],['all','All entries']].map(function(o){
+      return '<option value="'+o[0]+'"'+(S.period===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></label></div>';
+  if(!hs.length)return h+'<div class="list"><div class="empty">No entries for '+esc(s.name)+' in this period. Charts and the SpedForms summary appear here after the first saved session.</div></div>';
+  s.goals.forEach(function(g){
+    var pts=hs.filter(function(x){return !x.absent&&x.values&&num(x.values[g.id])}).map(function(x){return{d:x.date,v:x.values[g.id]}});
+    h+='<div class="panel stack"><div class="row spread"><h2>'+esc(g.label)+'</h2>'+
+      (num(g.target)?'<span class="pill">'+(g.dir==='max'?'at most ':'target ')+g.target+' '+esc(g.unit)+'</span>':'')+'</div>';
+    if(!pts.length)h+='<span class="muted small">No data recorded for this goal yet.</span>';
+    else{var st=stats(g,pts);
+      h+='<div class="row" style="gap:22px"><div><div class="stat">'+st.avg+'</div><span class="muted small">average '+esc(g.unit)+'</span></div>'+
+        '<div><div class="stat">'+pts[pts.length-1].v+'</div><span class="muted small">latest, '+esc(md(pts[pts.length-1].d))+'</span></div>'+
+        (st.metN!=null?'<div><div class="stat">'+st.metN+'/'+pts.length+'</div><span class="muted small">sessions at target</span></div>':'')+'</div>'+chart(g,pts)}
+    h+='</div>';
+  });
+  h+='<div class="panel stack"><div class="row spread"><h2>Summary for SpedForms</h2><button class="btn" data-act="copy">Copy</button></div><pre class="sum" id="sum">'+esc(summary(s,hs))+'</pre></div>';
+  return h;
+}
+function stats(g,pts){var vs=pts.map(function(p){return p.v}),sum=vs.reduce(function(a,b){return a+b},0);
+  return{avg:r1(sum/vs.length),min:Math.min.apply(null,vs),max:Math.max.apply(null,vs),
+    metN:num(g.target)?pts.filter(function(p){return met(g,p.v)}).length:null}}
+function chart(g,pts){
+  var W=320,H=130,L=28,R=10,T=10,B=22,top=Math.max.apply(null,pts.map(function(p){return p.v}).concat(num(g.target)?[g.target]:[]));
+  top=Math.max(1,Math.ceil(top*1.15));
+  function x(i){return pts.length===1?(L+W-R)/2:L+(W-L-R)*i/(pts.length-1)}
+  function y(v){return T+(H-T-B)*(1-v/top)}
+  var o='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(g.label)+' by session">';
+  [0,top/2,top].forEach(function(t){o+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(t)+'" y2="'+y(t)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(L-5)+'" y="'+(y(t)+4)+'" text-anchor="end">'+r1(t)+'</text>'});
+  if(num(g.target))o+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(g.target)+'" y2="'+y(g.target)+'" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="4 3"/>';
+  if(pts.length>1)o+='<polyline fill="none" stroke="var(--accent)" stroke-width="2" points="'+pts.map(function(p,i){return x(i)+','+y(p.v)}).join(' ')+'"/>';
+  pts.forEach(function(p,i){var last=i===pts.length-1;o+='<circle cx="'+x(i)+'" cy="'+y(p.v)+'" r="'+(last?4.5:3)+'" fill="'+(last?'var(--accent)':'var(--surface)')+'" stroke="var(--accent)" stroke-width="2"/>'});
+  o+='<text x="'+L+'" y="'+(H-5)+'">'+esc(md(pts[0].d))+'</text>';
+  if(pts.length>1)o+='<text x="'+(W-R)+'" y="'+(H-5)+'" text-anchor="end">'+esc(md(pts[pts.length-1].d))+'</text>';
+  return o+'</svg>';
+}
+function summary(s,hs){
+  var abs=hs.filter(function(x){return x.absent}).length,att=hs.length-abs;
+  var out=[s.name+': progress '+mdy(hs[0].date)+' to '+mdy(hs[hs.length-1].date)+' ('+att+' session'+(att===1?'':'s')+(abs?', '+abs+' absent':'')+')',''];
+  var dm=0,im=0;hs.forEach(function(x){if(num(x.min))dm+=x.min;if(num(x.indirect))im+=x.indirect});
+  S.indirect.forEach(function(x){if(x.studentId===s.id&&inPeriod(x)&&num(x.min))im+=x.min});
+  if(dm||im)out.splice(1,0,'Service time: '+dm+' direct min, '+im+' indirect min.');
+  s.goals.forEach(function(g){
+    var pts=hs.filter(function(x){return !x.absent&&x.values&&num(x.values[g.id])});
+    var head=g.text?'Objective '+(s.goals.filter(function(q){return q.text}).indexOf(g)+1)+': '+g.text:g.label+':';
+    if(!pts.length){out.push(head,'Progress: no data recorded this period.','');return}
+    var p=pts.map(function(x){return{d:x.date,v:x.values[g.id]}}),st=stats(g,p),l=pts[pts.length-1],vr=l.variants&&l.variants[g.id];
+    out.push(head,'Progress: '+s.name+' averaged '+st.avg+' '+g.unit+' (range '+st.min+' to '+st.max+') across '+pts.length+' session'+(pts.length===1?'':'s')+
+      (st.metN!=null?'; '+(g.dir==='max'?'at or under ':'met target of ')+g.target+' '+g.unit+' in '+st.metN+' of '+pts.length:'')+
+      '. Most recent: '+l.values[g.id]+' '+g.unit+(l.outof&&num(l.outof[g.id])?' out of '+l.outof[g.id]:'')+(vr?' ('+vr+')':'')+(l.help&&l.help[g.id]?', '+l.help[g.id].toLowerCase():'')+' on '+md(l.date)+'.','');
+  });
+  var notes=hs.filter(function(x){return x.note}).slice(-5);
+  if(notes.length){out.push('','Recent notes:');notes.forEach(function(x){out.push(md(x.date)+': '+x.note)})}
+  return out.join('\n');
+}
+
+function schoolOptions(sel){return '<option value="">No school set</option>'+S.schools.map(function(sc){
+  return '<option value="'+esc(sc.id)+'"'+(sc.id===sel?' selected':'')+'>'+esc(sc.alias||sc.name)+'</option>'}).join('')}
+function studentsView(){
+  var h='<div class="stack"><span class="eyebrow">Caseload</span><h1>Students, schedules and goals</h1></div>';
+  if(!S.loaded)return h+emptyRoster();
+  h+=S.students.length?'<div class="list">'+S.students.map(function(s){
+    var open=S.editId===s.id,sub=[schoolLabel(s),s.grade?'grade '+s.grade:'',s.codes?'code '+s.codes:'',s.slots.length?s.slots.map(function(sl){return DAYS[sl.day]}).join(', '):'no schedule'].filter(Boolean).join(' · ');
+    var o='<button class="item" data-act="edit" data-id="'+esc(s.id)+'" aria-expanded="'+open+'"><span class="nm">'+esc(s.name)+'<br><span class="sub">'+esc(sub)+'</span></span><span class="pill">'+s.goals.length+' goal'+(s.goals.length===1?'':'s')+'</span></button>';
+    if(open){o+='<div class="stack edit">'+
+        '<div class="row"><label>Initials or nickname<input id="st-name" value="'+esc(s.name)+'"></label><label>Grade<input id="st-grade" value="'+esc(s.grade||'')+'"></label></div>'+
+        '<label>School<select id="st-school">'+schoolOptions(s.schoolId)+'</select></label>'+
+        '<div class="row"><label>Last IEP meeting<input type="date" id="st-last" value="'+esc(s.iepLast||'')+'"></label><label>Next IEP meeting<input type="date" id="st-next" value="'+esc(s.iepNext||'')+'"></label></div>'+
+        '<div class="row"><label>IEP direct min per session<input type="number" inputmode="numeric" id="st-direct" value="'+(num(s.direct)?s.direct:'')+'"></label><label>IEP indirect min per session<input type="number" inputmode="numeric" id="st-ind" value="'+(num(s.indirect)?s.indirect:'')+'"></label></div>'+
+        '<h2 style="margin-top:8px">Disability codes</h2><div class="row">'+CODES.map(function(c){var on=(s.codes||'').split('/').indexOf(c[0])>=0;
+          return '<button class="chip '+(on?'on':'')+'" data-act="code" data-id="'+esc(s.id)+'" data-v="'+c[0]+'" title="'+esc(c[2])+'" aria-pressed="'+on+'">'+c[0]+' '+esc(c[1])+'</button>'}).join('')+'</div>'+
+        '<button class="btn primary" data-act="savestudent" data-id="'+esc(s.id)+'">Save details</button>'+
+        '<h2 style="margin-top:8px">Schedule</h2>'+
+        (s.slots.length?s.slots.map(function(sl,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(slotText(sl))+'</span><button class="chip" data-act="rmslot" data-id="'+esc(s.id)+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No time slots yet. Add each day she sees this student.</span>')+
+        '<div class="row"><label>Day<select id="sl-day">'+(function(){var sc=school(s.schoolId),ds=sc&&sc.days&&sc.days.length?sc.days:[0,1,2,3,4,5,6];return ds.map(function(i){return '<option value="'+i+'">'+DAYS[i]+'</option>'}).join('')})()+'</select></label>'+
+        '<label>Time<input type="time" id="sl-time"></label><label>Minutes<input type="number" inputmode="numeric" id="sl-min" value="20"></label></div>'+
+        '<div class="row"><label>How often<select id="sl-every"><option value="1">Every week</option><option value="2">Every 2 weeks</option></select></label>'+
+        '<label>First date (for every 2 weeks)<input type="date" id="sl-anchor" value="'+S.date+'"></label></div>'+
+        '<button class="btn" data-act="addslot" data-id="'+esc(s.id)+'">Add time slot</button>'+
+        '<h2 style="margin-top:8px">Goals</h2>'+
+        s.goals.map(function(g){
+        return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(g.label)+' <span class="muted small">'+esc(g.unit)+(num(g.target)?', '+(g.dir==='max'?'at most ':'target ')+g.target:'')+'</span></span>'+
+          '<button class="chip" data-act="rmgoal" data-id="'+esc(s.id)+'" data-g="'+esc(g.id)+'">Remove</button></div>'}).join('')+
+        '<label>New goal (short name)<input id="g-label" placeholder="e.g. Plank hold"></label>'+
+        '<label>Objective wording from the IEP (optional, with the alias in place of the name)<textarea id="g-text"></textarea></label>'+
+        '<div class="row"><label>Unit<input id="g-unit" placeholder="reps, sec, min"></label><label>Target<input id="g-target" type="number" inputmode="decimal" placeholder="optional"></label>'+
+        '<label>Direction<select id="g-dir"><option value="min">At least</option><option value="max">At most</option></select></label></div>'+
+        '<label>How it is measured<select id="g-kind"><option value="count">A count or a time</option><option value="ratio">Successes out of tries</option></select></label>'+
+        '<label>Options to tag (comma separated)<input id="g-variants" placeholder="e.g. Wall, Incline, Knee"></label>'+
+        '<button class="btn" data-act="addgoal" data-id="'+esc(s.id)+'">Add goal</button></div>'}
+    return o}).join('')+'</div>':'<div class="list"><div class="empty">No students yet. Add the first one below.</div></div>';
+  h+='<div class="panel stack"><h2>Add a student</h2><div class="row"><label>Initials or nickname<input id="s-name" placeholder="Never the real name"></label>'+
+    '<label>School<select id="s-school">'+schoolOptions('')+'</select></label></div>'+
+    '<button class="btn primary" data-act="addstudent">Add student</button></div>';
+  return h;
+}
+
+function schoolsView(){
+  var h='<div class="stack"><span class="eyebrow">Schools</span><h1>Calendars and report dates</h1></div>';
+  if(!S.loaded)return h+'<div class="list"><div class="empty">Loading schools…</div></div>';
+  h+=S.schools.length?'<div class="list">'+S.schools.map(function(sc){
+    var open=S.schoolEdit===sc.id,n=S.students.filter(function(s){return s.schoolId===sc.id}).length;
+    var o='<button class="item" data-act="editschool" data-id="'+esc(sc.id)+'" aria-expanded="'+open+'"><span class="nm">'+esc(sc.name)+(sc.alias&&sc.alias!==sc.name?' <span class="sub">('+esc(sc.alias)+')</span>':'')+
+      (sc.address?'<br><span class="sub">'+esc(sc.address)+'</span>':'')+'</span><span class="pill">'+n+' student'+(n===1?'':'s')+'</span></button>';
+    if(open){o+='<div class="stack edit">'+
+      '<div class="row"><label>School name<input id="sc-name" value="'+esc(sc.name)+'"></label><label>Short name<input id="sc-alias" value="'+esc(sc.alias||'')+'"></label></div>'+
+      '<label>Address<input id="sc-addr" value="'+esc(sc.address||'')+'"></label>'+
+      '<button class="btn primary" data-act="saveschool" data-id="'+esc(sc.id)+'">Save details</button>'+
+      '<h2 style="margin-top:8px">Days you are here</h2><div class="row">'+DAYS.map(function(dn,di){var on=(sc.days||[]).indexOf(di)>=0;
+        return '<button class="chip '+(on?'on':'')+'" data-act="scday" data-id="'+esc(sc.id)+'" data-i="'+di+'" aria-pressed="'+on+'">'+dn+'</button>'}).join('')+'</div>'+
+      '<h2 style="margin-top:8px">Days off</h2>'+
+      ((sc.closed||[]).length?sc.closed.map(function(c,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(md(c.from)+(c.to&&c.to!==c.from?' to '+md(c.to):'')+(c.label?', '+c.label:''))+'</span><button class="chip" data-act="rmclosed" data-id="'+esc(sc.id)+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No days off entered. Holidays and breaks show on the session list as school closed.</span>')+
+      '<div class="row"><label>From<input type="date" id="c-from"></label><label>To (optional)<input type="date" id="c-to"></label></div>'+
+      '<label>What it is<input id="c-label" placeholder="e.g. Fall break"></label>'+
+      '<button class="btn" data-act="addclosed" data-id="'+esc(sc.id)+'">Add days off</button>'+
+      '<h2 style="margin-top:8px">Reports due</h2>'+
+      ((sc.reports||[]).length?sc.reports.map(function(r,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(mdy(r.date)+(r.label?', '+r.label:''))+'</span><button class="chip" data-act="rmreport" data-id="'+esc(sc.id)+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No due dates entered. They appear under Coming up three weeks ahead.</span>')+
+      '<div class="row"><label>Due date<input type="date" id="r-date"></label><label>What is due<input id="r-label" placeholder="e.g. Q1 progress reports"></label></div>'+
+      '<button class="btn" data-act="addreport" data-id="'+esc(sc.id)+'">Add due date</button></div>'}
+    return o}).join('')+'</div>':'<div class="list"><div class="empty">No schools yet. Add the first one below.</div></div>';
+  h+='<div class="panel stack"><h2>Add a school</h2><div class="row"><label>School name<input id="n-name"></label><label>Short name<input id="n-alias" placeholder="optional"></label></div>'+
+    '<label>Address<input id="n-addr"></label><button class="btn primary" data-act="addschool">Add school</button></div>'+
+    '<button class="btn ghost" data-act="signout">Sign out</button>';
+  return h;
+}
+
+/* ---------- actions ---------- */
+function openEntry(id){var x=sess(id,S.date);S.open=id;S.confirmDel=false;
+  S.draft={absent:!!(x&&x.absent),values:Object.assign({},x&&x.values),variants:Object.assign({},x&&x.variants),note:(x&&x.note)||'',acts:((x&&x.acts)||[]).slice(),outof:Object.assign({},x&&x.outof),help:Object.assign({},x&&x.help)};
+  var s=student(id);
+  if(x){S.draft.min=x.min;S.draft.indirect=x.indirect}
+  else if(s){var sl0=slotOn(s,S.date),h0=history(id);S.draft.min=sl0?sl0.min:s.direct;S.draft.indirect=s.indirect;if(h0.length)S.draft.acts=(h0[h0.length-1].acts||[]).slice()}
+if(!x&&s)s.goals.forEach(function(g){var l=lastVal(id,g.id,S.date);if(l&&l.variants&&l.variants[g.id])S.draft.variants[g.id]=l.variants[g.id]});}
+function val(id){var e=document.getElementById(id);return e?e.value.trim():''}
+function nv(id){var v=val(id);return v!==''&&isFinite(+v)?+v:null}
+function byDate(k){return function(a,b){return a[k]<b[k]?-1:a[k]>b[k]?1:0}}
+
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-act]');if(!b)return;var a=b.dataset.act,d=S.draft,g=b.dataset.g,s,sc,i=+b.dataset.i;
+  if(a==='tab'){S.view=b.dataset.v;S.open=null}
+  else if(a==='day'){S.date=shift(S.date,+b.dataset.n)}
+  else if(a==='todaybtn'){S.date=today()}
+  else if(a==='open'){openEntry(b.dataset.id)}
+  else if(a==='back'){S.open=null}
+  else if(a==='absent'){d.absent=!d.absent}
+  else if(a==='step'){var cur=d.values[g];d.values[g]=num(cur)?Math.max(0,r1(cur+(+b.dataset.n))):(+b.dataset.n>0?1:0)}
+  else if(a==='variant'){if(d.variants[g]===b.dataset.v)delete d.variants[g];else d.variants[g]=b.dataset.v}
+  else if(a==='same'){var l=lastVal(S.open,g,S.date);if(l){d.values[g]=l.values[g];if(l.variants&&l.variants[g])d.variants[g]=l.variants[g]}}
+  else if(a==='save'||a==='saveplan'){
+    var vals={};Object.keys(d.values).forEach(function(k){if(num(d.values[k]))vals[k]=d.values[k]});
+    var doc={studentId:S.open,date:S.date,absent:d.absent,values:d.absent?{}:vals,variants:d.absent?{}:d.variants,note:d.note.trim(),updated:new Date().toISOString()};
+    s=student(S.open);var sl=s&&slotOn(s,S.date);if(sl)doc.time=sl.time;
+    doc.min=d.absent?0:(num(d.min)?d.min:0);doc.indirect=num(d.indirect)?d.indirect:0;doc.acts=d.absent?[]:d.acts;doc.outof=d.absent?{}:d.outof;doc.help=d.absent?{}:d.help;
+    var x0=sess(S.open,S.date);doc.status=(a==='save'||(x0&&x0.status!=='planned'))?'logged':'planned';
+    S.saving=true;render();
+    write(function(){return S.db.doc('sessions/'+S.open+'_'+S.date).set(doc)}).then(function(){S.saving=false;S.open=null;toast(doc.status==='planned'?'Plan saved':'Saved');render()},function(){S.saving=false;render()});
+    return}
+  else if(a==='del'){if(!S.confirmDel){S.confirmDel=true}else{var sid=S.open;
+    write(function(){return S.db.doc('sessions/'+sid+'_'+S.date).delete()}).then(function(){S.open=null;toast('Entry deleted');render()},function(){});return}}
+  else if(a==='copy'){var t=document.getElementById('sum').textContent;
+    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast('Copied')},function(){
+      var r=document.createRange();r.selectNodeContents(document.getElementById('sum'));var sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast('Selected. Use Copy from the menu.')});return}
+  else if(a==='help'){if(d.help[g]===b.dataset.v)delete d.help[g];else d.help[g]=b.dataset.v}
+  else if(a==='scday'){sc=school(b.dataset.id);if(!sc)return;var sd=(sc.days||[]).slice(),si=sd.indexOf(i);if(si<0)sd.push(i);else sd.splice(si,1);
+    saveDoc('schools',sc,{days:sd.sort()},'Days saved');return}
+  else if(a==='act'){var av=b.dataset.v,ai=d.acts.indexOf(av);if(ai<0)d.acts.push(av);else d.acts.splice(ai,1)}
+  else if(a==='addact'){var an=val('act-new');if(!an){toast('Type the activity name first');return}
+    var ex=S.activities.filter(function(x){return String(x.name).toLowerCase()===an.toLowerCase()})[0];
+    if(ex)an=String(ex.name);else write(function(){return S.db.doc('activities/a_'+rid()).set({name:an})}).catch(function(){});
+    if(d.acts.indexOf(an)<0)d.acts.push(an)}
+  else if(a==='indform'){S.indForm=!S.indForm}
+  else if(a==='addind'){var im=+val('ind-min'),is=val('ind-student');if(!is){toast('Pick a student');return} if(!(im>0)){toast('Enter the minutes');return}
+    write(function(){return S.db.doc('indirect/i_'+rid()).set({studentId:is,date:S.date,min:im,note:val('ind-note')})}).then(function(){S.indForm=false;toast('Indirect time added');render()},function(){});return}
+  else if(a==='rmind'){var iid=b.dataset.id;write(function(){return S.db.doc('indirect/'+iid).delete()}).then(function(){toast('Removed');render()},function(){});return}
+  else if(a==='savetravel'){var tv=val('travel'),td=S.date;write(function(){return S.db.doc('days/'+td).set({travel:tv!==''&&isFinite(+tv)?+tv:0})}).then(function(){toast('Travel time saved');render()},function(){});return}
+  else if(a==='code'){s=student(b.dataset.id);if(!s)return;var cs=(s.codes||'').split('/').filter(Boolean),ci=cs.indexOf(b.dataset.v);
+    if(ci<0)cs.push(b.dataset.v);else cs.splice(ci,1);saveDoc('students',s,{codes:cs.sort().join('/')},'Codes saved');return}
+  else if(a==='signout'){if(window.DAPE_SIGNOUT)window.DAPE_SIGNOUT();return}
+  else if(a==='edit'){S.editId=S.editId===b.dataset.id?null:b.dataset.id}
+  else if(a==='editschool'){S.schoolEdit=S.schoolEdit===b.dataset.id?null:b.dataset.id}
+  else if(a==='addstudent'){var n=val('s-name');if(!n){toast('Enter initials or a nickname first');return}
+    write(function(){return S.db.doc('students/s_'+rid()).set({name:n,schoolId:val('s-school'),goals:[],slots:[],order:S.students.length})}).then(function(){toast('Student added');render()},function(){});return}
+  else if(a==='savestudent'){s=student(b.dataset.id);if(!s)return;if(!val('st-name')){toast('Initials or a nickname are required');return}
+    saveDoc('students',s,{name:val('st-name'),grade:val('st-grade'),schoolId:val('st-school'),iepLast:val('st-last'),iepNext:val('st-next'),direct:nv('st-direct'),indirect:nv('st-ind')},'Details saved');return}
+  else if(a==='addslot'){s=student(b.dataset.id);var tm=val('sl-time'),mn=+val('sl-min');if(!s)return;
+    if(!tm){toast('Pick a time first');return} if(!(mn>0)){toast('Enter the minutes');return}
+    var ns={day:+val('sl-day'),time:tm,min:mn,every:+val('sl-every')===2?2:1};
+    if(ns.every===2){if(!val('sl-anchor')){toast('Pick the first date for the 2-week pattern');return} ns.anchor=val('sl-anchor')}
+    saveDoc('students',s,{slots:s.slots.concat([ns]).sort(function(x,y){return x.day-y.day||(x.time<y.time?-1:1)})},'Time slot added');return}
+  else if(a==='rmslot'){s=student(b.dataset.id);if(s)saveDoc('students',s,{slots:s.slots.filter(function(_,k){return k!==i})},'Time slot removed');return}
+  else if(a==='addgoal'){s=student(b.dataset.id);var lb=val('g-label');if(!s||!lb){toast('Enter a goal name first');return}
+    var tg=val('g-target'),ng={id:'g_'+rid(),label:lb,unit:val('g-unit')||'reps',dir:val('g-dir')||'min'};
+    if(tg!==''&&isFinite(+tg))ng.target=+tg;
+    if(val('g-text'))ng.text=val('g-text');if(val('g-kind')==='ratio')ng.kind='ratio';
+    var vr=val('g-variants').split(',').map(function(x){return x.trim()}).filter(Boolean);if(vr.length)ng.variants=vr;
+    saveDoc('students',s,{goals:s.goals.concat([ng])},'Goal added');return}
+  else if(a==='rmgoal'){s=student(b.dataset.id);if(s)saveDoc('students',s,{goals:s.goals.filter(function(x){return x.id!==g})},'Goal removed');return}
+  else if(a==='addschool'){var nn=val('n-name');if(!nn){toast('Enter the school name first');return}
+    write(function(){return S.db.doc('schools/sc_'+rid()).set({name:nn,alias:val('n-alias'),address:val('n-addr'),closed:[],reports:[]})}).then(function(){toast('School added');render()},function(){});return}
+  else if(a==='saveschool'){sc=school(b.dataset.id);if(!sc)return;if(!val('sc-name')){toast('The school name is required');return}
+    saveDoc('schools',sc,{name:val('sc-name'),alias:val('sc-alias'),address:val('sc-addr')},'Details saved');return}
+  else if(a==='addclosed'){sc=school(b.dataset.id);var f=val('c-from'),to=val('c-to')||f;if(!sc)return;
+    if(!f){toast('Pick the first day off');return} if(to<f){toast('The end date is before the start date');return}
+    saveDoc('schools',sc,{closed:(sc.closed||[]).concat([{from:f,to:to,label:val('c-label')}]).sort(byDate('from'))},'Days off added');return}
+  else if(a==='rmclosed'){sc=school(b.dataset.id);if(sc)saveDoc('schools',sc,{closed:(sc.closed||[]).filter(function(_,k){return k!==i})},'Days off removed');return}
+  else if(a==='addreport'){sc=school(b.dataset.id);var rd=val('r-date');if(!sc)return;if(!rd){toast('Pick the due date');return}
+    saveDoc('schools',sc,{reports:(sc.reports||[]).concat([{date:rd,label:val('r-label')}]).sort(byDate('date'))},'Due date added');return}
+  else if(a==='rmreport'){sc=school(b.dataset.id);if(sc)saveDoc('schools',sc,{reports:(sc.reports||[]).filter(function(_,k){return k!==i})},'Due date removed');return}
+  render();
+});
+document.addEventListener('input',function(e){var t=e.target;
+  if(t.id==='note'&&S.draft)S.draft.note=t.value;
+  else if((t.id==='e-min'||t.id==='e-ind')&&S.draft){var k=t.id==='e-min'?'min':'indirect';if(t.value===''||!isFinite(+t.value))delete S.draft[k];else S.draft[k]=+t.value}
+  else if(t.dataset.x&&S.draft){if(t.value===''||!isFinite(+t.value))delete S.draft[t.dataset.x][t.dataset.g];else S.draft[t.dataset.x][t.dataset.g]=+t.value}
+  else if(t.dataset.g&&S.draft){if(t.value===''||!isFinite(+t.value))delete S.draft.values[t.dataset.g];else S.draft.values[t.dataset.g]=+t.value}});
+document.addEventListener('change',function(e){var t=e.target;
+  if(t.id==='date-pick'&&t.value){S.date=t.value;render()}
+  else if(t.id==='prog-student'){S.progId=t.value;render()}
+  else if(t.id==='prog-period'){S.period=t.value;render()}});
+window.DAPE_START=start;
+})();
+</script>
+
+<script>
+/* Sign-in and storage. Each signed-in person reads and writes only their own rows (row-level security in Supabase). */
+(function(){
+var SUPABASE_URL='https://yqkgglqlikkerkifmdzq.supabase.co';
+var SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlxa2dnbHFsaWtrZXJraWZtZHpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3Mzc2MjYsImV4cCI6MjEwNzMxMzYyNn0.UcdUU24d0C4IVepzIizyr5FhSkP_5e4cXEoUMEUO8sc';
+function $(id){return document.getElementById(id)}
+var auth=$('auth'),app=$('app'),tabs=$('tabs'),msg=$('auth-msg'),started=false,email='';
+function show(signedIn){auth.hidden=signedIn;app.hidden=!signedIn;tabs.hidden=!signedIn}
+if(!(window.supabase&&window.supabase.createClient)){show(false);msg.textContent='The app could not finish loading. Check your connection and reload.';return}
+var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+/* Same small interface the screens were built on: collections of documents, kept in one table. */
+function makeDb(uid){
+  var cache={},L={},loaded=load();
+  function load(){var rows=[];
+    function page(from){return sb.from('dape_docs').select('coll,id,data').order('coll').order('id').range(from,from+999).then(function(r){
+      if(r.error)throw r.error;rows=rows.concat(r.data);return r.data.length===1000?page(from+1000):rows})}
+    return page(0).then(function(all){cache={};all.forEach(function(r){(cache[r.coll]=cache[r.coll]||{})[r.id]=r.data})})}
+  function snap(c){return{docs:Object.keys(cache[c]||{}).sort().map(function(id){return{id:id,data:function(){return cache[c][id]}}})}}
+  function notify(c){(L[c]||[]).forEach(function(f){f(snap(c))})}
+  /* pick up changes made on her other phone whenever the app comes back to the front */
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')load().then(function(){Object.keys(L).forEach(notify)},function(){})});
+  return{
+    collection:function(c){var q={limit:function(){return q},onSnapshot:function(f,err){(L[c]=L[c]||[]).push(f);loaded.then(function(){f(snap(c))},function(e){if(err)err(e)});return function(){}}};return q},
+    doc:function(p){var a=p.split('/');return{
+      set:function(d){return sb.from('dape_docs').upsert({user_id:uid,coll:a[0],id:a[1],data:d,updated_at:new Date().toISOString()},{onConflict:'user_id,coll,id'}).then(function(r){
+        if(r.error)throw r.error;(cache[a[0]]=cache[a[0]]||{})[a[1]]=d;notify(a[0])})},
+      delete:function(){return sb.from('dape_docs').delete().eq('user_id',uid).eq('coll',a[0]).eq('id',a[1]).then(function(r){
+        if(r.error)throw r.error;if(cache[a[0]])delete cache[a[0]][a[1]];notify(a[0])})}}}};
+}
+function begin(session){if(started)return;started=true;show(true);window.DAPE_START(makeDb(session.user.id))}
+window.DAPE_SIGNOUT=function(){sb.auth.signOut().then(function(){location.reload()},function(){location.reload()})};
+sb.auth.getSession().then(function(r){if(r.data&&r.data.session)begin(r.data.session);else show(false)},function(){show(false)});
+sb.auth.onAuthStateChange(function(ev,session){if(session)begin(session)});
+
+$('auth-email-form').addEventListener('submit',function(e){e.preventDefault();email=$('auth-email').value.trim();if(!email)return;
+  $('auth-send').disabled=true;msg.textContent='Sending…';
+  sb.auth.signInWithOtp({email:email,options:{shouldCreateUser:false}}).then(function(r){$('auth-send').disabled=false;
+    if(r.error){msg.textContent=/signups not allowed/i.test(r.error.message)?'That email is not set up for this app. Ask Pete to add it.':'Could not send the code: '+r.error.message;return}
+    $('auth-email-form').hidden=true;$('auth-code-form').hidden=false;msg.textContent='Check '+email+' for a code and type it here.';$('auth-code').focus()})});
+$('auth-code-form').addEventListener('submit',function(e){e.preventDefault();var code=$('auth-code').value.trim();if(!code)return;
+  $('auth-verify').disabled=true;msg.textContent='Checking…';
+  sb.auth.verifyOtp({email:email,token:code,type:'email'}).then(function(r){$('auth-verify').disabled=false;
+    if(r.error){msg.textContent='That code did not work. Check it, or ask for a new one.';return}
+    msg.textContent='';if(r.data&&r.data.session)begin(r.data.session)})});
+$('auth-back').addEventListener('click',function(){$('auth-code-form').hidden=true;$('auth-email-form').hidden=false;msg.textContent=''});
+})();
+</script>
+</body>
+</html>
