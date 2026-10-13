@@ -4,6 +4,14 @@ A phone-first web app for a DAPE teacher to plan sessions, log results against I
 
 Live app: https://jambal00.github.io/dape-session-log/
 
+## What it does
+
+- **Home screen** grouped by how often each job comes up: Every day (Today's Plan, Plan my Day), A few times a year (Students and IEPs, Progress Reports) and Setup (Schools, Agencies, Drive distances). Setup lists what is still missing until it is complete.
+- **Plan my Day:** a five-step planner that confirms schools and students and pre-fills each lesson plan from the last session.
+- **Today's Plan:** the day as a route, with results entered per student and hours, miles and pay split by agency.
+- **Students and IEPs:** each student's IEP entered in six steps (dates, disability codes, service minutes, annual goal, objectives, review). "Update after an IEP meeting" keeps the old IEP in history, and objectives that are dropped keep their data.
+- **Progress Reports:** charts, averages and Goal / Objective / Progress text for SpEd Forms, for the last 30 or 90 days, all entries, or custom dates.
+
 ## Data rule
 
 No identifiable student data. Students are entered as initials or a nickname only, including in notes. This repository holds code only, never student data.

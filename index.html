@@ -12,7 +12,12 @@
 <title>DAPE Session Log</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap">
 <style>
-/* Layout: single phone column, sticky tab bar at the bottom, one student per row like her paper sheet. */
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+</style>
+<style>
+/* Layout: single phone column under a sticky top bar with a menu button; home screen of six large task tiles; one student per row like her paper sheet. */
 :root{
   --bg:#f3f5f2; --surface:#ffffff; --ink:#17231d; --muted:#5d6b63; --line:#d5dbd6;
   --accent:#1f6b4a; --accent-ink:#ffffff; --accent-soft:#dcebe2;
@@ -29,11 +34,8 @@
   --accent:#58c08f; --accent-ink:#0c1511; --accent-soft:#1f3329;
   --good:#58c08f; --warn:#e0a44a; --bad:#ef8279; color-scheme:dark }
 *{box-sizing:border-box}
-html{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
-[hidden]{display:none!important}
-body{margin:0}
 body{background:var(--bg);color:var(--ink);font:16px/1.4 var(--body)}
-.wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:16px 96px;display:flex;flex-direction:column;gap:16px}
+.wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:16px 48px;display:flex;flex-direction:column;gap:16px}
 h1{font:700 28px/1.1 var(--display);margin:0;letter-spacing:.01em;text-wrap:balance}
 h2{font:700 20px/1.15 var(--display);margin:0}
 .eyebrow{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -64,23 +66,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 input,select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;min-height:44px;width:100%;min-width:0}
 textarea{min-height:76px;resize:vertical}
-/* 16px stops phones zooming in when a field is tapped; the date and time rules stop iPhone fields spilling out of their column */
-input,select,textarea{font-size:16px;max-width:100%}
-input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;display:block;text-align:left}
-input::-webkit-date-and-time-value{text-align:left}
-html,body{max-width:100%;overflow-x:hidden}
-html{touch-action:manipulation;-webkit-text-size-adjust:100%}
-button,input,select,textarea,label{touch-action:manipulation}
-.tabs.typing{display:none}
-.tabs button{max-width:200px}
-.row>label{align-self:flex-end}
-.leg{border:1.5px dashed var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
-.sec{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
-.sechead{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;padding:12px;border:0;background:var(--bg);color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:52px}
-.sechead .sub{font-size:14px;color:var(--muted)}
-.secbody{padding:12px}
-.chev{font:700 24px/1 var(--display);color:var(--accent);flex:none}
-label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;flex:1 1 130px;min-width:0}
+label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;flex:1 1 120px;min-width:0}
 .stepper{display:flex;align-items:center;gap:8px}
 .stepper button{width:52px;height:52px;border-radius:50%;border:1px solid var(--line);background:var(--bg);font:700 26px var(--display);cursor:pointer}
 .stepper input{width:84px;text-align:center;font:700 30px var(--display);font-variant-numeric:tabular-nums;height:52px;padding:4px}
@@ -88,18 +74,75 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .goal:first-of-type{border-top:0;padding-top:0}
 .chip{border:1px solid var(--line);background:none;border-radius:99px;padding:6px 12px;min-height:36px;cursor:pointer;font-size:14px}
 .chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px)}
-.tabs button{flex:1;max-width:150px;border:0;background:none;padding:14px 2px;font:700 15px var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);cursor:pointer;border-top:3px solid transparent}
-.tabs button.on{color:var(--accent);border-top-color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .in{max-width:560px;margin:0 auto;padding-inline:8px 16px;display:flex;align-items:center;gap:6px;min-height:56px}
+.top .brand{font:700 20px/1 var(--display);letter-spacing:.02em;background:none;border:0;color:var(--ink);cursor:pointer;padding:8px 4px}
+.top .where{margin-left:auto;font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.burger{width:48px;height:48px;border:0;background:none;border-radius:8px;cursor:pointer;display:grid;place-items:center;color:var(--ink)}
+.burger svg{width:24px;height:24px}
+.menu{position:fixed;inset:0;z-index:30;background:rgba(10,20,15,.45);display:flex}
+.menu .sheet{background:var(--surface);width:min(320px,86vw);height:100%;overflow:auto;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);display:flex;flex-direction:column}
+.menu .head{display:flex;align-items:center;gap:6px;padding:4px 8px;min-height:56px;border-bottom:1px solid var(--line)}
+.menu .go{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:14px 18px;cursor:pointer;color:var(--ink);min-height:56px}
+.menu .go b{font:700 19px/1.1 var(--display);letter-spacing:.02em}
+.menu .go span{font-size:13px;color:var(--muted)}
+.menu .go.on{background:var(--accent-soft)}
+.menu .go.on b{color:var(--good)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:10px;min-height:118px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);text-align:left;cursor:pointer;font:inherit}
+.tile b{font:700 22px/1.05 var(--display);letter-spacing:.01em;text-wrap:balance}
+.tile span{font-size:13px;color:var(--muted);line-height:1.3}
+.tile.lead{grid-column:1/-1;background:var(--accent);border-color:var(--accent);color:var(--accent-ink);min-height:104px}
+.tile.lead span{color:var(--accent-ink);opacity:.85}
+.tile .badge{font:600 11px var(--body);letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);border-radius:99px;padding:2px 8px;color:var(--muted)}
+@media (max-width:340px){.tiles{grid-template-columns:1fr}}
+.pill.gone{color:var(--muted);border-style:dashed}
+.split{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:baseline;font-variant-numeric:tabular-nums}
+.split .n{font:700 18px/1 var(--display)}
+.leg{display:flex;align-items:center;gap:12px;padding:2px 14px;color:var(--muted);font-size:14px}
+.leg .dot{flex:0 0 32px;height:32px;border-radius:50%;background:var(--accent-soft);color:var(--good);display:grid;place-items:center}
+.leg .dot svg{width:18px;height:18px}
+.leg strong{color:var(--ink);font-weight:600}
+.stop{display:flex;flex-direction:column;gap:6px}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.steps i{height:4px;border-radius:2px;background:var(--line)}
+.steps i.on{background:var(--accent)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-left:1px solid var(--line);background:var(--surface);padding:8px 10px;min-height:40px;cursor:pointer;font:600 13px var(--body);color:var(--muted)}
+.seg button:first-child{border-left:0}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.seg button.on.abs{background:var(--warn);color:var(--surface)}
+.wzrow{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;border-top:1px solid var(--line)}
+.wzrow:first-child{border-top:0}
+.wzrow .nm{font-weight:600;min-width:0;flex:1 1 140px}
+.check{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border:0;border-top:1px solid var(--line);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:60px}
+.check:first-child{border-top:0}
+.check .box{flex:0 0 26px;height:26px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;color:var(--accent-ink)}
+.check.on .box{background:var(--accent);border-color:var(--accent)}
+.check .box svg{width:16px;height:16px}
+.sticky-actions{position:sticky;bottom:calc(8px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;background:var(--bg);padding-block:8px}
 .banner{border:1px solid var(--warn);color:var(--warn);border-radius:8px;padding:10px 12px;font-size:14px}
-.toast{position:fixed;left:16px;right:16px;bottom:calc(76px + env(safe-area-inset-bottom,0px));margin:auto;max-width:400px;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:8px;text-align:center;font-weight:600}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(24px + env(safe-area-inset-bottom,0px));margin:auto;max-width:400px;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:8px;text-align:center;font-weight:600}
 .stat{font:700 26px/1 var(--display);font-variant-numeric:tabular-nums}
 svg{display:block;width:100%;height:auto}
 svg text{font:500 11px var(--body);fill:var(--muted)}
 pre.sum{white-space:pre-wrap;word-break:break-word;font:14px/1.45 var(--body);margin:0;user-select:all}
 .empty{padding:22px 14px;text-align:center;color:var(--muted)}
+.sec{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:4px}
+.sec .eyebrow{flex:1;display:flex;align-items:center;gap:10px}
+.sec .eyebrow:after{content:"";flex:1;border-top:1px solid var(--line)}
+.tile .warn{font:600 12px var(--body);color:var(--warn)}
+.minis{display:flex;flex-wrap:wrap;gap:8px}
+.mini{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:99px;padding:8px 14px;min-height:40px;cursor:pointer;font:600 14px var(--body)}
+.menu .grp{font:600 11px var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:14px 18px 4px}
+.iep{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
+.iep .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px}
+.iep .kv span:nth-child(odd){color:var(--muted)}
+.iep ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.pill.todo{color:var(--warn);border-color:var(--warn)}
+.obj{border-left:3px solid var(--accent)}
+.goaltext{white-space:pre-wrap;font-size:14px}
 </style>
-
 </head>
 <body>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -112,13 +155,14 @@ pre.sum{white-space:pre-wrap;word-break:break-word;font:14px/1.45 var(--body);ma
   </form>
   <p class="muted" id="auth-msg" role="status"></p>
 </div>
+<header class="top" id="top" hidden></header>
 <div class="wrap" id="app" hidden></div>
-<nav class="tabs" id="tabs" hidden></nav>
+<div class="menu" id="menu" hidden></div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
 (function(){
-var S={view:'today',date:today(),students:[],schools:[],sessions:[],activities:[],indirect:[],days:[],indForm:false,sec:'details',scSec:'details',loaded:false,db:null,dbState:'wait',
+var S={view:'home',menu:false,wz:{step:1,i:0},legs:[],settings:{},stFilter:'active',progQ:'',agencies:[],agEdit:null,date:today(),students:[],schools:[],sessions:[],activities:[],indirect:[],days:[],indForm:false,loaded:false,db:null,dbState:'wait',
        open:null,draft:null,progId:null,period:'all',editId:null,schoolEdit:null,saving:false};
 var DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var HELP=['Independent','Verbal cue','Demonstration','Hands-on help'];
@@ -126,7 +170,7 @@ var CODES=[['401','S/LI','Speech/Language Impaired'],['402','DCD-MM','Developmen
   ['404','PI','Physically Impaired'],['405','D/HH','Deaf/Hard of Hearing'],['406','B/VI','Blind/Visually Impaired'],['407','SLD','Specific Learning Disabilities'],
   ['408','EBD','Emotional or Behavioral Disorders'],['410','OHD','Other Health Disabilities'],['411','ASD','Autism Spectrum Disorders'],['412','D/D','Developmentally Delayed'],
   ['414','TBI','Traumatic Brain Injury'],['416','SMI','Severely Multiply Impaired'],['420','Aggregate','Special Education Aggregate (three or more disabilities)'],['422','Non-disabled','Non-Disabled (no IEP/IFSP)']];
-var app=document.getElementById('app'),tabs=document.getElementById('tabs'),toastEl=document.getElementById('toast');
+var app=document.getElementById('app'),topEl=document.getElementById('top'),menuEl=document.getElementById('menu'),toastEl=document.getElementById('toast');
 
 function today(){var d=new Date();return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
 function p2(n){return (n<10?'0':'')+n}
@@ -153,12 +197,20 @@ function slotText(sl){return DAYS[sl.day]+' '+fmtTime(sl.time)+', '+sl.min+' min
 function sess(sid,date){return S.sessions.filter(function(x){return x.studentId===sid&&x.date===date})[0]}
 function history(sid){return S.sessions.filter(function(x){return x.studentId===sid&&x.status!=='planned'}).sort(function(a,b){return a.date<b.date?-1:1})}
 function lastVal(sid,gid,before){var h=history(sid),i;for(i=h.length-1;i>=0;i--){if(h[i].date<before&&h[i].values&&num(h[i].values[gid]))return h[i]}return null}
+function active(s){return !s.status||s.status==='active'}
+function activeStudents(){return S.students.filter(active)}
+var STATUS={active:'Active',graduated:'Graduated',exited:'Exited'};
+function agency(id){return S.agencies.filter(function(a){return a.id===id})[0]}
+function agencyOfStudent(s){var sc=school(s.schoolId);return sc&&sc.agencyId?agency(sc.agencyId):null}
+function dayWord(d){return d===today()?'today':d===shift(today(),1)?'tomorrow':'this day'}
+function money(n){return '$'+(Math.round(n*100)/100).toFixed(2)}
 function met(g,v){return !num(g.target)?null:(g.dir==='max'?v<=g.target:v>=g.target)}
 
 /* ---------- data ---------- */
 function start(db){
   render();
   (function(){
+    if(!db){S.dbState='none';S.loaded=true;render();return}
     S.db=db;S.dbState='ok';var got={};
     function fail(){S.dbState='none';S.loaded=true;render()}
     function sub(name,q,fn){q.onSnapshot(function(snap){fn(snap.docs.map(function(d){var o=Object.assign({},d.data());o.id=d.id;return o}));
@@ -170,6 +222,9 @@ function start(db){
     sub('activities',db.collection('activities'),function(a){S.activities=a.sort(function(x,y){return String(x.name).localeCompare(String(y.name))})});
     sub('indirect',db.collection('indirect').limit(1000),function(a){S.indirect=a});
     sub('days',db.collection('days').limit(1000),function(a){S.days=a});
+    sub('legs',db.collection('legs'),function(a){S.legs=a});
+    sub('settings',db.collection('settings'),function(a){var m={};a.forEach(function(o){m[o.id]=o});S.settings=m});
+    sub('agencies',db.collection('agencies'),function(a){S.agencies=a.sort(function(x,y){return String(x.name).localeCompare(String(y.name))})});
   })();
 }
 /* Don't redraw under her thumbs while an entry or form is open. */
@@ -181,96 +236,254 @@ function saveDoc(coll,o,patch,msg){var d=Object.assign({},o,patch);delete d.id;
 
 /* ---------- views ---------- */
 function render(){
-  tabs.innerHTML=[['today','Today'],['schools','Schools']].map(function(t){
-    return '<button data-act="tab" data-v="'+t[0]+'" class="'+(S.view===t[0]?'on':'')+'">'+t[1]+'</button>'}).join('');
+  var cur=NAV.filter(function(n){return n[0]===S.view})[0];
+  topEl.innerHTML='<div class="in"><button class="burger" data-act="menu" aria-label="Open menu" aria-expanded="'+S.menu+'">'+BURGER+'</button>'+
+    '<button class="brand" data-act="go" data-v="home">DAPE Log</button>'+(cur&&S.view!=='home'?'<span class="where">'+esc(cur[1])+'</span>':'')+'</div>';
+  menuEl.hidden=!S.menu;
+  menuEl.innerHTML=S.menu?'<div class="sheet" role="dialog" aria-label="Menu"><div class="head"><button class="burger" data-act="menu" aria-label="Close menu">'+CLOSE+'</button><span class="brand" style="font:700 20px var(--display)">DAPE Log</span></div>'+
+    NAV.map(function(n,k){return (n[3]&&(k===0||NAV[k-1][3]!==n[3])?'<div class="grp">'+esc(n[3])+'</div>':'')+'<button class="go'+(S.view===n[0]||(S.view==='iep'&&n[0]==='students')?' on':'')+'" data-act="go" data-v="'+n[0]+'"><b>'+esc(n[1])+'</b><span>'+esc(n[2])+'</span></button>'}).join('')+
+    '<button class="go" data-act="signout" style="margin-top:auto"><b>Sign out</b><span>You will need your email and password to sign back in</span></button></div>':'';
   var h='';
-  if(S.dbState==='none')h+='<div class="banner">Could not reach your data. Check your connection, then close and reopen the app.</div>';
-  if(S.view==='today')h+=S.open?entryView():todayView();
+  if(S.dbState==='none')h+='<div class="banner">Entries can\'t be saved right now. Check your connection, then reload the page.</div>';
+  if(S.view==='home')h+=homeView();
+  else if(S.view==='today')h+=S.open?entryView():todayView();
+  else if(S.view==='plan')h+=wizardView();
+  else if(S.view==='progress')h+=progressView();
+  else if(S.view==='students')h+=studentsView();
+  else if(S.view==='iep')h+=iepView();
+  else if(S.view==='agencies')h+=agenciesView();
   else h+=schoolsView();
-  var y=window.scrollY;app.innerHTML=h;
-  if(S.top){S.top=false;window.scrollTo(0,0)}else window.scrollTo(0,y);
+  app.innerHTML=h;
+  if(S.scrollTo){var st0=document.getElementById(S.scrollTo);S.scrollTo=null;if(st0)st0.scrollIntoView({block:'start'})}
 }
-function emptyRoster(){return '<div class="list"><div class="empty">'+(S.loaded?'No students yet. Open a school on the Schools tab to add its students.':'Loading your caseload…')+'</div></div>'}
+var BURGER='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+var CLOSE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+var NAV=[['home','Home','Start here'],['today',"Today's Plan",'Sessions, results, hours and travel','Every day'],['plan','Plan my Day','Lesson plans for an upcoming day','Every day'],
+  ['students','Students and IEPs','IEPs, goals, schedules, status','A few times a year'],['progress','Progress Reports','Averages and SpEd Forms text','A few times a year'],
+  ['schools','Schools','Calendars, report dates, drive distances','Setup'],['agencies','Agencies','Pay rates and mileage rates','Setup']];
+function nextWorkDay(from){var d=shift(from,1),i;for(i=0;i<14;i++){if(scheduledOn(d).length)return d;d=shift(d,1)}return shift(from,1)}
+function scheduledOn(date){return activeStudents().filter(function(s){return slotOn(s,date)})}
+function homeView(){
+  var t=today(),sc=scheduledOn(t),schools=[];
+  sc.forEach(function(s){var l=schoolLabel(s);if(l&&schools.indexOf(l)<0)schools.push(l)});
+  var nw=nextWorkDay(t),nn=scheduledOn(nw).length,planned=scheduledOn(nw).filter(function(s){return sess(s.id,nw)}).length;
+  var nAct=activeStudents().length;
+  var h='<div class="stack"><span class="eyebrow">'+esc(longDate(t))+'</span><h1>Good '+(new Date().getHours()<12?'morning':new Date().getHours()<17?'afternoon':'evening')+', Trisha</h1>'+
+    '<span class="muted">'+(!S.loaded?'Loading…':sc.length?sc.length+' session'+(sc.length===1?'':'s')+' today'+(schools.length?' at '+esc(schools.join(' and ')):''):'Nothing scheduled today')+'</span></div>';
+  var noIep=activeStudents().filter(function(s){return !s.iep}).length,nextRep=nextReport(),su=setupStatus();
+  h+='<div class="sec"><span class="eyebrow">Every day</span></div><div class="tiles">'+
+    '<button class="tile lead" data-act="go" data-v="today"><b>Today\'s Plan</b><span>'+(sc.length?'Log results as you go, then check hours and travel':'Open the day view')+'</span></button>'+
+    '<button class="tile" data-act="go" data-v="plan" style="grid-column:1/-1;min-height:84px"><b>Plan my Day</b><span>'+(nn?esc(dayWord(nw)==='this day'?longDate(nw):dayWord(nw).replace(/^./,function(c){return c.toUpperCase()}))+': '+planned+' of '+nn+' planned':'Pick a day to plan')+'</span></button></div>';
+  h+='<div class="sec"><span class="eyebrow">A few times a year</span></div><div class="tiles">'+
+    '<button class="tile" data-act="go" data-v="students"><b>Students and IEPs</b><span>'+nAct+' active'+(S.loaded&&noIep?'<br><span class="warn">'+noIep+' IEP'+(noIep===1?'':'s')+' to set up</span>':'')+'</span></button>'+
+    '<button class="tile" data-act="go" data-v="progress"><b>Progress Reports</b><span>'+(nextRep?'Next due '+esc(md(nextRep.date))+' at '+esc(nextRep.school):'Search a student')+'</span></button></div>';
+  h+=comingUp();
+  if(!S.loaded)return h;
+  if(su.todo){
+    h+='<div class="sec"><span class="eyebrow">Setup · '+su.todo+' thing'+(su.todo===1?'':'s')+' to finish</span></div><div class="tiles">'+
+      '<button class="tile" data-act="go" data-v="schools"><b>Schools</b><span>'+S.schools.length+' school'+(S.schools.length===1?'':'s')+(su.schools?'<br><span class="warn">'+esc(su.schools)+'</span>':'')+'</span></button>'+
+      '<button class="tile" data-act="go" data-v="agencies"><b>Agencies</b><span>'+(S.agencies.length?S.agencies.length+' agenc'+(S.agencies.length===1?'y':'ies'):'None yet')+(su.agencies?'<br><span class="warn">'+esc(su.agencies)+'</span>':'')+'</span></button>'+
+      '<button class="tile" data-act="go" data-v="schools" data-scroll="places" style="grid-column:1/-1;min-height:84px"><b>Drive distances</b><span>'+(su.legs?'<span class="warn">'+esc(su.legs)+'</span>':'Home and every drive between schools')+'</span></button></div>';
+  }else{
+    h+='<div class="sec"><span class="eyebrow">Setup is complete</span></div><div class="minis">'+
+      '<button class="mini" data-act="go" data-v="schools">Schools</button><button class="mini" data-act="go" data-v="agencies">Agencies</button><button class="mini" data-act="go" data-v="schools" data-scroll="places">Drive distances</button></div>';
+  }
+  return h;
+}
+function nextReport(){var t=today(),best=null;
+  S.schools.forEach(function(sc){(sc.reports||[]).forEach(function(r){if(r.date>=t&&(!best||r.date<best.date))best={date:r.date,school:sc.alias||sc.name}})});return best}
+/* What is left to set up. Drive distances count only the drives this week's routes use. */
+function setupStatus(){var o={todo:0,schools:'',agencies:'',legs:''},n;
+  n=S.agencies.filter(function(a){return !num(a.rate)||!num(a.mileRate)}).length;
+  if(!S.agencies.length){o.agencies='Add the agencies that pay you';o.todo++}else if(n){o.agencies='Rates missing for '+n;o.todo+=n}
+  var ns=S.schools.filter(function(sc){return !sc.address||!sc.agencyId||!(sc.days&&sc.days.length)});
+  if(!S.schools.length){o.schools='Add your schools';o.todo++}else if(ns.length){o.schools=ns.length+' missing an address, agency or days';o.todo+=ns.length}
+  var seen={},miss=0,test=0,i;
+  for(i=0;i<7;i++){dayStops(shift(today(),i)).legs.forEach(function(l){var k=legKey(l.from,l.to);if(seen[k])return;seen[k]=1;if(l.miles==null)miss++;else if(l.test)test++})}
+  if(!(S.settings.home&&S.settings.home.address)){o.legs='Home address not entered';o.todo++}
+  if(miss||test){o.legs=(o.legs?o.legs+' · ':'')+[miss?miss+' not set':'',test?test+' still test values':''].filter(Boolean).join(', ');o.todo+=miss+test}
+  return o}
+function emptyRoster(){return '<div class="list"><div class="empty">'+(S.loaded?'No students yet. Add your caseload under Students in the menu, with the goals you track for each.':'Loading your caseload…')+'</div></div>'}
 
 function comingUp(){
   var t=today(),out=[];
-  S.students.forEach(function(s){if(s.iepNext&&s.iepNext>=t&&s.iepNext<=shift(t,30))out.push({d:s.iepNext,t:'IEP meeting, '+s.name})});
+  activeStudents().forEach(function(s){if(s.iepNext&&s.iepNext>=t&&s.iepNext<=shift(t,30))out.push({d:s.iepNext,t:'IEP meeting, '+s.name})});
   S.schools.forEach(function(sc){(sc.reports||[]).forEach(function(r){if(r.date>=t&&r.date<=shift(t,21))out.push({d:r.date,t:'Report due, '+(sc.alias||sc.name)+(r.label?' ('+r.label+')':'')})})});
   if(!out.length)return '';
   out.sort(function(a,b){return a.d<b.d?-1:1});
   return '<div class="panel stack"><span class="eyebrow">Coming up</span>'+out.map(function(o){
     return '<div class="row"><span class="time">'+esc(md(o.d))+'</span><span style="flex:1;min-width:0">'+esc(o.t)+'</span></div>'}).join('')+'</div>';
 }
-function placeName(sc){return sc?(sc.alias||sc.name):'Home'}
-function legKey(a,b){return (a?a.id:'home')+'>'+(b?b.id:'home')}
-function dayDoc(date){return S.days.filter(function(x){return x.id===date})[0]}
-function lastLeg(key,before){var best=null;S.days.forEach(function(d){var l=d.legs&&d.legs[key];if(d.id<before&&l&&(num(l.min)||num(l.miles))&&(!best||d.id>best.id))best=d});return best?best.legs[key]:null}
-function saveLeg(key,patch){
-  var d=dayDoc(S.date);if(!d){d={id:S.date,legs:{}};S.days.push(d)}
-  var legs=Object.assign({},d.legs);legs[key]=Object.assign({},legs[key],patch);d.legs=legs;var date=S.date;
-  return write(function(){return S.db.doc('days/'+date).set({legs:legs})}).then(function(){toast('Commute saved')},function(){})}
-function legCard(from,to){
-  var key=legKey(from,to),d=dayDoc(S.date),v=(d&&d.legs&&d.legs[key])||{},last=lastLeg(key,S.date),empty=!num(v.min)&&!num(v.miles);
-  return '<div class="leg"><div class="row spread"><strong>'+esc(placeName(from))+' to '+esc(placeName(to))+'</strong><span class="eyebrow">Commute</span></div>'+
-    '<div class="row"><label>Minutes<input type="number" inputmode="numeric" id="leg-min-'+esc(key)+'" data-leg="'+esc(key)+'" data-f="min" value="'+(num(v.min)?v.min:'')+'"></label>'+
-    '<label>Miles<input type="number" inputmode="decimal" step="0.1" id="leg-mi-'+esc(key)+'" data-leg="'+esc(key)+'" data-f="miles" value="'+(num(v.miles)?v.miles:'')+'"></label></div>'+
-    (empty&&last?'<div><button class="chip" data-act="legsame" data-leg="'+esc(key)+'">Same as last time: '+(last.min||0)+' min, '+(last.miles||0)+' mi</button></div>':'')+'</div>'}
+var ARROW='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v15M6 13l6 6 6-6"/></svg>';
+var TICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
+function dayDoc(date){return S.days.filter(function(x){return x.id===date})[0]||{}}
+function placeName(id){if(id==='home')return 'Home';var sc=school(id);return sc?(sc.alias||sc.name):'Unknown place'}
+function legKey(a,b){return [a,b].sort().join('__')}
+function legOf(a,b){var k=legKey(a,b);return S.legs.filter(function(x){return x.id===k})[0]}
+/* The day's route: schools in the order of their first session, each with its students, and a drive leg into each school starting from home. */
+function dayStops(date,keepSkipped){
+  var dd=dayDoc(date),skip=keepSkipped?[]:(dd.skip||[]),skipSc=keepSkipped?[]:(dd.skipSchools||[]),rows=[],grp={};
+  activeStudents().forEach(function(s){var sl=slotOn(s,date);if(sl&&skip.indexOf(s.id)<0&&skipSc.indexOf(s.schoolId||'')<0){rows.push({s:s,sl:sl});var k=(s.schoolId||'')+'|'+sl.time;grp[k]=(grp[k]||0)+1}});
+  S.sessions.forEach(function(x){if(x.date===date&&!rows.some(function(o){return o.s.id===x.studentId})){var s=student(x.studentId);if(s&&skip.indexOf(s.id)<0)rows.push({s:s,sl:null,extra:true})}});
+  var by={},order=[];
+  rows.forEach(function(o){var k=o.s.schoolId&&school(o.s.schoolId)?o.s.schoolId:'';if(!by[k]){by[k]={id:k,sc:school(k),rows:[]};order.push(k)}by[k].rows.push(o)});
+  function t(o){var x=sess(o.s.id,date);return o.sl?o.sl.time:(x&&x.time)||'99:99'}
+  order.forEach(function(k){by[k].rows.sort(function(a,b){return t(a)<t(b)?-1:t(a)>t(b)?1:0});by[k].first=t(by[k].rows[0])});
+  var stops=order.map(function(k){return by[k]}).sort(function(a,b){if(!a.id)return 1;if(!b.id)return -1;return a.first<b.first?-1:a.first>b.first?1:0});
+  var prev='home',legs=[];
+  stops.forEach(function(st){if(!st.id)return;var l=legOf(prev,st.id);
+    st.leg={from:prev,to:st.id,miles:l&&num(l.miles)?l.miles:null,min:l&&num(l.min)?l.min:null,test:!!(l&&l.test),agencyId:st.sc.agencyId||''};legs.push(st.leg);prev=st.id});
+  return {stops:stops,legs:legs,rows:rows,grp:grp};
+}
+function legRow(l){var ag=agency(l.agencyId);
+  return '<div class="leg"><span class="dot">'+ARROW+'</span><span style="flex:1;min-width:0"><strong>'+esc(placeName(l.from))+' to '+esc(placeName(l.to))+'</strong><br>'+
+    (l.miles!=null?l.miles+' mi':'Distance not set')+(l.min!=null?' · '+l.min+' min drive':'')+(ag?' · billed to '+esc(ag.name):'')+'</span>'+(l.test?'<span class="pill">test distance</span>':'')+'</div>'}
+function statusPill(x){if(!x)return '<span class="pill">Not logged</span>';
+  if(x.absent)return '<span class="pill abs">Absent</span>';return x.status==='planned'?'<span class="pill">Planned</span>':'<span class="pill done">Logged</span>'}
 function todayView(){
-  var sched=[],other=[],grp={};
-  S.students.forEach(function(s){var sl=slotOn(s,S.date);if(sl){sched.push({s:s,sl:sl});var k=(s.schoolId||'')+'|'+sl.time;grp[k]=(grp[k]||0)+1}else other.push({s:s})});
-  sched.sort(function(a,b){return a.sl.time<b.sl.time?-1:a.sl.time>b.sl.time?1:0});
-  var done=sched.filter(function(o){var x=sess(o.s.id,S.date);return x&&x.status!=='planned'}).length;
-  var h='<div class="stack"><span class="eyebrow">Your day</span><h1>'+esc(longDate(S.date))+'</h1>'+
+  var P=dayStops(S.date),rows=P.rows,grp=P.grp,nSc=P.stops.filter(function(st){return st.id}).length;
+  var done=rows.filter(function(o){var x=sess(o.s.id,S.date);return x&&x.status!=='planned'}).length;
+  var h='<div class="stack"><span class="eyebrow">Today\'s Plan</span><h1>'+esc(longDate(S.date))+'</h1>'+
     '<div class="row"><button class="btn" data-act="day" data-n="-1" aria-label="Previous day">‹</button>'+
     '<input type="date" id="date-pick" value="'+S.date+'" style="flex:1;width:auto">'+
     '<button class="btn" data-act="day" data-n="1" aria-label="Next day">›</button>'+
     (S.date!==today()?'<button class="btn" data-act="todaybtn">Today</button>':'')+'</div>'+
-    (S.students.length?'<span class="muted small">'+(sched.length?done+' of '+sched.length+' scheduled sessions logged':'Nothing scheduled this day')+'</span>':'')+'</div>';
-  if(S.date===today())h+=comingUp();
+    (S.loaded?'<span class="muted small">'+(rows.length?done+' of '+rows.length+' sessions logged'+(nSc?' · '+nSc+' school'+(nSc===1?'':'s'):''):'Nothing scheduled '+dayWord(S.date))+'</span>':'')+'</div>';
   if(!S.students.length)return h+emptyRoster();
+  if(!rows.length)return h;
   function rowHtml(o){
-    var s=o.s,x=sess(s.id,S.date),pill='<span class="pill">Not logged</span>',extra=0;
-    S.indirect.forEach(function(i){if(i.studentId===s.id&&i.date===S.date&&num(i.min))extra+=i.min});
-    if(x)pill=x.status==='planned'?'<span class="pill">Planned</span>':x.absent?'<span class="pill abs">Absent</span>':'<span class="pill done">Logged</span>';
-    var sub=[o.sl?'':schoolLabel(s),o.sl?o.sl.min+' direct'+(s.indirect?' / '+s.indirect+' indirect':''):'',o.sl&&grp[(s.schoolId||'')+'|'+o.sl.time]>1?'group':'',extra?'+'+extra+' other indirect':''].filter(Boolean).join(' · ');
-    return '<button class="item" data-act="open" data-id="'+esc(s.id)+'">'+(o.sl?'<span class="time">'+esc(fmtTime(o.sl.time))+'</span>':'')+
-      '<span class="nm">'+esc(s.name)+(sub?'<br><span class="sub">'+esc(sub)+'</span>':'')+'</span>'+pill+'</button>'}
-  /* the day as a series of hops: home, then each school in the order she reaches it. The drive home is not paid, so it is not tracked. */
-  var stops=[],by={},loose=[];
-  sched.forEach(function(o){var sc=school(o.s.schoolId);if(!sc){loose.push(o);return}
-    if(!by[sc.id]){by[sc.id]={sc:sc,rows:[]};stops.push(by[sc.id])}by[sc.id].rows.push(o)});
-  stops.forEach(function(st,i){
-    var cl=closedOn(st.sc,S.date);
-    h+=legCard(i?stops[i-1].sc:null,st.sc)+
-      '<div class="stack"><div class="row spread"><h2>'+esc(st.sc.name)+'</h2><span class="muted small">'+st.rows.length+' student'+(st.rows.length===1?'':'s')+'</span></div>'+
-      (cl?'<span class="banner">School closed this day'+(cl.label?': '+esc(cl.label):'')+'</span>':'')+
+    var s=o.s,x=sess(s.id,S.date),sc=school(s.schoolId),cl=sc&&closedOn(sc,S.date);
+    var sub=[o.sl?o.sl.min+' direct'+(s.indirect?' / '+s.indirect+' indirect':''):'added for this day',o.sl&&grp[(s.schoolId||'')+'|'+o.sl.time]>1?'group':'',cl?'school closed'+(cl.label?' ('+cl.label+')':''):''].filter(Boolean).join(' · ');
+    var tm=o.sl?o.sl.time:(x&&x.time);
+    return '<button class="item" data-act="open" data-id="'+esc(s.id)+'"><span class="time">'+esc(tm?fmtTime(tm):'')+'</span>'+
+      '<span class="nm">'+esc(s.name)+(sub?'<br><span class="sub">'+esc(sub)+'</span>':'')+'</span>'+statusPill(x)+'</button>'}
+  P.stops.forEach(function(st){
+    if(st.leg)h+=legRow(st.leg);
+    var ag=st.sc&&agency(st.sc.agencyId);
+    h+='<div class="stop"><div class="row spread"><h2>'+esc(st.sc?(st.sc.alias||st.sc.name):'No school set')+'</h2>'+(ag?'<span class="muted small">'+esc(ag.name)+'</span>':'')+'</div>'+
       '<div class="list">'+st.rows.map(rowHtml).join('')+'</div></div>';
   });
-  if(loose.length)h+='<h2>No school set</h2><div class="list">'+loose.map(rowHtml).join('')+'</div>';
-  if(other.length)h+=(sched.length||S.students.some(function(s){return s.slots.length})?'<span class="eyebrow">Not scheduled this day</span>':'')+'<div class="list">'+other.map(rowHtml).join('')+'</div>';
-  return h+dayPanel();
+  return h+dayPanel(P);
 }
 function dayMinutes(date){var d=0,i=0;
   S.sessions.forEach(function(x){if(x.date===date&&x.status!=='planned'){if(!x.absent&&num(x.min))d+=x.min;if(num(x.indirect))i+=x.indirect}});
   S.indirect.forEach(function(x){if(x.date===date&&num(x.min))i+=x.min});return{d:d,i:i}}
 function hrs(m){return Math.round(m/60*100)/100}
-function dayPanel(){
-  var m=dayMinutes(S.date),dd=dayDoc(S.date),cm=0,mi=0;
-  if(dd&&dd.legs)Object.keys(dd.legs).forEach(function(k){if(/>home$/.test(k))return;var l=dd.legs[k];if(num(l.min))cm+=l.min;if(num(l.miles))mi+=l.miles});
+function dayByAgency(date){var out={};
+  function add(sid,m){var s=student(sid),a=s&&agencyOfStudent(s),k=a?a.id:'';out[k]=(out[k]||0)+m}
+  S.sessions.forEach(function(x){if(x.date===date&&x.status!=='planned'){var m=(!x.absent&&num(x.min)?x.min:0)+(num(x.indirect)?x.indirect:0);if(m)add(x.studentId,m)}});
+  S.indirect.forEach(function(x){if(x.date===date&&num(x.min))add(x.studentId,x.min)});return out}
+function dayTotals(date,P){var out={};
+  function b(k){return out[k]||(out[k]={stu:0,trav:0,miles:0})}
+  var by=dayByAgency(date);Object.keys(by).forEach(function(k){b(k).stu+=by[k]});
+  P.legs.forEach(function(l){var x=b(l.agencyId);if(num(l.min))x.trav+=l.min;if(num(l.miles))x.miles+=l.miles});
+  return out}
+function dayPanel(P){
+  var m=dayMinutes(S.date),T=dayTotals(S.date,P),ks=Object.keys(T),trav=0,miles=0,missing=P.legs.some(function(l){return l.miles==null}),test=P.legs.some(function(l){return l.test});
+  ks.forEach(function(k){trav+=T[k].trav;miles+=T[k].miles});
   var h='<div class="panel stack"><span class="eyebrow">Day total</span>'+
-    '<div class="row" style="gap:20px;align-items:flex-start"><div><div class="stat">'+hrs(m.d+m.i)+'</div><span class="muted small">student hours<br>'+m.d+' direct + '+m.i+' indirect min</span></div>'+
-    '<div><div class="stat">'+hrs(cm)+'</div><span class="muted small">commute hours<br>'+(Math.round(mi*10)/10)+' miles</span></div>'+
-    '<div><div class="stat">'+hrs(m.d+m.i+cm)+'</div><span class="muted small">total hours</span></div></div>';
+    '<div class="row" style="gap:22px"><div><div class="stat">'+hrs(m.d+m.i+trav)+'</div><span class="muted small">total hours<br>'+hrs(m.d+m.i)+' students + '+hrs(trav)+' travel</span></div>'+
+    '<div><div class="stat">'+r1(miles)+'</div><span class="muted small">miles<br>'+P.legs.length+' drive'+(P.legs.length===1?'':'s')+' from home</span></div></div>';
+  if(ks.length)h+='<div class="split">'+ks.map(function(k){var a=agency(k),r=a&&num(a.rate)?a.rate:null,mr=a&&num(a.mileRate)?a.mileRate:null,t=T[k];
+      var pay=(r!=null?hrs(t.stu+t.trav)*r:0)+(mr!=null?t.miles*mr:0);
+      return '<span>'+esc(a?a.name:'No agency set')+'</span><span class="muted small">'+hrs(t.stu+t.trav)+' hrs · '+r1(t.miles)+' mi</span><span class="n">'+(r!=null||mr!=null?money(pay):'')+'</span>'}).join('')+'</div>';
+  if(missing)h+='<span class="muted small">Some drives have no distance yet. Add them under Schools, in Home and drive distances.</span>';
+  else if(test)h+='<span class="muted small">Miles use test distances for now.</span>';
+  h+='<span class="muted small">Student hours count logged sessions only. The drive home after the last school is not counted.</span>';
+  S.indirect.filter(function(x){return x.date===S.date}).forEach(function(x){var st=student(x.studentId);
+    h+='<div class="row spread"><span style="min-width:0;flex:1">'+esc((st?st.name:'Removed student')+', '+x.min+' indirect min'+(x.note?', '+x.note:''))+'</span><button class="chip" data-act="rmind" data-id="'+esc(x.id)+'">Remove</button></div>'});
+  if(S.indForm)h+='<div class="row"><label>Student<select id="ind-student"><option value="">Pick a student</option>'+activeStudents().map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'}).join('')+'</select></label>'+
+    '<label>Indirect minutes<input type="number" inputmode="numeric" id="ind-min"></label></div>'+
+    '<label>What it was<input id="ind-note" placeholder="Phone call, meeting, talking with a para. No real names."></label>'+
+    '<div class="row"><button class="btn primary" style="flex:1" data-act="addind">Save indirect time</button><button class="btn" data-act="indform">Cancel</button></div>';
+  else h+='<button class="btn" data-act="indform">Add indirect time outside a session</button>';
   return h+'</div>';
 }
-function indirectBlock(s){
-  var list=S.indirect.filter(function(x){return x.studentId===s.id&&x.date===S.date});
-  var h='<div class="panel stack"><div class="row spread"><strong>Other indirect time</strong>'+(S.indForm?'':'<button class="chip" data-act="indform">Add</button>')+'</div>';
-  if(!list.length&&!S.indForm)h+='<span class="muted small">A call, meeting or other time spent on this student outside the session.</span>';
-  list.forEach(function(x){h+='<div class="row spread"><span style="min-width:0;flex:1">'+esc(x.min+' min'+(x.note?', '+x.note:''))+'</span><button class="chip" data-act="rmind" data-id="'+esc(x.id)+'">Remove</button></div>'});
-  if(S.indForm)h+='<div class="row"><label>Minutes<input type="number" inputmode="numeric" id="ind-min"></label><label>What it was<input id="ind-note" placeholder="Call, meeting, para"></label></div>'+
-    '<div class="row"><button class="btn primary" style="flex:1" data-act="addind">Save indirect time</button><button class="btn" data-act="indform">Cancel</button></div>';
-  return h+'</div>';
+
+/* ---------- Plan my Day wizard ---------- */
+var WZ=['Day','Schools','Students','Lesson plans','Review'];
+function wzStudents(date){/* students she will see, in route order */var P=dayStops(date),out=[];
+  P.stops.forEach(function(st){st.rows.forEach(function(o){var x=sess(o.s.id,date);if(!(x&&x.absent))out.push(o)})});return out}
+function wizardView(){
+  var w=S.wz,d=S.date,h='<div class="stack"><span class="eyebrow">Plan my Day · Step '+w.step+' of 5</span><h1>'+esc(WZ[w.step-1])+'</h1>'+
+    '<div class="steps" aria-hidden="true">'+WZ.map(function(_,i){return '<i class="'+(i<w.step?'on':'')+'"></i>'}).join('')+'</div></div>';
+  if(!S.loaded)return h+'<div class="list"><div class="empty">Loading…</div></div>';
+  var all=dayStops(d,true),dd=dayDoc(d);
+  if(w.step===1){
+    h+='<div class="panel stack"><label>Which day are you planning?<input type="date" id="date-pick" value="'+d+'"></label>'+
+      '<div class="row"><button class="btn" data-act="day" data-n="-1">‹ Day before</button><button class="btn" data-act="day" data-n="1">Day after ›</button></div>'+
+      '<strong>'+esc(longDate(d))+'</strong>'+
+      (all.rows.length?'<span class="muted">'+all.rows.length+' student'+(all.rows.length===1?'':'s')+' scheduled at '+esc(all.stops.map(function(st){return st.sc?(st.sc.alias||st.sc.name):'no school'}).join(', '))+'</span>':
+        '<span class="muted">Nothing scheduled '+dayWord(d)+'. Pick another day, or add time slots to students.</span>')+'</div>';
+    return h+wzActions(false,!!all.rows.length);
+  }
+  if(w.step===2){
+    var ids=all.stops.filter(function(st){return st.id});
+    h+='<span class="muted">Untick a school you will not visit '+dayWord(d)+'.</span>';
+    h+=ids.length?'<div class="list">'+ids.map(function(st){var on=(dd.skipSchools||[]).indexOf(st.id)<0,cl=closedOn(st.sc,d);
+      var times=st.rows.filter(function(o){return o.sl}).map(function(o){return o.sl.time}).sort();
+      return '<button class="check'+(on?' on':'')+'" data-act="wzschool" data-id="'+esc(st.id)+'" aria-pressed="'+on+'"><span class="box">'+(on?TICK:'')+'</span><span style="flex:1;min-width:0"><strong>'+esc(st.sc.alias||st.sc.name)+'</strong><br><span class="muted small">'+
+        st.rows.length+' student'+(st.rows.length===1?'':'s')+(times.length?' · '+esc(fmtTime(times[0]))+(times.length>1?' to '+esc(fmtTime(times[times.length-1])):''):'')+(agency(st.sc.agencyId)?' · '+esc(agency(st.sc.agencyId).name):'')+'</span>'+
+        (cl?'<br><span class="small" style="color:var(--warn)">School closed'+(cl.label?': '+esc(cl.label):'')+'</span>':'')+'</span></button>'}).join('')+'</div>':
+      '<div class="list"><div class="empty">The students scheduled this day have no school set.</div></div>';
+    return h+wzActions(true,true);
+  }
+  if(w.step===3){
+    var P=dayStops(d),skip=dd.skip||[],stops=all.stops.filter(function(st){return (dd.skipSchools||[]).indexOf(st.id)<0});
+    h+='<span class="muted">Mark anyone who is out. Absent students stay on the day as absent; Not today removes them from this day only.</span>';
+    if(!stops.length)h+='<div class="list"><div class="empty">No schools left for this day. Go back and tick at least one.</div></div>';
+    stops.forEach(function(st){
+      h+='<div class="stop"><h2>'+esc(st.sc?(st.sc.alias||st.sc.name):'No school set')+'</h2><div class="list">'+st.rows.map(function(o){
+        var s=o.s,x=sess(s.id,d),state=skip.indexOf(s.id)>=0?'skip':(x&&x.absent)?'absent':'in';
+        return '<div class="wzrow"><span class="nm">'+(o.sl?'<span class="time" style="display:inline-block;min-width:64px;margin-right:10px">'+esc(fmtTime(o.sl.time))+'</span>':'')+esc(s.name)+'</span>'+
+          '<span class="seg" role="group" aria-label="'+esc(s.name)+'">'+[['in','Seeing'],['absent','Absent'],['skip','Not today']].map(function(v){
+            return '<button class="'+(state===v[0]?'on'+(v[0]==='absent'?' abs':''):'')+'" data-act="wzst" data-id="'+esc(s.id)+'" data-v="'+v[0]+'" aria-pressed="'+(state===v[0])+'">'+v[1]+'</button>'}).join('')+'</span></div>'}).join('')+'</div></div>';
+    });
+    return h+wzActions(true,true);
+  }
+  if(w.step===4){
+    var list=wzStudents(d);
+    if(!list.length)return h+'<div class="list"><div class="empty">No one to plan for. Everyone is absent or removed for this day.</div></div>'+wzActions(true,true);
+    if(w.i>=list.length)w.i=list.length-1;
+    var o=list[w.i],s=o.s;if(S.open!==s.id)openEntry(s.id);
+    h+='<div class="row">'+list.map(function(q,k){var x=sess(q.s.id,d);return '<button class="chip'+(k===w.i?' on':'')+'" data-act="wzjump" data-i="'+k+'">'+(x?'✓ ':'')+esc(q.s.name)+'</button>'}).join('')+'</div>';
+    h+='<div><span class="eyebrow">Student '+(w.i+1)+' of '+list.length+'</span><h2 style="font-size:26px">'+esc(s.name)+'</h2><span class="muted">'+esc([schoolLabel(s),o.sl?fmtTime(o.sl.time):'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · '))+'</span></div>';
+    var lastS=history(s.id);if(lastS.length){var ls=lastS[lastS.length-1];h+='<span class="muted small">Last session '+esc(md(ls.date))+(ls.acts&&ls.acts.length?': '+esc(ls.acts.join(', ')):'')+'. Its activities are pre-selected.</span>'}
+    h+=minutesPanel(s,S.draft);
+    h+='<label>Plan notes<textarea id="note" placeholder="Equipment to bring, what to try. Initials or nicknames only.">'+esc(S.draft.note)+'</textarea></label>';
+    h+='<div class="sticky-actions"><button class="btn" data-act="wzback">Back</button><button class="btn primary" style="flex:1" data-act="wzsave"'+(S.saving?' disabled':'')+'>'+(w.i<list.length-1?'Save and next student':'Save and review')+'</button></div>';
+    return h;
+  }
+  /* step 5: review */
+  var P5=dayStops(d),T=dayTotals(d,P5),list5=wzStudents(d),planned=list5.filter(function(o){return sess(o.s.id,d)}).length,stu=0,trav=0,miles=0,absN=P5.rows.length-list5.length;
+  list5.forEach(function(o){stu+=(o.sl?o.sl.min:(o.s.direct||0))+(o.s.indirect||0)});
+  P5.legs.forEach(function(l){if(num(l.min))trav+=l.min;if(num(l.miles))miles+=l.miles});
+  h+='<div class="panel stack"><div class="row" style="gap:22px"><div><div class="stat">'+list5.length+'</div><span class="muted small">students<br>'+planned+' with a plan</span></div>'+
+    '<div><div class="stat">'+hrs(stu+trav)+'</div><span class="muted small">hours expected<br>'+hrs(trav)+' of it driving</span></div>'+
+    '<div><div class="stat">'+r1(miles)+'</div><span class="muted small">miles</span></div></div>'+
+    (absN?'<span class="muted small">'+absN+' marked absent.</span>':'')+'</div>';
+  P5.stops.forEach(function(st){if(st.leg)h+=legRow(st.leg);
+    h+='<div class="stop"><h2>'+esc(st.sc?(st.sc.alias||st.sc.name):'No school set')+'</h2><div class="list">'+st.rows.map(function(o){var x=sess(o.s.id,d);
+      return '<div class="item" style="cursor:default"><span class="time">'+esc(o.sl?fmtTime(o.sl.time):'')+'</span><span class="nm">'+esc(o.s.name)+(x&&x.acts&&x.acts.length&&!x.absent?'<br><span class="sub">'+esc(x.acts.join(', '))+'</span>':'')+'</span>'+statusPill(x)+'</div>'}).join('')+'</div></div>'});
+  var ks=Object.keys(T);
+  if(ks.length&&S.agencies.length)h+='<div class="panel stack"><span class="eyebrow">Expected by agency</span><div class="split">'+ks.map(function(k){var a=agency(k);
+      var stuK=0;list5.forEach(function(o){var ak=agencyOfStudent(o.s);if((ak?ak.id:'')===k)stuK+=(o.sl?o.sl.min:(o.s.direct||0))+(o.s.indirect||0)});
+      return '<span>'+esc(a?a.name:'No agency set')+'</span><span class="muted small">'+hrs(stuK+T[k].trav)+' hrs</span><span class="n">'+r1(T[k].miles)+' mi</span>'}).join('')+'</div></div>';
+  h+='<div class="sticky-actions"><button class="btn" data-act="wzback">Back</button><button class="btn primary" style="flex:1" data-act="wzdone">Open this day in Today\'s Plan</button></div>';
+  return h;
+}
+function wzActions(back,next){return '<div class="sticky-actions">'+(back?'<button class="btn" data-act="wzback">Back</button>':'')+
+  '<button class="btn primary" style="flex:1" data-act="wznext"'+(next?'':' disabled')+'>Next: '+esc(WZ[S.wz.step])+'</button></div>'}
+function saveDay(date,patch,msg){var o=Object.assign({},dayDoc(date),patch);delete o.id;
+  return write(function(){return S.db.doc('days/'+date).set(o)}).then(function(){if(msg)toast(msg);render()},function(){})}
+function saveSession(kind,after){var d=S.draft,id=S.open,date=S.date;
+  var vals={};Object.keys(d.values).forEach(function(k){if(num(d.values[k]))vals[k]=d.values[k]});
+  var doc={studentId:id,date:date,absent:d.absent,values:d.absent?{}:vals,variants:d.absent?{}:d.variants,note:d.note.trim(),updated:new Date().toISOString()};
+  var s=student(id),sl=s&&slotOn(s,date);if(sl)doc.time=sl.time;
+  doc.min=d.absent?0:(num(d.min)?d.min:0);doc.indirect=num(d.indirect)?d.indirect:0;doc.acts=d.absent?[]:d.acts;doc.outof=d.absent?{}:d.outof;doc.help=d.absent?{}:d.help;
+  var x0=sess(id,date);doc.status=(kind==='save'||(x0&&x0.status!=='planned'))?'logged':'planned';
+  S.saving=true;render();
+  write(function(){return S.db.doc('sessions/'+id+'_'+date).set(doc)}).then(function(){S.saving=false;toast(doc.status==='planned'?'Plan saved':'Saved');after();render()},function(){S.saving=false;render()});
 }
 function extraInputs(g,d){var h='';
   if(g.kind==='ratio')h+='<div class="row"><label style="flex:0 1 200px">Out of how many tries<input type="number" inputmode="numeric" id="of-'+esc(g.id)+'" data-g="'+esc(g.id)+'" data-x="outof" value="'+(num(d.outof[g.id])?d.outof[g.id]:'')+'"></label></div>';
@@ -288,17 +501,18 @@ function minutesPanel(s,d){
 function entryView(){
   var s=student(S.open),d=S.draft; if(!s){S.open=null;return todayView()}
   var sl=slotOn(s,S.date),where=[schoolLabel(s),sl?fmtTime(sl.time):'',(s.direct||s.indirect)?'IEP '+(s.direct||0)+' direct / '+(s.indirect||0)+' indirect':'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · ');
-  var h='<div class="row spread"><button class="btn ghost" data-act="back">‹ Back</button><span class="muted small">'+esc(md(S.date))+'</span></div>'+
+  var h='<div class="row spread"><button class="btn ghost" data-act="back">‹ '+(S.view==='plan'?'Back to plan':S.fromStu?'Back to '+s.name:'Back to the day')+'</button><span class="muted small">'+esc(md(S.date))+'</span></div>'+
     '<div><h1>'+esc(s.name)+'</h1>'+(where?'<span class="muted">'+esc(where)+'</span>':'')+'</div>'+
-    indirectBlock(s)+'<h2>Lesson plan</h2>'+minutesPanel(s,d)+'<button class="btn" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
+    '<h2>Lesson plan</h2>'+minutesPanel(s,d)+'<button class="btn" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
     '<button class="btn '+(d.absent?'on':'')+'" data-act="absent" aria-pressed="'+!!d.absent+'">'+(d.absent?'Marked absent':'Mark absent')+'</button>';
   if(!d.absent){
     h+='<div class="panel">';
-    if(!s.goals.length)h+='<p class="muted" style="margin:0">No goals set up for this student yet. Add them in this student\'s folder under Schools, or just leave a note below.</p>';
-    s.goals.forEach(function(g){
+    if(!liveGoals(s).length)h+='<p class="muted" style="margin:0">No IEP objectives for this student yet. Set up the IEP under Students and IEPs, or just leave a note below.</p>';
+    liveGoals(s).forEach(function(g){
       var v=d.values[g.id],last=lastVal(s.id,g.id,S.date),m=num(v)?met(g,v):null;
       h+='<div class="goal stack"><div class="row spread"><strong>'+esc(g.label)+'</strong>'+
         (num(g.target)?'<span class="pill '+(m?'done':'')+'">'+(g.dir==='max'?'at most ':'target ')+g.target+' '+esc(g.unit)+'</span>':'')+'</div>'+
+        (g.baseline||g.mastery?'<span class="muted small">'+esc([g.baseline?'Baseline: '+g.baseline:'',g.mastery?'Mastery: '+g.mastery:''].filter(Boolean).join(' · '))+'</span>':'')+
         '<div class="stepper"><button data-act="step" data-g="'+esc(g.id)+'" data-n="-1" aria-label="Less">−</button>'+
         '<input type="number" inputmode="decimal" id="val-'+esc(g.id)+'" data-g="'+esc(g.id)+'" value="'+(num(v)?v:'')+'" placeholder="–" aria-label="'+esc(g.label)+'">'+
         '<button data-act="step" data-g="'+esc(g.id)+'" data-n="1" aria-label="More">+</button><span class="muted">'+esc(g.unit)+'</span></div>'+extraInputs(g,d);
@@ -316,18 +530,25 @@ function entryView(){
   return h;
 }
 
-function inPeriod(x){if(S.period==='all')return true;
-  if(S.period==='custom')return (!S.pFrom||x.date>=S.pFrom)&&(!S.pTo||x.date<=S.pTo);
-  return x.date>=shift(today(),-(+S.period))}
-function progressBody(s){
-  var hs=history(s.id).filter(inPeriod);
-  var h='<label>Period<select id="prog-period">'+[['30','Last 30 days'],['90','Last 90 days'],['all','All entries'],['custom','Custom dates']].map(function(o){
-      return '<option value="'+o[0]+'"'+(S.period===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></label>';
-  if(S.period==='custom')h+='<div class="row"><label>From<input type="date" id="prog-from" value="'+esc(S.pFrom||'')+'"></label><label>To<input type="date" id="prog-to" value="'+esc(S.pTo||'')+'"></label></div>';
-  if(!hs.length)return h+'<span class="muted small">No logged sessions in this period yet. Charts and the SpedForms summary appear after the first one.</span>';
-  s.goals.forEach(function(g){
+function inPeriod(x){if(S.period==='custom')return (!S.pFrom||x.date>=S.pFrom)&&(!S.pTo||x.date<=S.pTo);return S.period==='all'||x.date>=shift(today(),-(+S.period))}
+function progressView(){
+  var h='<div class="stack"><span class="eyebrow">Progress Reports</span><h1>'+(student(S.progId)?esc(student(S.progId).name):'Pick a student')+'</h1></div>';
+  if(!S.students.length)return h+emptyRoster();
+  var q=S.progQ.toLowerCase(),hits=S.students.filter(function(x){return !q||String(x.name).toLowerCase().indexOf(q)>=0||schoolLabel(x).toLowerCase().indexOf(q)>=0});
+  h+='<label>Find a student<input id="prog-q" type="search" value="'+esc(S.progQ)+'" placeholder="Initials, nickname or school" autocomplete="off"></label>'+
+    '<div class="row">'+(hits.length?hits.map(function(x){return '<button class="chip'+(x.id===S.progId?' on':'')+'" data-act="pickprog" data-id="'+esc(x.id)+'">'+esc(x.name)+(active(x)?'':' ('+esc(STATUS[x.status]||x.status)+')')+'</button>'}).join(''):'<span class="muted small">No student matches that search.</span>')+'</div>';
+  if(!student(S.progId))return h;
+  var s=student(S.progId),hs=history(s.id).filter(inPeriod);
+  h+='<div class="row">'+
+    '<label>Period<select id="prog-period">'+[['30','Last 30 days'],['90','Last 90 days'],['all','All entries'],['custom','Custom dates']].map(function(o){
+      return '<option value="'+o[0]+'"'+(S.period===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></label></div>'+
+    (S.period==='custom'?'<div class="row"><label>From<input type="date" id="prog-from" value="'+esc(S.pFrom||'')+'"></label><label>To<input type="date" id="prog-to" value="'+esc(S.pTo||'')+'"></label></div>':'');
+  if(!hs.length)return h+'<div class="list"><div class="empty">No entries for '+esc(s.name)+' in this period. Charts and the SpedForms summary appear here after the first saved session.</div></div>';
+  if(s.iep)h+='<span class="muted small">IEP '+esc(s.iep.meeting?mdy(s.iep.meeting):'date not entered')+(s.iep.amended?', amended '+esc(mdy(s.iep.amended)):'')+(s.iep.next?' · next review '+esc(mdy(s.iep.next)):'')+'</span>';
+  else h+='<span class="muted small">No IEP entered yet. Set it up under Students and IEPs to get objective-by-objective report text.</span>';
+  reportGoals(s,hs).forEach(function(g){
     var pts=hs.filter(function(x){return !x.absent&&x.values&&num(x.values[g.id])}).map(function(x){return{d:x.date,v:x.values[g.id]}});
-    h+='<div class="stack" style="border-top:1px solid var(--line);padding-top:12px"><div class="row spread"><h2>'+esc(g.label)+'</h2>'+
+    h+='<div class="panel stack"><div class="row spread"><h2>'+esc((g.num?'Objective '+g.num+': ':'')+g.label)+(g.retired?' <span class="muted small">(ended '+esc(md(g.retired))+')</span>':'')+'</h2>'+
       (num(g.target)?'<span class="pill">'+(g.dir==='max'?'at most ':'target ')+g.target+' '+esc(g.unit)+'</span>':'')+'</div>';
     if(!pts.length)h+='<span class="muted small">No data recorded for this goal yet.</span>';
     else{var st=stats(g,pts);
@@ -336,21 +557,16 @@ function progressBody(s){
         (st.metN!=null?'<div><div class="stat">'+st.metN+'/'+pts.length+'</div><span class="muted small">sessions at target</span></div>':'')+'</div>'+chart(g,pts)}
     h+='</div>';
   });
-  h+='<div class="stack" style="border-top:1px solid var(--line);padding-top:12px"><div class="row spread"><h2>Summary for SpedForms</h2><button class="btn" data-act="copy">Copy</button></div><pre class="sum" id="sum">'+esc(summary(s,hs))+'</pre></div>';
+  h+='<div class="panel stack"><div class="row spread"><h2>Summary for SpedForms</h2><button class="btn" data-act="copy">Copy</button></div><pre class="sum" id="sum">'+esc(summary(s,hs))+'</pre></div>';
   return h;
 }
-function sessionsOf(s){return S.sessions.filter(function(x){return x.studentId===s.id}).sort(function(a,b){return a.date<b.date?1:-1})}
-function sessionsBody(s){
-  var all=sessionsOf(s);
-  if(!all.length)return '<span class="muted small">No sessions yet. They appear here as you plan and log them on the Today tab.</span>';
-  return '<div class="list">'+all.slice(0,60).map(function(x){
-    var vals=s.goals.filter(function(g){return x.values&&num(x.values[g.id])}).map(function(g){return g.label+' '+x.values[g.id]}).join(' · ');
-    var pill=x.status==='planned'?'<span class="pill">Planned</span>':x.absent?'<span class="pill abs">Absent</span>':'<span class="pill done">Logged</span>';
-    var extra=[vals,x.note].filter(Boolean).join(' · ');
-    return '<button class="item" data-act="opensess" data-id="'+esc(s.id)+'" data-date="'+esc(x.date)+'"><span class="nm">'+esc(longDate(x.date)+', '+x.date.slice(0,4))+(extra?'<br><span class="sub">'+esc(extra)+'</span>':'')+'</span>'+pill+'</button>'}).join('')+'</div>'+
-    (all.length>60?'<span class="muted small">Showing the latest 60 of '+all.length+'.</span>':'');
-}
-function leaveEntry(){S.open=null;S.top=true;if(S.from){S.view='schools';S.editId=S.from;S.sec='sessions';S.from=null;S.date=S.fromDate||S.date}}
+/* Objectives to report on: current ones, plus ended ones that have data in the period. Ordered by annual goal, then objective number. */
+function reportGoals(s,hs){var annual=(s.iep&&s.iep.annual)||[];
+  function ai(g){var k=-1;annual.forEach(function(a,j){if(a.id===g.annualId)k=j});return k<0?999:k}
+  return (s.goals||[]).filter(function(g){return !g.retired||hs.some(function(x){return x.values&&num(x.values[g.id])})})
+    .map(function(g,k){return{g:g,k:k}}).sort(function(p,q){return ai(p.g)-ai(q.g)||((parseFloat(p.g.num)||99)-(parseFloat(q.g.num)||99))||p.k-q.k}).map(function(p){return p.g})}
+function liveGoals(s){return (s.goals||[]).filter(function(g){return !g.retired})}
+function hasData(sid,gid){return S.sessions.some(function(x){return x.studentId===sid&&x.values&&num(x.values[gid])})}
 function stats(g,pts){var vs=pts.map(function(p){return p.v}),sum=vs.reduce(function(a,b){return a+b},0);
   return{avg:r1(sum/vs.length),min:Math.min.apply(null,vs),max:Math.max.apply(null,vs),
     metN:num(g.target)?pts.filter(function(p){return met(g,p.v)}).length:null}}
@@ -374,9 +590,13 @@ function summary(s,hs){
   var dm=0,im=0;hs.forEach(function(x){if(num(x.min))dm+=x.min;if(num(x.indirect))im+=x.indirect});
   S.indirect.forEach(function(x){if(x.studentId===s.id&&inPeriod(x)&&num(x.min))im+=x.min});
   if(dm||im)out.splice(1,0,'Service time: '+dm+' direct min, '+im+' indirect min.');
-  s.goals.forEach(function(g){
+  var goalsR=reportGoals(s,hs),lastA=null,annual=(s.iep&&s.iep.annual)||[];
+  goalsR.forEach(function(g){
     var pts=hs.filter(function(x){return !x.absent&&x.values&&num(x.values[g.id])});
-    var head=g.text?'Objective '+(s.goals.filter(function(q){return q.text}).indexOf(g)+1)+': '+g.text:g.label+':';
+    var a=annual.filter(function(q){return q.id===g.annualId})[0];
+    if(a&&a!==lastA&&a.text){out.push((a.num?'Goal '+a.num:'Annual goal')+': '+a.text,'');lastA=a}
+    var nth=g.num||String(goalsR.filter(function(q){return q.text}).indexOf(g)+1);
+    var head=g.num?'Objective '+g.num+': '+(g.text||g.label)+(g.retired?' (ended '+md(g.retired)+')':''):(g.text?'Objective '+nth+': '+g.text:g.label+':');
     if(!pts.length){out.push(head,'Progress: no data recorded this period.','');return}
     var p=pts.map(function(x){return{d:x.date,v:x.values[g.id]}}),st=stats(g,p),l=pts[pts.length-1],vr=l.variants&&l.variants[g.id];
     out.push(head,'Progress: '+s.name+' averaged '+st.avg+' '+g.unit+' (range '+st.min+' to '+st.max+') across '+pts.length+' session'+(pts.length===1?'':'s')+
@@ -388,93 +608,264 @@ function summary(s,hs){
   return out.join('\n');
 }
 
-function schoolOptions(sel){return '<option value="">No school set</option>'+S.schools.map(function(sc){
-  return '<option value="'+esc(sc.id)+'"'+(sc.id===sel?' selected':'')+'>'+esc(sc.alias||sc.name)+'</option>'}).join('')}
-function section(k,key,title,summary,body){var open=S[k]===key;
-  return '<div class="sec"><button class="sechead" data-act="sec" data-k="'+k+'" data-v="'+key+'" aria-expanded="'+open+'"><span class="nm"><strong>'+title+'</strong>'+(summary?'<br><span class="sub">'+esc(summary)+'</span>':'')+'</span><span class="chev" aria-hidden="true">'+(open?'−':'+')+'</span></button>'+
-    (open?'<div class="stack secbody">'+body+'</div>':'')+'</div>'}
-function studentRow(s){
-  var sub=[s.grade?'grade '+s.grade:'',s.codes?'code '+s.codes:'',s.slots.length?s.slots.map(function(sl){return DAYS[sl.day]+' '+fmtTime(sl.time)}).join(', '):'no schedule'].filter(Boolean).join(' · ');
-  return '<button class="item" data-act="edit" data-id="'+esc(s.id)+'"><span class="nm">'+esc(s.name)+'<br><span class="sub">'+esc(sub)+'</span></span><span class="pill">'+s.goals.length+' goal'+(s.goals.length===1?'':'s')+'</span></button>'}
-
-function studentPage(s){
-  var id=esc(s.id),sc=school(s.schoolId);
-  var details='<div class="row"><label>Initials or nickname<input id="st-name" value="'+esc(s.name)+'"></label><label>Grade<input id="st-grade" value="'+esc(s.grade||'')+'"></label></div>'+
-    '<label>School<select id="st-school">'+schoolOptions(s.schoolId)+'</select></label>'+
-    '<div class="row"><label>Last IEP meeting<input type="date" id="st-last" value="'+esc(s.iepLast||'')+'"></label><label>Next IEP meeting<input type="date" id="st-next" value="'+esc(s.iepNext||'')+'"></label></div>'+
-    '<div class="row"><label>Direct minutes per session<input type="number" inputmode="numeric" id="st-direct" value="'+(num(s.direct)?s.direct:'')+'"></label><label>Indirect minutes per session<input type="number" inputmode="numeric" id="st-ind" value="'+(num(s.indirect)?s.indirect:'')+'"></label></div>'+
-    '<button class="btn primary" data-act="savestudent" data-id="'+id+'">Save details</button>';
-  var codes='<div class="row">'+CODES.map(function(c){var on=(s.codes||'').split('/').indexOf(c[0])>=0;
-      return '<button class="chip '+(on?'on':'')+'" data-act="code" data-id="'+id+'" data-v="'+c[0]+'" title="'+esc(c[2])+'" aria-pressed="'+on+'">'+c[0]+' '+esc(c[1])+'</button>'}).join('')+'</div><span class="muted small">Tap a code to add or remove it. It saves straight away.</span>';
-  var sched=(s.slots.length?s.slots.map(function(sl,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(slotText(sl))+'</span><button class="chip" data-act="rmslot" data-id="'+id+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No time slots yet. Add each day you see this student.</span>')+
-    '<div class="row"><label>Day<select id="sl-day">'+(function(){var ds=sc&&sc.days&&sc.days.length?sc.days:[0,1,2,3,4,5,6];return ds.map(function(i){return '<option value="'+i+'">'+DAYS[i]+'</option>'}).join('')})()+'</select></label>'+
-    '<label>Start time<input type="time" id="sl-time"></label></div>'+
-    '<div class="row"><label>Minutes<input type="number" inputmode="numeric" id="sl-min" value="'+(num(s.direct)?s.direct:20)+'"></label><label>How often<select id="sl-every"><option value="1">Every week</option><option value="2">Every 2 weeks</option></select></label></div>'+
-    '<label>First date, only for every 2 weeks<input type="date" id="sl-anchor" value="'+S.date+'"></label>'+
-    '<button class="btn primary" data-act="addslot" data-id="'+id+'">Add time slot</button>';
-  var goals=s.goals.map(function(g){
-    return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(g.label)+' <span class="muted small">'+esc(g.unit)+(num(g.target)?', '+(g.dir==='max'?'at most ':'target ')+g.target:'')+'</span></span>'+
-      '<button class="chip" data-act="rmgoal" data-id="'+id+'" data-g="'+esc(g.id)+'">Remove</button></div>'}).join('')+
-    '<label>New goal (short name)<input id="g-label" placeholder="e.g. Plank hold"></label>'+
-    '<label>Objective wording from the IEP (optional, with the alias in place of the name)<textarea id="g-text"></textarea></label>'+
-    '<div class="row"><label>Unit<input id="g-unit" placeholder="reps, sec, min"></label><label>Target<input id="g-target" type="number" inputmode="decimal" placeholder="optional"></label></div>'+
-    '<div class="row"><label>Direction<select id="g-dir"><option value="min">At least</option><option value="max">At most</option></select></label>'+
-    '<label>How it is measured<select id="g-kind"><option value="count">A count or a time</option><option value="ratio">Successes out of tries</option></select></label></div>'+
-    '<label>Options to tag (comma separated)<input id="g-variants" placeholder="e.g. Wall, Incline, Knee"></label>'+
-    '<button class="btn primary" data-act="addgoal" data-id="'+id+'">Add goal</button>';
-  var iep=[s.iepNext?'next IEP '+md(s.iepNext):'',(num(s.direct)||num(s.indirect))?(s.direct||0)+' direct / '+(s.indirect||0)+' indirect min':''].filter(Boolean).join(' · ');
-  return '<div class="row"><button class="btn ghost" data-act="backschool">‹ '+esc(sc?(sc.alias||sc.name):'All schools')+'</button></div>'+
-    '<div class="stack"><span class="eyebrow">Student'+(sc?' at '+esc(sc.alias||sc.name):'')+'</span><h1>'+esc(s.name)+'</h1></div>'+
-    section('sec','details','Details',iep||'School, grade, IEP dates and minutes',details)+
-    section('sec','codes','Disability codes',s.codes?s.codes.split('/').join(', '):'None picked',codes)+
-    section('sec','schedule','Schedule',s.slots.length?s.slots.map(slotText).join('; '):'No time slots yet',sched)+
-    section('sec','goals','Goals',s.goals.length?s.goals.map(function(g){return g.label}).join(', '):'No goals yet',goals)+
-    (function(){var all=sessionsOf(s);return section('sec','sessions','Sessions',all.length?all.length+' on file, latest '+md(all[0].date):'None yet',sessionsBody(s))})()+
-    section('sec','progress','Progress','Charts and the summary for SpedForms',progressBody(s));
+/* ---------- IEP record ----------
+   student.iep = {meeting, amended, next, direct, indirect, perWeek, annual:[{id,num,text}], updated}
+   Objectives stay in student.goals (session data is keyed by goal id), with annualId, num, baseline, mastery, started.
+   An objective dropped from the IEP keeps its data: it gets retired=<date> instead of being deleted.
+   "Update after an IEP meeting" copies the old record into student.iepHistory. */
+var IEPSTEPS=['Dates','Disability codes','Service minutes','Annual goal','Objectives','Review and save'];
+function codeName(c){var x=CODES.filter(function(k){return k[0]===c})[0];return x?c+' '+x[1]:c}
+function iepCard(s){
+  var ip=s.iep,h='<h2 style="margin-top:8px">IEP</h2><div class="iep">';
+  if(!ip){
+    var some=liveGoals(s).length||s.codes||s.iepNext||num(s.direct);
+    h+='<strong>No IEP entered yet</strong><span class="muted small">'+(some?'Some details are already here. Setting up the IEP starts from them, so nothing is lost.':'Have the IEP in front of you. The steps follow its pages: dates, disability codes, service minutes, the annual goal, then each objective.')+'</span>'+
+      '<button class="btn primary" data-act="iepstart" data-id="'+esc(s.id)+'" data-mode="edit">Set up IEP</button></div>';
+    return h}
+  h+='<div class="kv"><span>Meeting</span><span>'+esc(ip.meeting?mdy(ip.meeting):'not entered')+(ip.amended?', amended '+esc(mdy(ip.amended)):'')+'</span>'+
+    '<span>Next review</span><span>'+esc(ip.next?mdy(ip.next):'not entered')+'</span>'+
+    '<span>Codes</span><span>'+esc(s.codes?s.codes.split('/').map(codeName).join(', '):'none')+'</span>'+
+    '<span>Minutes</span><span>'+esc((num(ip.direct)?ip.direct:0)+' direct + '+(num(ip.indirect)?ip.indirect:0)+' indirect per session'+(ip.perWeek?', '+ip.perWeek+' a week':''))+'</span></div>';
+  (ip.annual||[]).forEach(function(a){
+    var ob=liveGoals(s).filter(function(g){return g.annualId===a.id});
+    h+='<strong>'+esc(a.num?'Goal '+a.num:'Annual goal')+'</strong>'+(a.text?'<span class="goaltext">'+esc(a.text)+'</span>':'')+
+      (ob.length?'<ol>'+ob.map(function(g){return '<li>'+esc(g.label)+' <span class="muted">('+esc(g.unit)+(num(g.target)?', '+(g.dir==='max'?'at most ':'target ')+g.target:'')+(g.variants&&g.variants.length?'; '+g.variants.join(', '):'')+')</span></li>'}).join('')+'</ol>':'<span class="muted small">No objectives yet.</span>')});
+  var loose=liveGoals(s).filter(function(g){return !(ip.annual||[]).some(function(a){return a.id===g.annualId})});
+  if(loose.length)h+='<span class="muted small">Not under a goal: '+esc(loose.map(function(g){return g.label}).join(', '))+'</span>';
+  var ended=(s.goals||[]).filter(function(g){return g.retired});
+  if(ended.length)h+='<span class="muted small">Ended objectives, kept for reports: '+esc(ended.map(function(g){return g.label+' ('+md(g.retired)+')'}).join(', '))+'</span>';
+  if((s.iepHistory||[]).length)h+='<span class="muted small">Earlier IEPs: '+esc(s.iepHistory.map(function(x){return (x.meeting?mdy(x.meeting):'undated')+' to '+(x.ended?mdy(x.ended):'?')}).join('; '))+'</span>';
+  h+='<div class="row"><button class="btn" style="flex:1" data-act="iepstart" data-id="'+esc(s.id)+'" data-mode="edit">Edit IEP</button>'+
+    '<button class="btn" style="flex:1" data-act="iepstart" data-id="'+esc(s.id)+'" data-mode="update">Update after an IEP meeting</button></div>'+
+    '<span class="muted small">Edit fixes this IEP. Update starts a new one after a meeting and keeps the old one in history.</span></div>';
+  return h}
+function blankObj(aid,n){return {id:'g_'+rid(),existing:false,annualId:aid,num:String(n),text:'',label:'',unit:'',target:'',dir:'min',kind:'count',variants:'',baseline:'',mastery:''}}
+function iepStart(sid,mode){var s=student(sid);if(!s)return;var ip=s.iep||{};
+  var annual=((ip.annual&&ip.annual.length)?ip.annual:[{id:'a_'+rid()}]).map(function(a){return {id:a.id,num:a.num||'',text:a.text||''}});
+  var objs=liveGoals(s).map(function(g,k){var inA=annual.some(function(a){return a.id===g.annualId});
+    return {id:g.id,existing:true,annualId:inA?g.annualId:annual[0].id,num:g.num||String(k+1),text:g.text||'',label:g.label||'',unit:g.unit||'',
+      target:num(g.target)?String(g.target):'',dir:g.dir==='max'?'max':'min',kind:g.kind==='ratio'?'ratio':'count',variants:(g.variants||[]).join(', '),baseline:g.baseline||'',mastery:g.mastery||''}});
+  if(!objs.length)objs=[blankObj(annual[0].id,1)];
+  var up=mode==='update';
+  S.iepEd={sid:sid,mode:up?'update':'edit',step:1,d:{meeting:up?'':(ip.meeting||s.iepLast||''),amended:up?'':(ip.amended||''),next:up?'':(ip.next||s.iepNext||''),
+    codes:(s.codes||'').split('/').filter(Boolean),direct:num(ip.direct)?String(ip.direct):(num(s.direct)?String(s.direct):''),
+    indirect:num(ip.indirect)?String(ip.indirect):(num(s.indirect)?String(s.indirect):''),perWeek:ip.perWeek||'',annual:annual,objs:objs}};
+  S.view='iep';window.scrollTo(0,0)}
+function getP(o,p){var v=p.split('.').reduce(function(a,k){return a==null?a:a[k]},o);return v==null?'':v}
+function setP(o,p,v){var ks=p.split('.'),last=ks.pop();ks.forEach(function(k){o=o[k]});o[last]=v}
+function fld(label,path,type,ph,extra){var v=getP(S.iepEd.d,path),id='iep-'+path.replace(/\./g,'-');
+  var t=type==='area'?'<textarea id="'+id+'" data-iep="'+path+'"'+(ph?' placeholder="'+esc(ph)+'"':'')+'>'+esc(v)+'</textarea>':
+    '<input id="'+id+'" type="'+(type||'text')+'"'+(type==='number'?' inputmode="decimal"':'')+' data-iep="'+path+'" value="'+esc(v)+'"'+(ph?' placeholder="'+esc(ph)+'"':'')+'>';
+  return '<label'+(extra||'')+'>'+esc(label)+t+'</label>'}
+function pick(label,path,opts){var v=getP(S.iepEd.d,path),id='iep-'+path.replace(/\./g,'-');
+  return '<label>'+esc(label)+'<select id="'+id+'" data-iep="'+path+'">'+opts.map(function(o){return '<option value="'+esc(o[0])+'"'+(String(v)===o[0]?' selected':'')+'>'+esc(o[1])+'</option>'}).join('')+'</select></label>'}
+function iepView(){
+  var E=S.iepEd,s=E&&student(E.sid);if(!s){S.view='students';return studentsView()}
+  var d=E.d,st=E.step,up=E.mode==='update';
+  var h='<div class="row spread"><button class="btn ghost" data-act="iepcancel">‹ Back to students</button><span class="muted small">Nothing saves until the last step</span></div>'+
+    '<div class="stack"><span class="eyebrow">'+esc(s.name)+' · '+(up?'Update after an IEP meeting':(s.iep?'Edit IEP':'Set up IEP'))+' · Step '+st+' of 6</span><h1>'+esc(IEPSTEPS[st-1])+'</h1>'+
+    '<div class="steps" style="grid-template-columns:repeat(6,1fr)" aria-hidden="true">'+IEPSTEPS.map(function(_,k){return '<i class="'+(k<st?'on':'')+'"></i>'}).join('')+'</div></div>';
+  if(st===1){
+    if(up)h+='<div class="banner">The current IEP moves to this student\'s history when you save. Objectives you keep carry on with their data.</div>';
+    h+='<span class="muted">From the top of the IEP. Leave a date blank if you don\'t have it yet.</span><div class="panel stack">'+
+      fld('IEP meeting date','meeting','date')+fld('Amended date, if it was amended','amended','date')+fld('Next annual review','next','date')+'</div>'+
+      '<span class="muted small">The next review shows under Coming up on the home screen 30 days ahead.</span>';
+  }else if(st===2){
+    h+='<span class="muted">Tap the code or codes on the IEP. A student can have two, like 401/411.</span><div class="panel"><div class="row">'+CODES.map(function(c){var on=d.codes.indexOf(c[0])>=0;
+      return '<button class="chip '+(on?'on':'')+'" data-act="iepcode" data-v="'+c[0]+'" title="'+esc(c[2])+'" aria-pressed="'+on+'">'+c[0]+' '+esc(c[1])+'</button>'}).join('')+'</div></div>'+
+      '<span class="muted small">'+(d.codes.length?'Selected: '+esc(d.codes.slice().sort().map(codeName).join(', ')):'None selected yet.')+'</span>';
+  }else if(st===3){
+    h+='<span class="muted">From the service minutes on the IEP.</span><div class="panel stack"><div class="row">'+
+      fld('Direct minutes per session','direct','number')+fld('Indirect minutes per session','indirect','number')+'</div>'+
+      fld('Sessions per week','perWeek','text','e.g. 1, 2, or every other week')+'</div>'+
+      '<span class="muted small">Day and time are set in the student\'s Schedule. '+(s.slots.length?'Now: '+esc(s.slots.map(slotText).join('; ')):'No time slots yet.')+'</span>';
+  }else if(st===4){
+    h+='<span class="muted">Copy the Measurable Annual Goal. Write the initials where the IEP has the name.</span>';
+    d.annual.forEach(function(a,k){
+      h+='<div class="panel stack">'+fld('Goal number','annual.'+k+'.num','text','e.g. 4',' style="flex:0 0 auto;max-width:140px"')+
+        fld('Annual goal wording','annual.'+k+'.text','area','e.g. M.O. will increase upper body strength by…')+
+        (d.annual.length>1?'<button class="btn ghost danger" data-act="iepannrm" data-id="'+esc(a.id)+'">Remove this goal</button>':'')+'</div>'});
+    h+='<button class="btn" data-act="iepannadd">Add another annual goal</button><span class="muted small">Most DAPE IEPs have one annual goal. Add another only if the IEP has a second DAPE goal page.</span>';
+  }else if(st===5){
+    h+='<span class="muted">One entry for each objective you chart. Copy the wording with initials in place of the name, then fill in how you count it.</span>';
+    d.annual.forEach(function(a){
+      h+='<h2>'+esc(a.num?'Goal '+a.num:'Annual goal')+'</h2>';
+      d.objs.forEach(function(o,k){if(o.annualId!==a.id)return;var p='objs.'+k+'.';
+        var kept=o.existing&&hasData(s.id,o.id);
+        h+='<div class="panel stack obj"><div class="row spread"><strong>Objective '+esc(o.num||'')+'</strong>'+
+          '<button class="chip" data-act="iepobjrm" data-i="'+k+'">'+(kept?'Stop tracking (keeps its data)':'Remove')+'</button></div>'+
+          '<div class="row">'+fld('Objective number',p+'num','text','',' style="flex:0 0 110px"')+fld('Short name',p+'label','text','e.g. Push-ups')+'</div>'+
+          fld('Objective wording from the IEP',p+'text','area','e.g. M.O. will participate in a progressive strength-building routine…')+
+          '<div class="row">'+fld('Unit',p+'unit','text','reps, sec, min')+fld('Target',p+'target','number','optional')+pick('Direction',p+'dir',[['min','At least'],['max','At most']])+'</div>'+
+          pick('How it is measured',p+'kind',[['count','A count or a time'],['ratio','Successes out of tries']])+
+          fld('Progression levels to tag (comma separated)',p+'variants','text','e.g. Wall, Incline, Knee')+
+          '<div class="row">'+fld('Baseline',p+'baseline','text','optional, e.g. 5 wall push-ups')+fld('How mastery is judged',p+'mastery','text','e.g. 3 out of 4 sessions per month')+'</div>'+
+          (d.annual.length>1?pick('Belongs to',p+'annualId',d.annual.map(function(q){return [q.id,q.num?'Goal '+q.num:'Annual goal']})):'')+'</div>'});
+      h+='<button class="btn" data-act="iepobjadd" data-id="'+esc(a.id)+'">Add an objective'+(d.annual.length>1?' to '+esc(a.num?'Goal '+a.num:'this goal'):'')+'</button>';
+    });
+    h+='<span class="muted small">Leave Target blank when the IEP asks for an increase rather than a number. Progression levels become one-tap tags when you log a session.</span>';
+  }else{
+    h+=reviewIep(s,d,up);
+  }
+  h+='<div class="sticky-actions">'+(st>1?'<button class="btn" data-act="iepback">Back</button>':'<button class="btn" data-act="iepcancel">Cancel</button>')+
+    (st<6?'<button class="btn primary" style="flex:1" data-act="iepnext">Next: '+esc(IEPSTEPS[st])+'</button>':
+      '<button class="btn primary" style="flex:1" data-act="iepsave"'+(S.saving?' disabled':'')+'>'+(up?'Save new IEP':'Save IEP')+'</button>')+'</div>';
+  return h}
+function reviewIep(s,d,up){
+  function row(k,v,step){return '<span>'+esc(k)+'</span><span>'+v+' <button class="chip" data-act="iepgo" data-n="'+step+'" style="min-height:28px;padding:2px 10px">Change</button></span>'}
+  var h='<span class="muted">Check everything once. Tap Change to fix a section.</span><div class="iep" style="background:var(--surface)"><div class="kv">'+
+    row('Meeting',esc(d.meeting?mdy(d.meeting):'not entered')+(d.amended?', amended '+esc(mdy(d.amended)):''),1)+
+    row('Next review',esc(d.next?mdy(d.next):'not entered'),1)+
+    row('Codes',esc(d.codes.length?d.codes.slice().sort().map(codeName).join(', '):'none'),2)+
+    row('Minutes',esc((d.direct||0)+' direct + '+(d.indirect||0)+' indirect'+(d.perWeek?', '+d.perWeek+' a week':'')),3)+'</div>';
+  d.annual.forEach(function(a){
+    h+='<strong>'+esc(a.num?'Goal '+a.num:'Annual goal')+'</strong>'+(a.text?'<span class="goaltext">'+esc(a.text)+'</span>':'<span class="muted small">No goal wording entered.</span>');
+    var ob=d.objs.filter(function(o){return o.annualId===a.id});
+    h+=ob.length?'<ol>'+ob.map(function(o){return '<li><strong>'+esc(o.label||'(no short name)')+'</strong>: '+esc((o.unit||'reps')+(o.target!==''?', '+(o.dir==='max'?'at most ':'target ')+o.target:'')+(o.variants?'; levels '+o.variants:'')+(o.mastery?'; mastery '+o.mastery:''))+'</li>'}).join('')+'</ol>':'<span class="muted small">No objectives.</span>'});
+  h+='<div><button class="chip" data-act="iepgo" data-n="5">Change objectives</button></div></div>';
+  var dropped=liveGoals(s).filter(function(g){return !d.objs.some(function(o){return o.id===g.id})});
+  if(dropped.length)h+='<div class="banner">No longer tracked: '+esc(dropped.map(function(g){return g.label}).join(', '))+'. Any past data stays in Progress Reports.</div>';
+  if(up)h+='<span class="muted small">The IEP from '+esc(s.iep&&s.iep.meeting?mdy(s.iep.meeting):'before')+' goes into history.</span>';
+  return h}
+function nnum(v){v=String(v==null?'':v).trim();return v!==''&&isFinite(+v)?+v:null}
+function iepSave(){
+  var E=S.iepEd,s=E&&student(E.sid);if(!s)return;var d=E.d,up=E.mode==='update';
+  if(up&&!d.meeting){toast('Enter the new meeting date first');E.step=1;render();return}
+  var bad=d.objs.filter(function(o){return !String(o.label).trim()})[0];if(bad){toast('Objective '+(bad.num||'')+' needs a short name');E.step=5;render();return}
+  var annual=d.annual.filter(function(a){return String(a.text).trim()||String(a.num).trim()||d.objs.some(function(o){return o.annualId===a.id})})
+    .map(function(a){return {id:a.id,num:String(a.num).trim(),text:String(a.text).trim()}});
+  var ip={meeting:d.meeting,amended:d.amended,next:d.next,direct:nnum(d.direct),indirect:nnum(d.indirect),perWeek:String(d.perWeek).trim(),annual:annual,updated:new Date().toISOString()};
+  var endDate=up?d.meeting:today(),keep={};
+  var goals=d.objs.map(function(o){keep[o.id]=1;var old=(s.goals||[]).filter(function(g){return g.id===o.id})[0]||{};
+    var g={id:o.id,label:String(o.label).trim(),unit:String(o.unit).trim()||'reps',dir:o.dir==='max'?'max':'min',annualId:o.annualId,num:String(o.num).trim(),started:old.started||d.meeting||today()};
+    var tg=nnum(o.target);if(tg!=null)g.target=tg;
+    if(String(o.text).trim())g.text=String(o.text).trim();if(o.kind==='ratio')g.kind='ratio';
+    var vr=String(o.variants).split(',').map(function(x){return x.trim()}).filter(Boolean);if(vr.length)g.variants=vr;
+    if(String(o.baseline).trim())g.baseline=String(o.baseline).trim();if(String(o.mastery).trim())g.mastery=String(o.mastery).trim();
+    return g});
+  (s.goals||[]).forEach(function(g){if(keep[g.id])return;if(g.retired)goals.push(g);else if(hasData(s.id,g.id))goals.push(Object.assign({},g,{retired:endDate}))});
+  var patch={iep:ip,goals:goals,codes:d.codes.slice().sort().join('/'),direct:ip.direct,indirect:ip.indirect,iepLast:d.meeting||'',iepNext:d.next||''};
+  if(up&&s.iep)patch.iepHistory=(s.iepHistory||[]).concat([Object.assign({},s.iep,{codes:s.codes||'',ended:endDate,
+    objectives:liveGoals(s).map(function(g){return {id:g.id,num:g.num||'',label:g.label,text:g.text||''}})})]);
+  var o2=Object.assign({},s,patch);delete o2.id;
+  S.saving=true;render();
+  write(function(){return S.db.doc('students/'+s.id).set(o2)}).then(function(){
+    S.saving=false;S.iepEd=null;S.view='students';S.editId=s.id;toast(up?'New IEP saved':'IEP saved');render();window.scrollTo(0,0)},
+    function(){S.saving=false;render()});
 }
 
-function schoolPage(sc){
-  var id=esc(sc.id),cl=sc.closed||[],rp=sc.reports||[],dy=sc.days||[],kids=S.students.filter(function(s){return s.schoolId===sc.id});
-  var details='<div class="row"><label>School name<input id="sc-name" value="'+esc(sc.name)+'"></label><label>Short name<input id="sc-alias" value="'+esc(sc.alias||'')+'"></label></div>'+
-    '<label>Address<input id="sc-addr" value="'+esc(sc.address||'')+'"></label>'+
-    '<button class="btn primary" data-act="saveschool" data-id="'+id+'">Save details</button>';
-  var days='<div class="row">'+DAYS.map(function(dn,di){var on=dy.indexOf(di)>=0;
-    return '<button class="chip '+(on?'on':'')+'" data-act="scday" data-id="'+id+'" data-i="'+di+'" aria-pressed="'+on+'">'+dn+'</button>'}).join('')+'</div><span class="muted small">Tap a day to add or remove it. It saves straight away.</span>';
-  var off=(cl.length?cl.map(function(c,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(md(c.from)+(c.to&&c.to!==c.from?' to '+md(c.to):'')+(c.label?', '+c.label:''))+'</span><button class="chip" data-act="rmclosed" data-id="'+id+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">Holidays and breaks show on the session list as school closed.</span>')+
-    '<div class="row"><label>From<input type="date" id="c-from"></label><label>To (optional)<input type="date" id="c-to"></label></div>'+
-    '<label>What it is<input id="c-label" placeholder="e.g. Fall break"></label>'+
-    '<button class="btn primary" data-act="addclosed" data-id="'+id+'">Add days off</button>';
-  var reps=(rp.length?rp.map(function(r,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(mdy(r.date)+(r.label?', '+r.label:''))+'</span><button class="chip" data-act="rmreport" data-id="'+id+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">Due dates appear under Coming up three weeks ahead.</span>')+
-    '<div class="row"><label>Due date<input type="date" id="r-date"></label><label>What is due<input id="r-label" placeholder="e.g. Q1 progress reports"></label></div>'+
-    '<button class="btn primary" data-act="addreport" data-id="'+id+'">Add due date</button>';
-  return '<div class="row"><button class="btn ghost" data-act="backschools">‹ All schools</button></div>'+
-    '<div class="stack"><span class="eyebrow">School</span><h1>'+esc(sc.name)+'</h1>'+(sc.address?'<span class="muted">'+esc(sc.address)+'</span>':'')+'</div>'+
-    '<h2>Students</h2>'+
-    (kids.length?'<div class="list">'+kids.map(studentRow).join('')+'</div>':'<div class="list"><div class="empty">No students at this school yet. Add the first one below.</div></div>')+
-    '<div class="panel stack"><label>Add a student (initials or nickname, never the real name)<input id="s-name"></label>'+
-    '<button class="btn primary" data-act="addstudent" data-sc="'+id+'">Add student to '+esc(sc.alias||sc.name)+'</button></div>'+
-    '<h2 style="margin-top:8px">School settings</h2>'+
-    section('scSec','details','Name and address',sc.address||'No address entered',details)+
-    section('scSec','days','Days you are here',dy.length?dy.map(function(i){return DAYS[i]}).join(', '):'None picked',days)+
-    section('scSec','off','Days off',cl.length?cl.length+' entered':'None entered',off)+
-    section('scSec','reports','Reports due',rp.length?rp.map(function(r){return md(r.date)}).join(', '):'None entered',reps);
+function sessionsOf(s){return S.sessions.filter(function(x){return x.studentId===s.id}).sort(function(p,q){return p.date<q.date?1:-1})}
+function sessionsBody(s){
+  var all=sessionsOf(s);
+  if(!all.length)return '<span class="muted small">No sessions yet. They appear here as you plan and log them in Today\'s Plan.</span>';
+  return '<div class="list">'+all.slice(0,60).map(function(x){
+    var vals=(s.goals||[]).filter(function(g){return x.values&&num(x.values[g.id])}).map(function(g){return g.label+' '+x.values[g.id]}).join(' · ');
+    var pill=x.status==='planned'?'<span class="pill">Planned</span>':x.absent?'<span class="pill abs">Absent</span>':'<span class="pill done">Logged</span>';
+    var extra=[vals,x.note].filter(Boolean).join(' · ');
+    return '<button class="item" data-act="opensess" data-id="'+esc(s.id)+'" data-date="'+esc(x.date)+'"><span class="nm">'+esc(longDate(x.date)+', '+x.date.slice(0,4))+(extra?'<br><span class="sub">'+esc(extra)+'</span>':'')+'</span>'+pill+'</button>'}).join('')+'</div>'+
+    (all.length>60?'<span class="muted small">Showing the latest 60 of '+all.length+'.</span>':'');
+}
+function schoolOptions(sel){return '<option value="">No school set</option>'+S.schools.map(function(sc){
+  return '<option value="'+esc(sc.id)+'"'+(sc.id===sel?' selected':'')+'>'+esc(sc.alias||sc.name)+'</option>'}).join('')}
+function studentsView(){
+  var h='<div class="stack"><span class="eyebrow">Students and IEPs</span><h1>Caseload</h1></div>';
+  if(!S.loaded)return h+emptyRoster();
+  var actN=activeStudents().length,iepN=activeStudents().filter(function(s){return s.iep}).length;
+  if(actN)h+='<span class="muted small">'+iepN+' of '+actN+' active students have an IEP set up. Tap a student to see or enter their IEP.</span>';
+  var cnt=function(st){return S.students.filter(function(s){return st==='all'||(s.status||'active')===st}).length};
+  h+='<div class="row">'+[['active','Active'],['graduated','Graduated'],['exited','Exited'],['all','All']].map(function(f){
+    return '<button class="chip'+(S.stFilter===f[0]?' on':'')+'" data-act="stfilter" data-v="'+f[0]+'">'+f[1]+' '+cnt(f[0])+'</button>'}).join('')+'</div>';
+  var shown=S.students.filter(function(s){return S.stFilter==='all'||(s.status||'active')===S.stFilter});
+  h+=shown.length?'<div class="list">'+shown.map(function(s){
+    var open=S.editId===s.id,sub=[schoolLabel(s),s.grade?'grade '+s.grade:'',s.codes?'code '+s.codes:'',s.slots.length?s.slots.map(function(sl){return DAYS[sl.day]}).join(', '):'no schedule'].filter(Boolean).join(' · ');
+    var o='<button class="item" data-act="edit" data-id="'+esc(s.id)+'" aria-expanded="'+open+'"><span class="nm">'+esc(s.name)+'<br><span class="sub">'+esc(sub)+'</span></span>'+(active(s)?(s.iep?'<span class="pill">'+liveGoals(s).length+' objective'+(liveGoals(s).length===1?'':'s')+'</span>':'<span class="pill todo">IEP to set up</span>'):'<span class="pill gone">'+esc(STATUS[s.status]||s.status)+'</span>')+'</button>';
+    if(open){o+='<div class="stack edit">'+
+        '<div class="row"><label>Initials or nickname<input id="st-name" value="'+esc(s.name)+'"></label><label>Grade<input id="st-grade" value="'+esc(s.grade||'')+'"></label></div>'+
+        '<label>School<select id="st-school">'+schoolOptions(s.schoolId)+'</select></label>'+
+        '<div class="row"><label>Status<select id="st-status">'+Object.keys(STATUS).map(function(k){return '<option value="'+k+'"'+((s.status||'active')===k?' selected':'')+'>'+STATUS[k]+'</option>'}).join('')+'</select></label>'+
+          '<label>Date status changed<input type="date" id="st-sdate" value="'+esc(s.statusDate||'')+'"></label></div>'+
+        '<span class="muted small">Graduated and exited students leave the daily schedule. Their goals and history stay for reports.</span>'+
+        '<div class="row"><button class="btn primary" style="flex:1" data-act="savestudent" data-id="'+esc(s.id)+'">Save details</button><button class="btn" data-act="progfor" data-id="'+esc(s.id)+'">Progress report</button></div>'+
+        iepCard(s)+
+        '<h2 style="margin-top:8px">Schedule</h2>'+
+        (s.slots.length?s.slots.map(function(sl,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(slotText(sl))+'</span><button class="chip" data-act="rmslot" data-id="'+esc(s.id)+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No time slots yet. Add each day she sees this student.</span>')+
+        '<div class="row"><label>Day<select id="sl-day">'+(function(){var sc=school(s.schoolId),ds=sc&&sc.days&&sc.days.length?sc.days:[0,1,2,3,4,5,6];return ds.map(function(i){return '<option value="'+i+'">'+DAYS[i]+'</option>'}).join('')})()+'</select></label>'+
+        '<label>Time<input type="time" id="sl-time"></label><label>Minutes<input type="number" inputmode="numeric" id="sl-min" value="20"></label></div>'+
+        '<div class="row"><label>How often<select id="sl-every"><option value="1">Every week</option><option value="2">Every 2 weeks</option></select></label>'+
+        '<label>First date (for every 2 weeks)<input type="date" id="sl-anchor" value="'+S.date+'"></label></div>'+
+        '<button class="btn" data-act="addslot" data-id="'+esc(s.id)+'">Add time slot</button>'+
+        '<h2 style="margin-top:8px">Sessions</h2>'+sessionsBody(s)+'</div>'}
+    return o}).join('')+'</div>':'<div class="list"><div class="empty">'+(S.students.length?'No students in this group.':'No students yet. Add the first one below.')+'</div></div>';
+  h+='<div class="panel stack"><h2>Add a student</h2><div class="row"><label>Initials or nickname<input id="s-name" placeholder="Never the real name"></label>'+
+    '<label>School<select id="s-school">'+schoolOptions('')+'</select></label></div>'+
+    '<button class="btn primary" data-act="addstudent">Add student</button></div>';
+  return h;
 }
 
 function schoolsView(){
-  if(!S.loaded)return '<div class="stack"><span class="eyebrow">Schools</span><h1>Your schools</h1></div><div class="list"><div class="empty">Loading schools…</div></div>';
-  var st=S.editId&&student(S.editId);if(st)return studentPage(st);
-  var open=S.schoolEdit&&school(S.schoolEdit);if(open)return schoolPage(open);
-  var h='<div class="stack"><span class="eyebrow">Schools</span><h1>Your schools and their students</h1></div>';
+  var h='<div class="stack"><span class="eyebrow">Schools</span><h1>Calendars and report dates</h1></div>';
+  if(!S.loaded)return h+'<div class="list"><div class="empty">Loading schools…</div></div>';
   h+=S.schools.length?'<div class="list">'+S.schools.map(function(sc){
-    var n=S.students.filter(function(s){return s.schoolId===sc.id}).length,dy=sc.days||[];
-    return '<button class="item" data-act="editschool" data-id="'+esc(sc.id)+'"><span class="nm">'+esc(sc.name)+'<br><span class="sub">'+esc(dy.length?dy.map(function(i){return DAYS[i]}).join(', '):'no days set')+'</span></span><span class="pill">'+n+' student'+(n===1?'':'s')+'</span></button>'}).join('')+'</div>'
-    :'<div class="list"><div class="empty">No schools yet. Add the first one below, then open it to add its students.</div></div>';
-  var loose=S.students.filter(function(s){return !school(s.schoolId)});
-  if(loose.length)h+='<h2>Students with no school set</h2><div class="list">'+loose.map(studentRow).join('')+'</div>';
+    var open=S.schoolEdit===sc.id,n=activeStudents().filter(function(s){return s.schoolId===sc.id}).length;
+    var o='<button class="item" data-act="editschool" data-id="'+esc(sc.id)+'" aria-expanded="'+open+'"><span class="nm">'+esc(sc.name)+(sc.alias&&sc.alias!==sc.name?' <span class="sub">('+esc(sc.alias)+')</span>':'')+
+      '<br><span class="sub">'+esc([agency(sc.agencyId)?agency(sc.agencyId).name:'No agency set',sc.address].filter(Boolean).join(' · '))+'</span></span><span class="pill">'+n+' student'+(n===1?'':'s')+'</span></button>';
+    if(open){o+='<div class="stack edit">'+
+      '<div class="row"><label>School name<input id="sc-name" value="'+esc(sc.name)+'"></label><label>Short name<input id="sc-alias" value="'+esc(sc.alias||'')+'"></label></div>'+
+      '<label>Address<input id="sc-addr" value="'+esc(sc.address||'')+'"></label>'+
+      '<label>Agency that pays for this school<select id="sc-agency">'+agencyOptions(sc.agencyId)+'</select></label>'+
+      '<button class="btn primary" data-act="saveschool" data-id="'+esc(sc.id)+'">Save details</button>'+
+      '<h2 style="margin-top:8px">Days you are here</h2><div class="row">'+DAYS.map(function(dn,di){var on=(sc.days||[]).indexOf(di)>=0;
+        return '<button class="chip '+(on?'on':'')+'" data-act="scday" data-id="'+esc(sc.id)+'" data-i="'+di+'" aria-pressed="'+on+'">'+dn+'</button>'}).join('')+'</div>'+
+      '<h2 style="margin-top:8px">Days off</h2>'+
+      ((sc.closed||[]).length?sc.closed.map(function(c,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(md(c.from)+(c.to&&c.to!==c.from?' to '+md(c.to):'')+(c.label?', '+c.label:''))+'</span><button class="chip" data-act="rmclosed" data-id="'+esc(sc.id)+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No days off entered. Holidays and breaks show on the session list as school closed.</span>')+
+      '<div class="row"><label>From<input type="date" id="c-from"></label><label>To (optional)<input type="date" id="c-to"></label></div>'+
+      '<label>What it is<input id="c-label" placeholder="e.g. Fall break"></label>'+
+      '<button class="btn" data-act="addclosed" data-id="'+esc(sc.id)+'">Add days off</button>'+
+      '<h2 style="margin-top:8px">Reports due</h2>'+
+      ((sc.reports||[]).length?sc.reports.map(function(r,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(mdy(r.date)+(r.label?', '+r.label:''))+'</span><button class="chip" data-act="rmreport" data-id="'+esc(sc.id)+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No due dates entered. They appear under Coming up three weeks ahead.</span>')+
+      '<div class="row"><label>Due date<input type="date" id="r-date"></label><label>What is due<input id="r-label" placeholder="e.g. Q1 progress reports"></label></div>'+
+      '<button class="btn" data-act="addreport" data-id="'+esc(sc.id)+'">Add due date</button></div>'}
+    return o}).join('')+'</div>':'<div class="list"><div class="empty">No schools yet. Add the first one below.</div></div>';
+  h+=placesPanel();
   h+='<div class="panel stack"><h2>Add a school</h2><div class="row"><label>School name<input id="n-name"></label><label>Short name<input id="n-alias" placeholder="optional"></label></div>'+
-    '<label>Address<input id="n-addr"></label><button class="btn primary" data-act="addschool">Add school</button></div>'+
-    '<button class="btn ghost" data-act="signout">Sign out</button>';
+    '<label>Address<input id="n-addr"></label><label>Agency<select id="n-agency">'+agencyOptions('')+'</select></label><button class="btn primary" data-act="addschool">Add school</button></div>';
   return h;
+}
+
+function agencyOptions(sel){return '<option value="">No agency set</option>'+S.agencies.map(function(a){
+  return '<option value="'+esc(a.id)+'"'+(a.id===sel?' selected':'')+'>'+esc(a.name)+'</option>'}).join('')}
+function agenciesView(){
+  var h='<div class="stack"><span class="eyebrow">Agencies</span><h1>Who pays, and how much</h1>'+
+    '<span class="muted small">Each school belongs to one agency. Hours and miles are split by agency. A drive is billed to the agency of the school you are driving to, and the drive from home to the first school counts.</span></div>';
+  if(!S.loaded)return h+'<div class="list"><div class="empty">Loading agencies…</div></div>';
+  h+=S.agencies.length?'<div class="list">'+S.agencies.map(function(a){
+    var open=S.agEdit===a.id,ns=S.schools.filter(function(sc){return sc.agencyId===a.id});
+    var sub=[num(a.rate)?money(a.rate)+'/hr':'no hourly rate',num(a.mileRate)?money(a.mileRate)+'/mile':'no mileage rate',ns.length?ns.map(function(sc){return sc.alias||sc.name}).join(', '):'no schools'].join(' · ');
+    var o='<button class="item" data-act="editag" data-id="'+esc(a.id)+'" aria-expanded="'+open+'"><span class="nm">'+esc(a.name)+'<br><span class="sub">'+esc(sub)+'</span></span></button>';
+    if(open)o+='<div class="stack edit"><label>Agency name<input id="ag-name" value="'+esc(a.name)+'"></label>'+
+      '<div class="row"><label>Hourly rate ($)<input type="number" inputmode="decimal" step="0.01" id="ag-rate" value="'+(num(a.rate)?a.rate:'')+'"></label>'+
+      '<label>Mileage rate ($ per mile)<input type="number" inputmode="decimal" step="0.001" id="ag-mile" value="'+(num(a.mileRate)?a.mileRate:'')+'"></label></div>'+
+      '<label>Notes<textarea id="ag-note" placeholder="Invoice contact, billing cycle, anything to remember">'+esc(a.note||'')+'</textarea></label>'+
+      '<span class="muted small">Travel time is paid at the hourly rate.</span>'+
+      '<button class="btn primary" data-act="saveag" data-id="'+esc(a.id)+'">Save agency</button></div>';
+    return o}).join('')+'</div>':'<div class="list"><div class="empty">No agencies yet. Add the first one below, then pick it on each school.</div></div>';
+  h+='<div class="panel stack"><h2>Add an agency</h2><label>Agency name<input id="na-name" placeholder="e.g. Designs for Learning"></label>'+
+    '<div class="row"><label>Hourly rate ($)<input type="number" inputmode="decimal" step="0.01" id="na-rate"></label><label>Mileage rate ($ per mile)<input type="number" inputmode="decimal" step="0.001" id="na-mile"></label></div>'+
+    '<button class="btn primary" data-act="addag">Add agency</button></div>';
+  return h;
+}
+
+function placesPanel(){
+  var home=S.settings.home||{},ids=['home'].concat(S.schools.map(function(sc){return sc.id})),pairs=[],i,j;
+  for(i=0;i<ids.length;i++)for(j=i+1;j<ids.length;j++)pairs.push([ids[i],ids[j]]);
+  var h='<div class="panel stack" id="places" style="scroll-margin-top:72px"><h2>Home and drive distances</h2><span class="muted small">Look up each pair once in a maps app. Every day\'s miles and travel time are worked out from these. Your home address stays in this app.</span>'+
+    '<div class="row end"><label>Home address<input id="home-addr" value="'+esc(home.address||'')+'" placeholder="Street, city"></label><button class="btn" data-act="savehome">Save</button></div>';
+  pairs.forEach(function(p){var k=legKey(p[0],p[1]),l=legOf(p[0],p[1]);
+    h+='<div class="stack" style="gap:6px;border-top:1px solid var(--line);padding-top:10px"><div class="row spread"><strong>'+esc(placeName(p[0]))+' and '+esc(placeName(p[1]))+'</strong>'+(l&&l.test?'<span class="pill">test distance</span>':'')+'</div>'+
+      '<div class="row end"><label>Miles<input type="number" inputmode="decimal" step="0.1" id="lm-'+k+'" value="'+(l&&num(l.miles)?l.miles:'')+'"></label>'+
+      '<label>Drive minutes<input type="number" inputmode="numeric" id="lt-'+k+'" value="'+(l&&num(l.min)?l.min:'')+'"></label>'+
+      '<button class="btn" data-act="saveleg" data-k="'+k+'">Save</button></div></div>'});
+  return h+'</div>';
 }
 
 /* ---------- actions ---------- */
@@ -483,35 +874,56 @@ function openEntry(id){var x=sess(id,S.date);S.open=id;S.confirmDel=false;
   var s=student(id);
   if(x){S.draft.min=x.min;S.draft.indirect=x.indirect}
   else if(s){var sl0=slotOn(s,S.date),h0=history(id);S.draft.min=sl0?sl0.min:s.direct;S.draft.indirect=s.indirect;if(h0.length)S.draft.acts=(h0[h0.length-1].acts||[]).slice()}
-if(!x&&s)s.goals.forEach(function(g){var l=lastVal(id,g.id,S.date);if(l&&l.variants&&l.variants[g.id])S.draft.variants[g.id]=l.variants[g.id]});}
+if(!x&&s)liveGoals(s).forEach(function(g){var l=lastVal(id,g.id,S.date);if(l&&l.variants&&l.variants[g.id])S.draft.variants[g.id]=l.variants[g.id]});}
+function leaveEntry(){S.open=null;if(S.fromStu){S.view='students';S.editId=S.fromStu;S.date=S.fromDate||S.date;S.fromStu=null;window.scrollTo(0,0)}}
 function val(id){var e=document.getElementById(id);return e?e.value.trim():''}
 function nv(id){var v=val(id);return v!==''&&isFinite(+v)?+v:null}
 function byDate(k){return function(a,b){return a[k]<b[k]?-1:a[k]>b[k]?1:0}}
 
 document.addEventListener('click',function(e){
   var b=e.target.closest('[data-act]');if(!b)return;var a=b.dataset.act,d=S.draft,g=b.dataset.g,s,sc,i=+b.dataset.i;
-  if(a==='tab'){S.view=b.dataset.v;S.open=null;S.from=null;S.editId=null;S.schoolEdit=null;S.top=true}
-  else if(a==='day'){S.date=shift(S.date,+b.dataset.n)}
+  if(a==='menu'){S.menu=!S.menu}
+  else if(a==='go'){var v=b.dataset.v;S.menu=false;S.open=null;S.fromStu=null;
+    if(v==='today')S.date=today();else if(v==='plan'){S.date=nextWorkDay(today());S.wz={step:1,i:0}}
+    S.view=v;S.iepEd=null;S.scrollTo=b.dataset.scroll||null;window.scrollTo(0,0)}
+  else if(a==='signout'){if(window.DAPE_SIGNOUT)window.DAPE_SIGNOUT();return}
+  else if(a==='opensess'){S.menu=false;S.fromStu=b.dataset.id;S.fromDate=S.date;S.view='today';S.date=b.dataset.date;openEntry(b.dataset.id);window.scrollTo(0,0)}
+  else if(a==='stfilter'){S.stFilter=b.dataset.v;S.editId=null}
+  else if(a==='pickprog'){S.progId=b.dataset.id}
+  else if(a==='progfor'){S.progId=b.dataset.id;S.view='progress';S.progQ='';window.scrollTo(0,0)}
+  else if(a==='editag'){S.agEdit=S.agEdit===b.dataset.id?null:b.dataset.id}
+  else if(a==='addag'){var agn=val('na-name');if(!agn){toast('Enter the agency name first');return}
+    write(function(){return S.db.doc('agencies/ag_'+rid()).set({name:agn,rate:nv('na-rate'),mileRate:nv('na-mile'),note:''})}).then(function(){toast('Agency added');render()},function(){});return}
+  else if(a==='saveag'){var ag=agency(b.dataset.id);if(!ag)return;if(!val('ag-name')){toast('The agency name is required');return}
+    saveDoc('agencies',ag,{name:val('ag-name'),rate:nv('ag-rate'),mileRate:nv('ag-mile'),note:val('ag-note')},'Agency saved');return}
+  else if(a==='day'){S.date=shift(S.date,+b.dataset.n);S.open=null}
   else if(a==='todaybtn'){S.date=today()}
-  else if(a==='open'){openEntry(b.dataset.id);S.indForm=false;S.top=true}
-  else if(a==='legsame'){var ll=lastLeg(b.dataset.leg,S.date);if(ll)saveLeg(b.dataset.leg,{min:num(ll.min)?ll.min:null,miles:num(ll.miles)?ll.miles:null})}
-  else if(a==='opensess'){S.from=b.dataset.id;S.fromDate=S.date;S.date=b.dataset.date;S.view='today';openEntry(b.dataset.id);S.top=true}
+  else if(a==='open'){openEntry(b.dataset.id)}
   else if(a==='back'){leaveEntry()}
-  else if(a==='backschools'){S.schoolEdit=null;S.top=true}
-  else if(a==='backschool'){var bs=student(S.editId);S.schoolEdit=bs&&school(bs.schoolId)?bs.schoolId:null;S.editId=null;S.top=true}
   else if(a==='absent'){d.absent=!d.absent}
   else if(a==='step'){var cur=d.values[g];d.values[g]=num(cur)?Math.max(0,r1(cur+(+b.dataset.n))):(+b.dataset.n>0?1:0)}
   else if(a==='variant'){if(d.variants[g]===b.dataset.v)delete d.variants[g];else d.variants[g]=b.dataset.v}
   else if(a==='same'){var l=lastVal(S.open,g,S.date);if(l){d.values[g]=l.values[g];if(l.variants&&l.variants[g])d.variants[g]=l.variants[g]}}
-  else if(a==='save'||a==='saveplan'){
-    var vals={};Object.keys(d.values).forEach(function(k){if(num(d.values[k]))vals[k]=d.values[k]});
-    var doc={studentId:S.open,date:S.date,absent:d.absent,values:d.absent?{}:vals,variants:d.absent?{}:d.variants,note:d.note.trim(),updated:new Date().toISOString()};
-    s=student(S.open);var sl=s&&slotOn(s,S.date);if(sl)doc.time=sl.time;
-    doc.min=d.absent?0:(num(d.min)?d.min:0);doc.indirect=num(d.indirect)?d.indirect:0;doc.acts=d.absent?[]:d.acts;doc.outof=d.absent?{}:d.outof;doc.help=d.absent?{}:d.help;
-    var x0=sess(S.open,S.date);doc.status=(a==='save'||(x0&&x0.status!=='planned'))?'logged':'planned';
-    S.saving=true;render();
-    write(function(){return S.db.doc('sessions/'+S.open+'_'+S.date).set(doc)}).then(function(){S.saving=false;leaveEntry();toast(doc.status==='planned'?'Plan saved':'Saved');render()},function(){S.saving=false;render()});
-    return}
+  else if(a==='save'||a==='saveplan'){saveSession(a,function(){leaveEntry()});return}
+  else if(a==='wznext'){S.wz.step=Math.min(5,S.wz.step+1);S.wz.i=0;S.open=null;window.scrollTo(0,0)}
+  else if(a==='wzback'){S.open=null;if(S.wz.step===4&&S.wz.i>0)S.wz.i--;else{S.wz.step=Math.max(1,S.wz.step-1);if(S.wz.step===4)S.wz.i=Math.max(0,wzStudents(S.date).length-1)}window.scrollTo(0,0)}
+  else if(a==='wzjump'){S.wz.i=i;S.open=null}
+  else if(a==='wzsave'){var nList=wzStudents(S.date).length;saveSession('saveplan',function(){S.open=null;if(S.wz.i<nList-1)S.wz.i++;else S.wz.step=5;window.scrollTo(0,0)});return}
+  else if(a==='wzdone'){S.view='today';S.open=null;window.scrollTo(0,0)}
+  else if(a==='wzschool'){var dd0=dayDoc(S.date),ss=(dd0.skipSchools||[]).slice(),xi=ss.indexOf(b.dataset.id);if(xi<0)ss.push(b.dataset.id);else ss.splice(xi,1);
+    saveDay(S.date,{skipSchools:ss});return}
+  else if(a==='wzst'){var sidw=b.dataset.id,v=b.dataset.v,dd1=dayDoc(S.date),sk=(dd1.skip||[]).filter(function(x){return x!==sidw}),xw=sess(sidw,S.date),stw=student(sidw);
+    var p1=(v==='skip')!==((dd1.skip||[]).indexOf(sidw)>=0)?saveDay(S.date,{skip:v==='skip'?sk.concat([sidw]):sk}):Promise.resolve();
+    p1.then(function(){
+      if(v==='absent'&&!(xw&&xw.absent)){var slw=stw&&slotOn(stw,S.date),dw=Object.assign({studentId:sidw,date:S.date,values:{},variants:{},acts:[],note:'',status:'planned'},xw||{},{absent:true,min:0,indirect:num(stw&&stw.indirect)?stw.indirect:0,updated:new Date().toISOString()});
+        if(slw)dw.time=slw.time;delete dw.id;return write(function(){return S.db.doc('sessions/'+sidw+'_'+S.date).set(dw)}).then(function(){toast('Marked absent');render()},function(){})}
+      if(v!=='absent'&&xw&&xw.absent){var slx=stw&&slotOn(stw,S.date),dx=Object.assign({},xw,{absent:false,min:slx?slx.min:(stw&&stw.direct)||0,updated:new Date().toISOString()});delete dx.id;
+        return write(function(){return S.db.doc('sessions/'+sidw+'_'+S.date).set(dx)}).then(function(){render()},function(){})}
+    });return}
+  else if(a==='savehome'){var hd=Object.assign({},S.settings.home||{},{address:val('home-addr')});delete hd.id;
+    write(function(){return S.db.doc('settings/home').set(hd)}).then(function(){toast('Home address saved');render()},function(){});return}
+  else if(a==='saveleg'){var lk=b.dataset.k,lmi=nv('lm-'+lk),lmn=nv('lt-'+lk);if(lmi==null){toast('Enter the miles first');return}
+    write(function(){return S.db.doc('legs/'+lk).set({miles:lmi,min:lmn,test:false})}).then(function(){toast('Distance saved');render()},function(){});return}
   else if(a==='del'){if(!S.confirmDel){S.confirmDel=true}else{var sid=S.open;
     write(function(){return S.db.doc('sessions/'+sid+'_'+S.date).delete()}).then(function(){leaveEntry();toast('Entry deleted');render()},function(){});return}}
   else if(a==='copy'){var t=document.getElementById('sum').textContent;
@@ -526,20 +938,33 @@ document.addEventListener('click',function(e){
     if(ex)an=String(ex.name);else write(function(){return S.db.doc('activities/a_'+rid()).set({name:an})}).catch(function(){});
     if(d.acts.indexOf(an)<0)d.acts.push(an)}
   else if(a==='indform'){S.indForm=!S.indForm}
-  else if(a==='addind'){var im=+val('ind-min'),is=S.open;if(!is)return; if(!(im>0)){toast('Enter the minutes');return}
+  else if(a==='addind'){var im=+val('ind-min'),is=val('ind-student');if(!is){toast('Pick a student');return} if(!(im>0)){toast('Enter the minutes');return}
     write(function(){return S.db.doc('indirect/i_'+rid()).set({studentId:is,date:S.date,min:im,note:val('ind-note')})}).then(function(){S.indForm=false;toast('Indirect time added');render()},function(){});return}
   else if(a==='rmind'){var iid=b.dataset.id;write(function(){return S.db.doc('indirect/'+iid).delete()}).then(function(){toast('Removed');render()},function(){});return}
-  else if(a==='savetravel'){var tv=val('travel'),td=S.date;write(function(){return S.db.doc('days/'+td).set({travel:tv!==''&&isFinite(+tv)?+tv:0})}).then(function(){toast('Travel time saved');render()},function(){});return}
   else if(a==='code'){s=student(b.dataset.id);if(!s)return;var cs=(s.codes||'').split('/').filter(Boolean),ci=cs.indexOf(b.dataset.v);
     if(ci<0)cs.push(b.dataset.v);else cs.splice(ci,1);saveDoc('students',s,{codes:cs.sort().join('/')},'Codes saved');return}
-  else if(a==='signout'){if(window.DAPE_SIGNOUT)window.DAPE_SIGNOUT();return}
-  else if(a==='sec'){S[b.dataset.k]=S[b.dataset.k]===b.dataset.v?'':b.dataset.v}
-  else if(a==='edit'){S.editId=b.dataset.id;S.sec='';S.top=true}
-  else if(a==='editschool'){S.schoolEdit=b.dataset.id;S.scSec='';S.top=true}
+  else if(a==='edit'){S.editId=S.editId===b.dataset.id?null:b.dataset.id}
+  else if(a==='editschool'){S.schoolEdit=S.schoolEdit===b.dataset.id?null:b.dataset.id}
   else if(a==='addstudent'){var n=val('s-name');if(!n){toast('Enter initials or a nickname first');return}
-    write(function(){return S.db.doc('students/s_'+rid()).set({name:n,schoolId:b.dataset.sc||'',goals:[],slots:[],order:S.students.length})}).then(function(){toast('Student added');render()},function(){});return}
+    var nid='s_'+rid();
+    write(function(){return S.db.doc('students/'+nid).set({name:n,schoolId:val('s-school'),goals:[],slots:[],order:S.students.length})}).then(function(){S.editId=nid;S.stFilter='active';toast('Student added. Add the schedule and IEP below.');render()},function(){});return}
   else if(a==='savestudent'){s=student(b.dataset.id);if(!s)return;if(!val('st-name')){toast('Initials or a nickname are required');return}
-    saveDoc('students',s,{name:val('st-name'),grade:val('st-grade'),schoolId:val('st-school'),iepLast:val('st-last'),iepNext:val('st-next'),direct:nv('st-direct'),indirect:nv('st-ind')},'Details saved');return}
+    var stn=val('st-status')||'active',std=val('st-sdate');if(stn!=='active'&&!std)std=today();
+    saveDoc('students',s,{name:val('st-name'),grade:val('st-grade'),schoolId:val('st-school'),status:stn,statusDate:stn==='active'?'':std},'Details saved');return}
+  else if(a==='iepstart'){iepStart(b.dataset.id,b.dataset.mode||'edit');render();return}
+  else if(a==='iepcancel'){var ce=S.iepEd;S.iepEd=null;S.view='students';S.editId=ce?ce.sid:S.editId;window.scrollTo(0,0)}
+  else if(a==='iepnext'){var E1=S.iepEd;if(!E1)return;
+    if(E1.step===5){var bo=E1.d.objs.filter(function(o){return !String(o.label).trim()})[0];if(bo){toast('Objective '+(bo.num||'')+' needs a short name');return}}
+    E1.step=Math.min(6,E1.step+1);window.scrollTo(0,0)}
+  else if(a==='iepback'){if(S.iepEd)S.iepEd.step=Math.max(1,S.iepEd.step-1);window.scrollTo(0,0)}
+  else if(a==='iepgo'){if(S.iepEd)S.iepEd.step=+b.dataset.n;window.scrollTo(0,0)}
+  else if(a==='iepcode'){var dc=S.iepEd.d.codes,ki=dc.indexOf(b.dataset.v);if(ki<0)dc.push(b.dataset.v);else dc.splice(ki,1)}
+  else if(a==='iepannadd'){S.iepEd.d.annual.push({id:'a_'+rid(),num:'',text:''})}
+  else if(a==='iepannrm'){var D2=S.iepEd.d,aid=b.dataset.id;if(D2.objs.some(function(o){return o.annualId===aid})){toast('Move or remove this goal\'s objectives first');return}
+    D2.annual=D2.annual.filter(function(x){return x.id!==aid})}
+  else if(a==='iepobjadd'){var D3=S.iepEd.d,aid3=b.dataset.id,nn3=D3.objs.filter(function(o){return o.annualId===aid3}).length+1;D3.objs.push(blankObj(aid3,nn3))}
+  else if(a==='iepobjrm'){S.iepEd.d.objs.splice(i,1)}
+  else if(a==='iepsave'){iepSave();return}
   else if(a==='addslot'){s=student(b.dataset.id);var tm=val('sl-time'),mn=+val('sl-min');if(!s)return;
     if(!tm){toast('Pick a time first');return} if(!(mn>0)){toast('Enter the minutes');return}
     var ns={day:+val('sl-day'),time:tm,min:mn,every:+val('sl-every')===2?2:1};
@@ -554,9 +979,9 @@ document.addEventListener('click',function(e){
     saveDoc('students',s,{goals:s.goals.concat([ng])},'Goal added');return}
   else if(a==='rmgoal'){s=student(b.dataset.id);if(s)saveDoc('students',s,{goals:s.goals.filter(function(x){return x.id!==g})},'Goal removed');return}
   else if(a==='addschool'){var nn=val('n-name');if(!nn){toast('Enter the school name first');return}
-    write(function(){return S.db.doc('schools/sc_'+rid()).set({name:nn,alias:val('n-alias'),address:val('n-addr'),closed:[],reports:[]})}).then(function(){toast('School added');render()},function(){});return}
+    write(function(){return S.db.doc('schools/sc_'+rid()).set({name:nn,alias:val('n-alias'),address:val('n-addr'),agencyId:val('n-agency'),closed:[],reports:[]})}).then(function(){toast('School added');render()},function(){});return}
   else if(a==='saveschool'){sc=school(b.dataset.id);if(!sc)return;if(!val('sc-name')){toast('The school name is required');return}
-    saveDoc('schools',sc,{name:val('sc-name'),alias:val('sc-alias'),address:val('sc-addr')},'Details saved');return}
+    saveDoc('schools',sc,{name:val('sc-name'),alias:val('sc-alias'),address:val('sc-addr'),agencyId:val('sc-agency')},'Details saved');return}
   else if(a==='addclosed'){sc=school(b.dataset.id);var f=val('c-from'),to=val('c-to')||f;if(!sc)return;
     if(!f){toast('Pick the first day off');return} if(to<f){toast('The end date is before the start date');return}
     saveDoc('schools',sc,{closed:(sc.closed||[]).concat([{from:f,to:to,label:val('c-label')}]).sort(byDate('from'))},'Days off added');return}
@@ -571,16 +996,17 @@ document.addEventListener('input',function(e){var t=e.target;
   else if((t.id==='e-min'||t.id==='e-ind')&&S.draft){var k=t.id==='e-min'?'min':'indirect';if(t.value===''||!isFinite(+t.value))delete S.draft[k];else S.draft[k]=+t.value}
   else if(t.dataset.x&&S.draft){if(t.value===''||!isFinite(+t.value))delete S.draft[t.dataset.x][t.dataset.g];else S.draft[t.dataset.x][t.dataset.g]=+t.value}
   else if(t.dataset.g&&S.draft){if(t.value===''||!isFinite(+t.value))delete S.draft.values[t.dataset.g];else S.draft.values[t.dataset.g]=+t.value}});
-function typingField(el){return el&&(el.tagName==='TEXTAREA'||(el.tagName==='INPUT'&&!/^(date|time|checkbox|radio)$/.test(el.type)))}
-document.addEventListener('focusin',function(e){if(typingField(e.target))tabs.classList.add('typing')});
-document.addEventListener('focusout',function(){setTimeout(function(){if(!typingField(document.activeElement))tabs.classList.remove('typing')},50)});
 document.addEventListener('change',function(e){var t=e.target;
-  if(t.dataset.leg){var lp={};lp[t.dataset.f]=t.value===''||!isFinite(+t.value)?null:+t.value;saveLeg(t.dataset.leg,lp);return}
-  if(t.id==='date-pick'&&t.value){S.date=t.value;render()}
+  if(t.id==='date-pick'&&t.value){S.date=t.value;S.open=null;render()}
   else if(t.id==='prog-student'){S.progId=t.value;render()}
-  else if(t.id==='prog-period'){S.period=t.value;if(t.value==='custom'&&!S.pFrom){var ps=student(S.editId);S.pFrom=(ps&&ps.iepLast)||shift(today(),-30);S.pTo=today()}render()}
+  else if(t.id==='prog-period'){S.period=t.value;if(t.value==='custom'&&!S.pFrom){var ps=student(S.progId);S.pFrom=(ps&&(ps.iep&&ps.iep.meeting||ps.iepLast))||shift(today(),-30);S.pTo=today()}render()}
   else if(t.id==='prog-from'){S.pFrom=t.value;render()}
   else if(t.id==='prog-to'){S.pTo=t.value;render()}});
+document.addEventListener('input',function(e){if(e.target.id==='prog-q'){S.progQ=e.target.value;var p=e.target.selectionStart;render();var n=document.getElementById('prog-q');if(n){n.focus();try{n.setSelectionRange(p,p)}catch(_){}}}});
+function iepInput(e){var t=e.target;if(t.dataset&&t.dataset.iep&&S.iepEd){setP(S.iepEd.d,t.dataset.iep,t.value);if(t.tagName==='SELECT')render()}}
+document.addEventListener('input',iepInput);document.addEventListener('change',function(e){if(e.target.tagName==='SELECT')iepInput(e)});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&S.menu){S.menu=false;render()}});
+menuEl.addEventListener('click',function(e){if(e.target===menuEl){S.menu=false;render()}});
 window.DAPE_START=start;
 })();
 </script>
@@ -591,8 +1017,8 @@ window.DAPE_START=start;
 var SUPABASE_URL='https://yqkgglqlikkerkifmdzq.supabase.co';
 var SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlxa2dnbHFsaWtrZXJraWZtZHpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3Mzc2MjYsImV4cCI6MjEwNzMxMzYyNn0.UcdUU24d0C4IVepzIizyr5FhSkP_5e4cXEoUMEUO8sc';
 function $(id){return document.getElementById(id)}
-var auth=$('auth'),app=$('app'),tabs=$('tabs'),msg=$('auth-msg'),started=false;
-function show(signedIn){auth.hidden=signedIn;app.hidden=!signedIn;tabs.hidden=!signedIn}
+var auth=$('auth'),app=$('app'),top=$('top'),msg=$('auth-msg'),started=false;
+function show(signedIn){auth.hidden=signedIn;app.hidden=!signedIn;top.hidden=!signedIn}
 if(!(window.supabase&&window.supabase.createClient)){show(false);msg.textContent='The app could not finish loading. Check your connection and reload.';return}
 var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
