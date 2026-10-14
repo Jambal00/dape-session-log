@@ -292,6 +292,7 @@ function saveDoc(coll,o,patch,msg){var d=Object.assign({},o,patch);delete d.id;
 
 /* ---------- views ---------- */
 function render(){
+  if(S.loaded)routeSoon();
   var cur=NAV.filter(function(n){return n[0]===S.view})[0];
   topEl.innerHTML='<div class="in"><button class="burger" data-act="menu" aria-label="Open menu" aria-expanded="'+S.menu+'">'+BURGER+'</button>'+
     '<button class="brand" data-act="go" data-v="home">DAPE Log</button>'+(cur&&S.view!=='home'?'<span class="where">'+esc(cur[1])+'</span>':'')+'</div>';
@@ -1051,18 +1052,63 @@ document.addEventListener('keydown',function(e){var t=e.target;if(!(t.dataset&&t
 document.addEventListener('mousedown',function(e){var b=e.target.closest&&e.target.closest('[data-geoi]');if(b){e.preventDefault();geoPick(+b.dataset.geoi)}});
 document.addEventListener('focusout',function(e){if(e.target.dataset&&e.target.dataset.geo)setTimeout(function(){if(!(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.geo))geoClose()},150)});
 
-function placesPanel(){
-  var home=S.settings.home||{},ids=['home'].concat(S.schools.map(function(sc){return sc.id})),pairs=[],i,j;
+/* Every pair of places whose drive matters: home and each school, each pair of schools,
+   and each office-start agency's office with that agency's schools (miles only). */
+function neededPairs(){
+  var ids=['home'].concat(S.schools.map(function(sc){return sc.id})),pairs=[],i,j;
   for(i=0;i<ids.length;i++)for(j=i+1;j<ids.length;j++)pairs.push([ids[i],ids[j]]);
   S.agencies.filter(officeStart).forEach(function(a){S.schools.filter(function(sc){return sc.agencyId===a.id}).forEach(function(sc){pairs.push([officeId(a),sc.id,true])})});
-  var h='<div class="panel stack" id="places" style="scroll-margin-top:72px"><h2>Home and drive distances</h2><span class="muted small">Look up each pair once in a maps app. Every day\'s miles and travel time are worked out from these. Your home address stays in this app.</span>'+
+  return pairs}
+/* A place's saved map location as "lat,lon", or '' when its address was not picked from the suggestions. */
+function placeLL(id){var o=null;
+  if(id==='home')o={lat:me().lat,lon:me().lon};
+  else if(String(id).indexOf('office_')===0){var a=agency(id.slice(7));o=a&&{lat:a.officeLat,lon:a.officeLon}}
+  else{var sc=school(id);o=sc&&{lat:sc.lat,lon:sc.lon}}
+  return o&&typeof o.lat==='number'&&typeof o.lon==='number'?o.lat.toFixed(6)+','+o.lon.toFixed(6):''}
+/* How a stored distance came about. Typed-in values (including ones saved before calculation existed) are never overwritten. */
+function legSource(l){return !l?'':l.test?'test':l.source==='auto'?'auto':'manual'}
+/* ---------- automatic drive distances (Geoapify Routing) ----------
+   Fills a distance when it is missing, still a test value, or was calculated for an address that has since changed.
+   One request per drive, one at a time; a failed drive is not retried for ten minutes. */
+var ROUTE={busy:{},failed:{},done:{},timer:null,running:false};
+function routeWanted(){
+  if(!S.loaded||!S.db)return[];
+  return neededPairs().filter(function(pr){
+    var k=legKey(pr[0],pr[1]),l=legOf(pr[0],pr[1]),a=placeLL(pr[0]),b=placeLL(pr[1]),src=legSource(l);
+    if(!a||!b||ROUTE.busy[k]||ROUTE.done[k]===a+'|'+b)return false;
+    if(ROUTE.failed[k]&&Date.now()-ROUTE.failed[k]<600000)return false;
+    if(src==='manual')return false;
+    if(src==='auto'&&l.ll&&l.ll[pr[0]]===a&&l.ll[pr[1]]===b)return false;
+    return true})}
+function routeSoon(){clearTimeout(ROUTE.timer);ROUTE.timer=setTimeout(routeRun,1200)}
+function routeRun(){
+  if(ROUTE.running)return;var todo=routeWanted();if(!todo.length)return;
+  ROUTE.running=true;var pr=todo[0],k=legKey(pr[0],pr[1]),a=placeLL(pr[0]),b=placeLL(pr[1]);ROUTE.busy[k]=1;
+  if(S.view==='schools')softRender();
+  fetch('https://api.geoapify.com/v1/routing?waypoints='+a+'|'+b+'&mode=drive&format=json&apiKey='+GEO_KEY)
+    .then(function(r){if(!r.ok)throw new Error('status '+r.status);return r.json()})
+    .then(function(j){var x=j.results&&j.results[0];
+      if(!x||typeof x.distance!=='number'||typeof x.time!=='number')throw new Error('no route');
+      var miles=x.distance_units==='miles'?x.distance:x.distance/1609.344,ll={};ll[pr[0]]=a;ll[pr[1]]=b;
+      ROUTE.done[k]=a+'|'+b;
+      return S.db.doc('legs/'+k).set({miles:Math.round(miles*10)/10,min:Math.round(x.time/60),test:false,source:'auto',ll:ll,at:new Date().toISOString()})})
+    .catch(function(){ROUTE.failed[k]=Date.now()})
+    .then(function(){delete ROUTE.busy[k];ROUTE.running=false;if(S.view==='schools')softRender();setTimeout(routeRun,250)})}
+
+function placesPanel(){
+  var home=S.settings.home||{},pairs=neededPairs();
+  var noLL=['home'].concat(S.schools.map(function(sc){return sc.id})).concat(S.agencies.filter(officeStart).map(officeId)).filter(function(id){return !placeLL(id)});
+  var h='<div class="panel stack" id="places" style="scroll-margin-top:72px"><h2>Home and drive distances</h2><span class="muted small">Worked out automatically from the addresses you picked from the suggestions. Every day\'s miles and travel time come from these. If an agency uses a different number for a drive, type it in; your number is kept.</span>'+
     '<div class="row spread"><span class="small" style="min-width:0;flex:1"><b>Home:</b> '+(home.address?esc(home.address):'<span class="warn">not entered yet</span>')+'</span><button class="btn" data-act="go" data-v="profile">'+(home.address?'Change':'Add')+' in My profile</button></div>';
-  pairs.forEach(function(p){var k=legKey(p[0],p[1]),l=legOf(p[0],p[1]);
-    h+='<div class="stack" style="gap:6px;border-top:1px solid var(--line);padding-top:10px"><div class="row spread"><strong>'+esc(placeName(p[0]))+' and '+esc(placeName(p[1]))+'</strong>'+(l&&l.test?'<span class="pill">test distance</span>':'')+'</div>'+
+  if(noLL.length)h+='<div class="banner" style="border-color:var(--line);color:var(--ink)">To calculate drives for '+esc(noLL.map(placeName).join(', '))+', open '+(noLL.length===1?'it':'each')+' and pick the address from the suggestions, then save.</div>';
+  pairs.forEach(function(p){var k=legKey(p[0],p[1]),l=legOf(p[0],p[1]),src=legSource(l),ready=placeLL(p[0])&&placeLL(p[1]);
+    var tag=ROUTE.busy[k]?'<span class="pill">calculating…</span>':src==='auto'?'<span class="pill done">calculated</span>':src==='manual'?'<span class="pill">entered by you</span>':src==='test'?'<span class="pill">test distance</span>':'';
+    h+='<div class="stack" style="gap:6px;border-top:1px solid var(--line);padding-top:10px"><div class="row spread"><strong>'+esc(placeName(p[0]))+' and '+esc(placeName(p[1]))+'</strong>'+tag+'</div>'+
       (p[2]?'<span class="muted small">Used for paid miles when you drive from home to '+esc(placeName(p[1]))+'. Only the miles are needed.</span>':'')+
       '<div class="row end"><label>Miles<input type="number" inputmode="decimal" step="0.1" id="lm-'+k+'" value="'+(l&&num(l.miles)?l.miles:'')+'"></label>'+
       (p[2]?'':'<label>Drive minutes<input type="number" inputmode="numeric" id="lt-'+k+'" value="'+(l&&num(l.min)?l.min:'')+'"></label>')+
-      '<button class="btn" data-act="saveleg" data-k="'+k+'">Save</button></div></div>'});
+      '<button class="btn" data-act="saveleg" data-k="'+k+'">Save</button></div>'+
+      (src==='manual'&&ready?'<button type="button" class="linkbtn" data-act="autoleg" data-k="'+k+'">Use the calculated distance instead</button>':'')+'</div>'});
   return h+'</div>';
 }
 
@@ -1125,7 +1171,8 @@ document.addEventListener('click',function(e){
   else if(a==='saveprofile'){var pa=val('pf-addr'),pg=geoFor('pf-addr',pa,S.settings.home);var hd=Object.assign({},S.settings.home||{},{name:val('pf-name'),business:val('pf-biz'),address:pa,lat:pg.lat,lon:pg.lon});delete hd.id;
     write(function(){return S.db.doc('settings/home').set(hd)}).then(function(){toast('Profile saved');render()},function(){});return}
   else if(a==='saveleg'){var lk=b.dataset.k,lmi=nv('lm-'+lk),lmn=nv('lt-'+lk);if(lmi==null){toast('Enter the miles first');return}
-    write(function(){return S.db.doc('legs/'+lk).set({miles:lmi,min:lmn,test:false})}).then(function(){toast('Distance saved');render()},function(){});return}
+    write(function(){return S.db.doc('legs/'+lk).set({miles:lmi,min:lmn,test:false,source:'manual'})}).then(function(){toast('Distance saved');render()},function(){});return}
+  else if(a==='autoleg'){var ak=b.dataset.k;write(function(){return S.db.doc('legs/'+ak).delete()}).then(function(){delete ROUTE.failed[ak];delete ROUTE.done[ak];toast('Calculating the distance');routeSoon();render()},function(){});return}
   else if(a==='del'){if(!S.confirmDel){S.confirmDel=true}else{var sid=S.open;
     write(function(){return S.db.doc('sessions/'+sid+'_'+S.date).delete()}).then(function(){leaveEntry();toast('Entry deleted');render()},function(){});return}}
   else if(a==='copy'){var t=document.getElementById('sum').textContent;
