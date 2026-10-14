@@ -105,6 +105,10 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .tile .badge{font:600 11px var(--body);letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);border-radius:99px;padding:2px 8px;color:var(--muted)}
 @media (max-width:340px){.tiles{grid-template-columns:1fr}}
 .pill.gone{color:var(--muted);border-style:dashed}
+.tick{flex-direction:row;align-items:flex-start;gap:12px;font-weight:600;cursor:pointer;flex:0 0 auto}
+.tick input{width:22px;height:22px;min-height:0;flex:0 0 22px;margin:1px 0 0;padding:0;accent-color:var(--accent)}
+.tick span{display:flex;flex-direction:column;gap:2px}
+.tick small{font-weight:400;font-size:13px;color:var(--muted)}
 .split{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:baseline;font-variant-numeric:tabular-nums}
 .split .n{font:700 18px/1 var(--display)}
 .leg{display:flex;align-items:center;gap:12px;padding:2px 14px;color:var(--muted);font-size:14px}
@@ -211,6 +215,8 @@ var STATUS={active:'Active',graduated:'Graduated',exited:'Exited'};
 function agency(id){return S.agencies.filter(function(a){return a.id===id})[0]}
 function agencyOfStudent(s){var sc=school(s.schoolId);return sc&&sc.agencyId?agency(sc.agencyId):null}
 function dayWord(d){return d===today()?'today':d===shift(today(),1)?'tomorrow':'this day'}
+function reimburses(a){return !!a&&a.reimburseMiles!==false}
+function taxMiles(a){return !a||a.taxMiles!==false}
 function money(n){return '$'+(Math.round(n*100)/100).toFixed(2)}
 function met(g,v){return !num(g.target)?null:(g.dir==='max'?v<=g.target:v>=g.target)}
 
@@ -302,7 +308,7 @@ function nextReport(){var t=today(),best=null;
   S.schools.forEach(function(sc){(sc.reports||[]).forEach(function(r){if(r.date>=t&&(!best||r.date<best.date))best={date:r.date,school:sc.alias||sc.name}})});return best}
 /* What is left to set up. Drive distances count only the drives this week's routes use. */
 function setupStatus(){var o={todo:0,schools:'',agencies:'',legs:''},n;
-  n=S.agencies.filter(function(a){return !num(a.rate)||!num(a.mileRate)}).length;
+  n=S.agencies.filter(function(a){return !num(a.rate)||(reimburses(a)&&!num(a.mileRate))}).length;
   if(!S.agencies.length){o.agencies='Add the agencies that pay you';o.todo++}else if(n){o.agencies='Rates missing for '+n;o.todo+=n}
   var ns=S.schools.filter(function(sc){return !sc.address||!sc.agencyId||!(sc.days&&sc.days.length)});
   if(!S.schools.length){o.schools='Add your schools';o.todo++}else if(ns.length){o.schools=ns.length+' missing an address, agency or days';o.todo+=ns.length}
@@ -382,21 +388,23 @@ function dayByAgency(date){var out={};
   S.sessions.forEach(function(x){if(x.date===date&&x.status!=='planned'){var m=(!x.absent&&num(x.min)?x.min:0)+(num(x.indirect)?x.indirect:0);if(m)add(x.studentId,m)}});
   S.indirect.forEach(function(x){if(x.date===date&&num(x.min))add(x.studentId,x.min)});return out}
 function dayTotals(date,P){var out={};
-  function b(k){return out[k]||(out[k]={stu:0,trav:0,miles:0})}
+  function b(k){return out[k]||(out[k]={stu:0,trav:0,miles:0,tax:0})}
   var by=dayByAgency(date);Object.keys(by).forEach(function(k){b(k).stu+=by[k]});
-  P.legs.forEach(function(l){var x=b(l.agencyId);if(num(l.min))x.trav+=l.min;if(num(l.miles))x.miles+=l.miles});
+  P.legs.forEach(function(l){var x=b(l.agencyId);if(num(l.min))x.trav+=l.min;if(num(l.miles)){x.miles+=l.miles;if(taxMiles(agency(l.agencyId)))x.tax+=l.miles}});
   return out}
 function dayPanel(P){
   var m=dayMinutes(S.date),T=dayTotals(S.date,P),ks=Object.keys(T),trav=0,miles=0,missing=P.legs.some(function(l){return l.miles==null}),test=P.legs.some(function(l){return l.test});
-  ks.forEach(function(k){trav+=T[k].trav;miles+=T[k].miles});
+  var tax=0;ks.forEach(function(k){trav+=T[k].trav;miles+=T[k].miles;tax+=T[k].tax});
   var h='<div class="panel stack"><span class="eyebrow">Day total</span>'+
     '<div class="row" style="gap:22px"><div><div class="stat">'+hrs(m.d+m.i+trav)+'</div><span class="muted small">total hours<br>'+hrs(m.d+m.i)+' students + '+hrs(trav)+' travel</span></div>'+
-    '<div><div class="stat">'+r1(miles)+'</div><span class="muted small">miles<br>'+P.legs.length+' drive'+(P.legs.length===1?'':'s')+' from home</span></div></div>';
-  if(ks.length)h+='<div class="split">'+ks.map(function(k){var a=agency(k),r=a&&num(a.rate)?a.rate:null,mr=a&&num(a.mileRate)?a.mileRate:null,t=T[k];
+    '<div><div class="stat">'+r1(miles)+'</div><span class="muted small">miles<br>'+P.legs.length+' drive'+(P.legs.length===1?'':'s')+' from home</span></div>'+
+    (r1(tax)!==r1(miles)?'<div><div class="stat">'+r1(tax)+'</div><span class="muted small">miles<br>for taxes</span></div>':'')+'</div>';
+  if(ks.length)h+='<div class="split">'+ks.map(function(k){var a=agency(k),r=a&&num(a.rate)?a.rate:null,mr=reimburses(a)&&num(a.mileRate)?a.mileRate:null,t=T[k];
       var pay=(r!=null?hrs(t.stu+t.trav)*r:0)+(mr!=null?t.miles*mr:0);
-      return '<span>'+esc(a?a.name:'No agency set')+'</span><span class="muted small">'+hrs(t.stu+t.trav)+' hrs · '+r1(t.miles)+' mi</span><span class="n">'+(r!=null||mr!=null?money(pay):'')+'</span>'}).join('')+'</div>';
+      return '<span>'+esc(a?a.name:'No agency set')+'</span><span class="muted small">'+hrs(t.stu+t.trav)+' hrs · '+r1(t.miles)+' mi'+(a&&!reimburses(a)&&t.miles?' (not paid)':'')+'</span><span class="n">'+(r!=null||mr!=null?money(pay):'')+'</span>'}).join('')+'</div>';
   if(missing)h+='<span class="muted small">Some drives have no distance yet. Add them under Schools, in Home and drive distances.</span>';
   else if(test)h+='<span class="muted small">Miles use test distances for now.</span>';
+  if(r1(tax)!==r1(miles))h+='<span class="muted small">Miles for taxes leave out agencies you set to not count for taxes.</span>';
   h+='<span class="muted small">Student hours count logged sessions only. The drive home after the last school is not counted.</span>';
   S.indirect.filter(function(x){return x.date===S.date}).forEach(function(x){var st=student(x.studentId);
     h+='<div class="row spread"><span style="min-width:0;flex:1">'+esc((st?st.name:'Removed student')+', '+x.min+' indirect min'+(x.note?', '+x.note:''))+'</span><button class="chip" data-act="rmind" data-id="'+esc(x.id)+'">Remove</button></div>'});
@@ -842,23 +850,29 @@ function schoolsView(){
 
 function agencyOptions(sel){return '<option value="">No agency set</option>'+S.agencies.map(function(a){
   return '<option value="'+esc(a.id)+'"'+(a.id===sel?' selected':'')+'>'+esc(a.name)+'</option>'}).join('')}
+function mileToggles(p,a){
+  return '<label class="tick"><input type="checkbox" id="'+p+'-reimb"'+(a&&!reimburses(a)?'':' checked')+'><span>Pays for mileage<small>Untick if this agency does not reimburse your driving. Its miles then add nothing to pay.</small></span></label>'+
+    '<label class="tick"><input type="checkbox" id="'+p+'-tax"'+(taxMiles(a)?' checked':'')+'><span>Count these miles for taxes<small>Untick to leave this agency\'s miles out of your tax mileage total.</small></span></label>'}
+function chk(id){var e=document.getElementById(id);return !!(e&&e.checked)}
 function agenciesView(){
   var h='<div class="stack"><span class="eyebrow">Agencies</span><h1>Who pays, and how much</h1>'+
-    '<span class="muted small">Each school belongs to one agency. Hours and miles are split by agency. A drive is billed to the agency of the school you are driving to, and the drive from home to the first school counts.</span></div>';
+    '<span class="muted small">Each school belongs to one agency. Hours and miles are split by agency. A drive is billed to the agency of the school you are driving to, and the drive from home to the first school counts. For each agency, choose whether it pays for mileage and whether its miles count toward your tax mileage.</span></div>';
   if(!S.loaded)return h+'<div class="list"><div class="empty">Loading agencies…</div></div>';
   h+=S.agencies.length?'<div class="list">'+S.agencies.map(function(a){
     var open=S.agEdit===a.id,ns=S.schools.filter(function(sc){return sc.agencyId===a.id});
-    var sub=[num(a.rate)?money(a.rate)+'/hr':'no hourly rate',num(a.mileRate)?money(a.mileRate)+'/mile':'no mileage rate',ns.length?ns.map(function(sc){return sc.alias||sc.name}).join(', '):'no schools'].join(' · ');
+    var sub=[num(a.rate)?money(a.rate)+'/hr':'no hourly rate',!reimburses(a)?'mileage not reimbursed':num(a.mileRate)?money(a.mileRate)+'/mile':'no mileage rate',taxMiles(a)?'':'miles not counted for taxes',ns.length?ns.map(function(sc){return sc.alias||sc.name}).join(', '):'no schools'].filter(Boolean).join(' · ');
     var o='<button class="item" data-act="editag" data-id="'+esc(a.id)+'" aria-expanded="'+open+'"><span class="nm">'+esc(a.name)+'<br><span class="sub">'+esc(sub)+'</span></span></button>';
     if(open)o+='<div class="stack edit"><label>Agency name<input id="ag-name" value="'+esc(a.name)+'"></label>'+
       '<div class="row"><label>Hourly rate ($)<input type="number" inputmode="decimal" step="0.01" id="ag-rate" value="'+(num(a.rate)?a.rate:'')+'"></label>'+
-      '<label>Mileage rate ($ per mile)<input type="number" inputmode="decimal" step="0.001" id="ag-mile" value="'+(num(a.mileRate)?a.mileRate:'')+'"></label></div>'+
+      '<label>Mileage rate ($ per mile)<input type="number" inputmode="decimal" step="0.001" id="ag-mile" value="'+(num(a.mileRate)?a.mileRate:'')+'"'+(reimburses(a)?'':' disabled')+'></label></div>'+
+      mileToggles('ag',a)+
       '<label>Notes<textarea id="ag-note" placeholder="Invoice contact, billing cycle, anything to remember">'+esc(a.note||'')+'</textarea></label>'+
       '<span class="muted small">Travel time is paid at the hourly rate.</span>'+
       '<button class="btn primary" data-act="saveag" data-id="'+esc(a.id)+'">Save agency</button></div>';
     return o}).join('')+'</div>':'<div class="list"><div class="empty">No agencies yet. Add the first one below, then pick it on each school.</div></div>';
   h+='<div class="panel stack"><h2>Add an agency</h2><label>Agency name<input id="na-name" placeholder="e.g. Designs for Learning"></label>'+
     '<div class="row"><label>Hourly rate ($)<input type="number" inputmode="decimal" step="0.01" id="na-rate"></label><label>Mileage rate ($ per mile)<input type="number" inputmode="decimal" step="0.001" id="na-mile"></label></div>'+
+    mileToggles('na',null)+
     '<button class="btn primary" data-act="addag">Add agency</button></div>';
   return h;
 }
@@ -901,9 +915,9 @@ document.addEventListener('click',function(e){
   else if(a==='progfor'){S.progId=b.dataset.id;S.view='progress';S.progQ='';window.scrollTo(0,0)}
   else if(a==='editag'){S.agEdit=S.agEdit===b.dataset.id?null:b.dataset.id}
   else if(a==='addag'){var agn=val('na-name');if(!agn){toast('Enter the agency name first');return}
-    write(function(){return S.db.doc('agencies/ag_'+rid()).set({name:agn,rate:nv('na-rate'),mileRate:nv('na-mile'),note:''})}).then(function(){toast('Agency added');render()},function(){});return}
+    write(function(){return S.db.doc('agencies/ag_'+rid()).set({name:agn,rate:nv('na-rate'),mileRate:chk('na-reimb')?nv('na-mile'):null,reimburseMiles:chk('na-reimb'),taxMiles:chk('na-tax'),note:''})}).then(function(){toast('Agency added');render()},function(){});return}
   else if(a==='saveag'){var ag=agency(b.dataset.id);if(!ag)return;if(!val('ag-name')){toast('The agency name is required');return}
-    saveDoc('agencies',ag,{name:val('ag-name'),rate:nv('ag-rate'),mileRate:nv('ag-mile'),note:val('ag-note')},'Agency saved');return}
+    saveDoc('agencies',ag,{name:val('ag-name'),rate:nv('ag-rate'),mileRate:nv('ag-mile'),reimburseMiles:chk('ag-reimb'),taxMiles:chk('ag-tax'),note:val('ag-note')},'Agency saved');return}
   else if(a==='day'){S.date=shift(S.date,+b.dataset.n);S.open=null}
   else if(a==='todaybtn'){S.date=today()}
   else if(a==='open'){openEntry(b.dataset.id)}
@@ -1005,6 +1019,7 @@ document.addEventListener('input',function(e){var t=e.target;
   else if(t.dataset.x&&S.draft){if(t.value===''||!isFinite(+t.value))delete S.draft[t.dataset.x][t.dataset.g];else S.draft[t.dataset.x][t.dataset.g]=+t.value}
   else if(t.dataset.g&&S.draft){if(t.value===''||!isFinite(+t.value))delete S.draft.values[t.dataset.g];else S.draft.values[t.dataset.g]=+t.value}});
 document.addEventListener('change',function(e){var t=e.target;
+  if(t.id==='ag-reimb'||t.id==='na-reimb'){var mi=document.getElementById(t.id==='ag-reimb'?'ag-mile':'na-mile');if(mi)mi.disabled=!t.checked}
   if(t.id==='date-pick'&&t.value){S.date=t.value;S.open=null;render()}
   else if(t.id==='prog-student'){S.progId=t.value;render()}
   else if(t.id==='prog-period'){S.period=t.value;if(t.value==='custom'&&!S.pFrom){var ps=student(S.progId);S.pFrom=(ps&&(ps.iep&&ps.iep.meeting||ps.iepLast))||shift(today(),-30);S.pTo=today()}render()}
