@@ -298,6 +298,7 @@ function render(){
   else if(S.view==='students')h+=studentsView();
   else if(S.view==='iep')h+=iepView();
   else if(S.view==='agencies')h+=agenciesView();
+  else if(S.view==='profile')h+=profileView();
   else h+=schoolsView();
   app.innerHTML=h;
   if(S.scrollTo){var st0=document.getElementById(S.scrollTo);S.scrollTo=null;if(st0)st0.scrollIntoView({block:'start'})}
@@ -306,15 +307,17 @@ var BURGER='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-wi
 var CLOSE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 var NAV=[['home','Home','Start here'],['today',"Today's Plan",'Sessions, results, hours and travel','Every day'],['plan','Plan my Day','Lesson plans for an upcoming day','Every day'],
   ['students','Students and IEPs','IEPs, goals, schedules, status','A few times a year'],['progress','Progress Reports','Averages and SpEd Forms text','A few times a year'],
-  ['schools','Schools','Calendars, report dates, drive distances','Setup'],['agencies','Agencies','Pay rates and mileage rates','Setup']];
+  ['profile','My profile','Your name and home address','Setup'],['schools','Schools','Calendars, report dates, drive distances','Setup'],['agencies','Agencies','Pay rates and mileage rates','Setup']];
 function nextWorkDay(from){var d=shift(from,1),i;for(i=0;i<14;i++){if(scheduledOn(d).length)return d;d=shift(d,1)}return shift(from,1)}
 function scheduledOn(date){return activeStudents().filter(function(s){return slotOn(s,date)})}
+function me(){return S.settings.home||{}}
+function myName(){return String(me().name||'').trim().split(/\s+/)[0]||''}
 function homeView(){
   var t=today(),sc=scheduledOn(t),schools=[];
   sc.forEach(function(s){var l=schoolLabel(s);if(l&&schools.indexOf(l)<0)schools.push(l)});
   var nw=nextWorkDay(t),nn=scheduledOn(nw).length,planned=scheduledOn(nw).filter(function(s){return sess(s.id,nw)}).length;
   var nAct=activeStudents().length;
-  var h='<div class="stack"><span class="eyebrow">'+esc(longDate(t))+'</span><h1>Good '+(new Date().getHours()<12?'morning':new Date().getHours()<17?'afternoon':'evening')+', Trisha</h1>'+
+  var h='<div class="stack"><span class="eyebrow">'+esc(longDate(t))+'</span><h1>Good '+(new Date().getHours()<12?'morning':new Date().getHours()<17?'afternoon':'evening')+(myName()?', '+esc(myName()):'')+'</h1>'+
     '<span class="muted">'+(!S.loaded?'Loading…':sc.length?sc.length+' session'+(sc.length===1?'':'s')+' today'+(schools.length?' at '+esc(schools.join(' and ')):''):'Nothing scheduled today')+'</span></div>';
   var noIep=activeStudents().filter(function(s){return !s.iep}).length,nextRep=nextReport(),su=setupStatus();
   h+='<div class="sec"><span class="eyebrow">Every day</span></div><div class="tiles">'+
@@ -327,27 +330,28 @@ function homeView(){
   if(!S.loaded)return h;
   if(su.todo){
     h+='<div class="sec"><span class="eyebrow">Setup · '+su.todo+' thing'+(su.todo===1?'':'s')+' to finish</span></div><div class="tiles">'+
+      '<button class="tile" data-act="go" data-v="profile" style="grid-column:1/-1;min-height:84px"><b>My profile</b><span>'+(su.profile?'<span class="warn">'+esc(su.profile)+'</span>':esc(me().name||'Your name and home address'))+'</span></button>'+
       '<button class="tile" data-act="go" data-v="schools"><b>Schools</b><span>'+S.schools.length+' school'+(S.schools.length===1?'':'s')+(su.schools?'<br><span class="warn">'+esc(su.schools)+'</span>':'')+'</span></button>'+
       '<button class="tile" data-act="go" data-v="agencies"><b>Agencies</b><span>'+(S.agencies.length?S.agencies.length+' agenc'+(S.agencies.length===1?'y':'ies'):'None yet')+(su.agencies?'<br><span class="warn">'+esc(su.agencies)+'</span>':'')+'</span></button>'+
       '<button class="tile" data-act="go" data-v="schools" data-scroll="places" style="grid-column:1/-1;min-height:84px"><b>Drive distances</b><span>'+(su.legs?'<span class="warn">'+esc(su.legs)+'</span>':'Home and every drive between schools')+'</span></button></div>';
   }else{
     h+='<div class="sec"><span class="eyebrow">Setup is complete</span></div><div class="minis">'+
-      '<button class="mini" data-act="go" data-v="schools">Schools</button><button class="mini" data-act="go" data-v="agencies">Agencies</button><button class="mini" data-act="go" data-v="schools" data-scroll="places">Drive distances</button></div>';
+      '<button class="mini" data-act="go" data-v="profile">My profile</button><button class="mini" data-act="go" data-v="schools">Schools</button><button class="mini" data-act="go" data-v="agencies">Agencies</button><button class="mini" data-act="go" data-v="schools" data-scroll="places">Drive distances</button></div>';
   }
   return h;
 }
 function nextReport(){var t=today(),best=null;
   S.schools.forEach(function(sc){(sc.reports||[]).forEach(function(r){if(r.date>=t&&(!best||r.date<best.date))best={date:r.date,school:sc.alias||sc.name}})});return best}
 /* What is left to set up. Drive distances count only the drives this week's routes use. */
-function setupStatus(){var o={todo:0,schools:'',agencies:'',legs:''},n;
-  n=S.agencies.filter(function(a){return !num(a.rate)||(reimburses(a)&&!PAY.mileRateOn(a,today()))||(a.travelOwn&&paysTravel(a)&&!num(a.travelRate))||(officeStart(a)&&!a.officeAddress)}).length;
-  if(!S.agencies.length){o.agencies='Add the agencies that pay you';o.todo++}else if(n){o.agencies='Rates or office address missing for '+n;o.todo+=n}
+function setupStatus(){var o={todo:0,schools:'',agencies:'',legs:'',profile:''},n;
+  n=S.agencies.filter(function(a){return !num(a.rate)||(reimburses(a)&&!PAY.mileRateOn(a,today()))||(a.travelOwn&&paysTravel(a)&&!num(a.travelRate))||!a.officeAddress}).length;
+  if(!S.agencies.length){o.agencies='Add the agencies that pay you';o.todo++}else if(n){o.agencies='Rates or address missing for '+n;o.todo+=n}
   var ns=S.schools.filter(function(sc){return !sc.address||!sc.agencyId||!(sc.days&&sc.days.length)});
   if(!S.schools.length){o.schools='Add your schools';o.todo++}else if(ns.length){o.schools=ns.length+' missing an address, agency or days';o.todo+=ns.length}
   var seen={},miss=0,test=0,i;
   for(i=0;i<7;i++){dayStops(shift(today(),i)).legs.forEach(function(l){var k=legKey(l.from,l.to);if(!seen[k]){seen[k]=1;if(l.miles==null)miss++;else if(l.test)test++}
     if(l.office){var ko=legKey(officeId(agency(l.agencyId)),l.to);if(!seen[ko]){seen[ko]=1;if(l.officeMiles==null)miss++}}})}
-  if(!(S.settings.home&&S.settings.home.address)){o.legs='Home address not entered';o.todo++}
+  var pm=[me().name?'':'name',me().address?'':'home address'].filter(Boolean);if(pm.length){o.profile='Add your '+pm.join(' and ');o.todo++}
   if(miss||test){o.legs=(o.legs?o.legs+' · ':'')+[miss?miss+' not set':'',test?test+' still test values':''].filter(Boolean).join(', ');o.todo+=miss+test}
   return o}
 function emptyRoster(){return '<div class="list"><div class="empty">'+(S.loaded?'No students yet. Add your caseload under Students in the menu, with the goals you track for each.':'Loading your caseload…')+'</div></div>'}
@@ -921,7 +925,8 @@ function agExample(d){
     '<div class="ex">'+rows.join('')+'<span class="tot">Pay</span><span class="tot">'+money(pay)+'</span><span class="z">Miles tracked for taxes</span><span class="z">'+(d.taxMiles?30:0)+'</span></div>'+
     (d.reimburseMiles&&d.office?'<span class="small">On a real day, the drive from home to this agency\'s first school is paid on the office distance instead of the miles driven.</span>':'')}
 function agencyForm(w,d,id){
-  var h='<label>Agency name<input id="'+w+'-name" data-agw="'+w+'" data-agf="name" value="'+esc(d.name)+'" placeholder="e.g. Designs for Learning"></label>';
+  var h='<label>Agency name<input id="'+w+'-name" data-agw="'+w+'" data-agf="name" value="'+esc(d.name)+'" placeholder="e.g. Designs for Learning"></label>'+
+    '<label>Agency address<input id="'+w+'-officeAddress" data-agw="'+w+'" data-agf="officeAddress" value="'+esc(d.officeAddress)+'" placeholder="Street, city" autocomplete="off"></label>';
   h+='<div class="paysheet"><div class="sect">What they pay you for</div>'+
     '<div class="pl"><b>Time with students</b>'+agMoney(w,'rate',d,'/hr','Base rate per hour')+'<small>Your base rate, for direct and indirect minutes.</small></div>'+
     '<div class="pl"><b>Travel time</b>'+agSwitch(w,'paysTravel',d.paysTravel,'Paid for travel time')+
@@ -933,8 +938,7 @@ function agencyForm(w,d,id){
       (d.reimburseMiles?'<small>Paid per mile, on top of travel time. Add a rate change when the agency changes its rate partway through the year.</small><div class="sub" style="display:block">'+rateRows(w,d)+'</div>'+
         '<div class="sub" style="flex-direction:column;align-items:flex-start;gap:6px"><span class="small" style="font-weight:600">Mileage to the first school starts from</span>'+
         '<span class="seg" role="group" aria-label="Mileage starts from">'+[[false,'Your home'],[true,'Agency office']].map(function(o){return '<button type="button" class="'+(d.office===o[0]?'on':'')+'" data-act="agq" data-w="'+w+'" data-f="office" data-v="'+(o[0]?1:0)+'" aria-pressed="'+(d.office===o[0])+'">'+o[1]+'</button>'}).join('')+'</span>'+
-        (d.office?'<label style="width:100%;flex:0 0 auto">Office address<input id="'+w+'-officeAddress" data-agw="'+w+'" data-agf="officeAddress" value="'+esc(d.officeAddress)+'" placeholder="Street, city"></label>'+
-          '<span class="small muted">When you drive from home to one of this agency\'s schools, the paid miles are the office-to-school distance. Travel time stays your actual drive. Drives between schools use actual miles. Add the office distances under Schools, in Home and drive distances.</span>':'')+'</div>'
+        (d.office?'<span class="small muted">Uses the agency address above. When you drive from home to one of this agency\'s schools, the paid miles are the office-to-school distance. Travel time stays your actual drive. Drives between schools use actual miles. Add the office distances under Schools, in Home and drive distances.</span>':'')+'</div>'
       :'<small>Not reimbursed. Miles still show in your day totals.</small>')+'</div>'+
     '<div class="sect">For your taxes</div>'+
     '<div class="pl"><b>Track these miles</b>'+agSwitch(w,'taxMiles',d.taxMiles,'Track these miles for taxes')+
@@ -960,12 +964,12 @@ function agFields(d){
       if(v==null){if(i===0&&d.mileRates.length===1)continue;return 'Enter the mileage rate'+(f?' starting '+md(f):'')}
       if(seen[f])return 'Two mileage rates start on the same date';seen[f]=1;rates.push({from:f,rate:v})}
     rates.sort(function(x,y){return x.from<y.from?-1:x.from>y.from?1:0});
-    if(d.office&&!d.officeAddress.trim())return 'Enter the office address';
+    if(d.office&&!d.officeAddress.trim())return 'Enter the agency address';
   }
   var cur=PAY.mileRateOn({mileRates:rates},today());
   return{name:d.name.trim(),rate:n(d.rate),paysTravel:d.paysTravel,travelOwn:!!(d.paysTravel&&d.travelOwn),travelRate:d.paysTravel&&d.travelOwn?n(d.travelRate):null,
     reimburseMiles:d.reimburseMiles,mileRates:d.reimburseMiles?rates:[],mileRate:d.reimburseMiles&&cur?cur.rate:null,
-    mileFrom:d.reimburseMiles&&d.office?'office':'home',officeAddress:d.reimburseMiles&&d.office?d.officeAddress.trim():'',taxMiles:d.taxMiles,note:d.note.trim()}}
+    mileFrom:d.reimburseMiles&&d.office?'office':'home',officeAddress:d.officeAddress.trim(),taxMiles:d.taxMiles,note:d.note.trim()}}
 function agenciesView(){
   var h='<div class="stack"><span class="eyebrow">Agencies</span><h1>Who pays, and how much</h1>'+
     '<span class="muted small">Each school belongs to one agency. Hours and miles are split by agency. A drive is billed to the agency of the school you are driving to, and the drive from home to the first school counts.</span></div>';
@@ -980,12 +984,19 @@ function agenciesView(){
   return h;
 }
 
+function profileView(){var p=me();
+  return '<div class="stack"><span class="eyebrow">My profile</span><h1>About you</h1><span class="muted small">Used for your greeting and for working out drive distances. It stays in this app; nothing here is shared with the agencies or schools.</span></div>'+
+    '<div class="panel stack"><label>Your name<input id="pf-name" value="'+esc(p.name||'')+'" placeholder="e.g. Trisha Smith" autocomplete="name"></label>'+
+    '<label>Business name (optional)<input id="pf-biz" value="'+esc(p.business||'')+'" placeholder="If you work under a business name" autocomplete="organization"></label>'+
+    '<label>Home address<input id="pf-addr" value="'+esc(p.address||'')+'" placeholder="Street, city, state, ZIP" autocomplete="street-address"></label>'+
+    '<span class="muted small">Your drives start here, unless an agency pays mileage from its office.</span>'+
+    '<button class="btn primary" data-act="saveprofile">Save profile</button></div>'}
 function placesPanel(){
   var home=S.settings.home||{},ids=['home'].concat(S.schools.map(function(sc){return sc.id})),pairs=[],i,j;
   for(i=0;i<ids.length;i++)for(j=i+1;j<ids.length;j++)pairs.push([ids[i],ids[j]]);
   S.agencies.filter(officeStart).forEach(function(a){S.schools.filter(function(sc){return sc.agencyId===a.id}).forEach(function(sc){pairs.push([officeId(a),sc.id,true])})});
   var h='<div class="panel stack" id="places" style="scroll-margin-top:72px"><h2>Home and drive distances</h2><span class="muted small">Look up each pair once in a maps app. Every day\'s miles and travel time are worked out from these. Your home address stays in this app.</span>'+
-    '<div class="row end"><label>Home address<input id="home-addr" value="'+esc(home.address||'')+'" placeholder="Street, city"></label><button class="btn" data-act="savehome">Save</button></div>';
+    '<div class="row spread"><span class="small" style="min-width:0;flex:1"><b>Home:</b> '+(home.address?esc(home.address):'<span class="warn">not entered yet</span>')+'</span><button class="btn" data-act="go" data-v="profile">'+(home.address?'Change':'Add')+' in My profile</button></div>';
   pairs.forEach(function(p){var k=legKey(p[0],p[1]),l=legOf(p[0],p[1]);
     h+='<div class="stack" style="gap:6px;border-top:1px solid var(--line);padding-top:10px"><div class="row spread"><strong>'+esc(placeName(p[0]))+' and '+esc(placeName(p[1]))+'</strong>'+(l&&l.test?'<span class="pill">test distance</span>':'')+'</div>'+
       (p[2]?'<span class="muted small">Used for paid miles when you drive from home to '+esc(placeName(p[1]))+'. Only the miles are needed.</span>':'')+
@@ -1051,8 +1062,8 @@ document.addEventListener('click',function(e){
       if(v!=='absent'&&xw&&xw.absent){var slx=stw&&slotOn(stw,S.date),dx=Object.assign({},xw,{absent:false,min:slx?slx.min:(stw&&stw.direct)||0,updated:new Date().toISOString()});delete dx.id;
         return write(function(){return S.db.doc('sessions/'+sidw+'_'+S.date).set(dx)}).then(function(){render()},function(){})}
     });return}
-  else if(a==='savehome'){var hd=Object.assign({},S.settings.home||{},{address:val('home-addr')});delete hd.id;
-    write(function(){return S.db.doc('settings/home').set(hd)}).then(function(){toast('Home address saved');render()},function(){});return}
+  else if(a==='saveprofile'){var hd=Object.assign({},S.settings.home||{},{name:val('pf-name'),business:val('pf-biz'),address:val('pf-addr')});delete hd.id;
+    write(function(){return S.db.doc('settings/home').set(hd)}).then(function(){toast('Profile saved');render()},function(){});return}
   else if(a==='saveleg'){var lk=b.dataset.k,lmi=nv('lm-'+lk),lmn=nv('lt-'+lk);if(lmi==null){toast('Enter the miles first');return}
     write(function(){return S.db.doc('legs/'+lk).set({miles:lmi,min:lmn,test:false})}).then(function(){toast('Distance saved');render()},function(){});return}
   else if(a==='del'){if(!S.confirmDel){S.confirmDel=true}else{var sid=S.open;
