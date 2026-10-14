@@ -130,6 +130,16 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .rate-row .money{width:112px;padding:0 8px}
 .rate-row+.rate-row{border-top:1px dashed var(--line);padding-top:8px}
 .linkbtn{border:0;background:none;color:var(--good);font-weight:600;padding:6px 0;cursor:pointer;text-align:left}
+.geo{position:relative;display:block}
+.geo-list{position:relative;margin-top:4px;z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 20px rgba(10,20,15,.16);overflow:hidden}
+.geo-list button{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:10px 12px;cursor:pointer;color:var(--ink);font:inherit;font-weight:400}
+.geo-list button:first-child{border-top:0}
+.geo-list button b{display:block;font-weight:600;font-size:15px}
+.geo-list button span{font-size:13px;color:var(--muted)}
+.geo-list button[aria-selected="true"],.geo-list button:hover{background:var(--accent-soft)}
+.geo-list .credit{display:block;padding:6px 12px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);text-align:right}
+.geo-list .credit a{color:var(--muted)}
+.geo-note{padding:10px 12px;font-size:13px;color:var(--muted)}
 .example{background:var(--accent-soft);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
 .example .t{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
 .ex{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px;font-variant-numeric:tabular-nums}
@@ -872,7 +882,7 @@ function schoolsView(){
       '<br><span class="sub">'+esc([agency(sc.agencyId)?agency(sc.agencyId).name:'No agency set',sc.address].filter(Boolean).join(' · '))+'</span></span><span class="pill">'+n+' student'+(n===1?'':'s')+'</span></button>';
     if(open){o+='<div class="stack edit">'+
       '<div class="row"><label>School name<input id="sc-name" value="'+esc(sc.name)+'"></label><label>Short name<input id="sc-alias" value="'+esc(sc.alias||'')+'"></label></div>'+
-      '<label>Address<input id="sc-addr" value="'+esc(sc.address||'')+'"></label>'+
+      '<label>Address<span class="geo"><input id="sc-addr" data-geo="1" autocomplete="off" value="'+esc(sc.address||'')+'" placeholder="Start typing the address"></span></label>'+
       '<label>Agency that pays for this school<select id="sc-agency">'+agencyOptions(sc.agencyId)+'</select></label>'+
       '<button class="btn primary" data-act="saveschool" data-id="'+esc(sc.id)+'">Save details</button>'+
       '<h2 style="margin-top:8px">Days you are here</h2><div class="row">'+DAYS.map(function(dn,di){var on=(sc.days||[]).indexOf(di)>=0;
@@ -889,7 +899,7 @@ function schoolsView(){
     return o}).join('')+'</div>':'<div class="list"><div class="empty">No schools yet. Add the first one below.</div></div>';
   h+=placesPanel();
   h+='<div class="panel stack"><h2>Add a school</h2><div class="row"><label>School name<input id="n-name"></label><label>Short name<input id="n-alias" placeholder="optional"></label></div>'+
-    '<label>Address<input id="n-addr"></label><label>Agency<select id="n-agency">'+agencyOptions('')+'</select></label><button class="btn primary" data-act="addschool">Add school</button></div>';
+    '<label>Address<span class="geo"><input id="n-addr" data-geo="1" autocomplete="off" placeholder="Start typing the address"></span></label><label>Agency<select id="n-agency">'+agencyOptions('')+'</select></label><button class="btn primary" data-act="addschool">Add school</button></div>';
   return h;
 }
 
@@ -899,7 +909,7 @@ function agencyOptions(sel){return '<option value="">No agency set</option>'+S.a
    A new agency starts with travel paid at the base rate, mileage reimbursed and miles tracked. */
 function agDraftFrom(a){a=a||{};var rs=PAY.mileRates(a).map(function(r){return{from:r.from,rate:String(r.rate)}});if(!rs.length)rs=[{from:'',rate:''}];
   return{name:a.name||'',rate:num(a.rate)?String(a.rate):'',paysTravel:a.id?paysTravel(a):true,travelOwn:!!(a.travelOwn&&num(a.travelRate)),
-  travelRate:num(a.travelRate)?String(a.travelRate):'',reimburseMiles:a.id?reimburses(a):true,mileRates:rs,office:a.mileFrom==='office',officeAddress:a.officeAddress||'',
+  travelRate:num(a.travelRate)?String(a.travelRate):'',reimburseMiles:a.id?reimburses(a):true,mileRates:rs,office:a.mileFrom==='office',officeAddress:a.officeAddress||'',officeLat:typeof a.officeLat==='number'?a.officeLat:null,officeLon:typeof a.officeLon==='number'?a.officeLon:null,
   taxMiles:a.taxMiles!==false,note:a.note||''}}
 /* The draft's rate in effect today, for the example day. */
 function draftRateToday(d){var t=today(),best=null;d.mileRates.forEach(function(r){var v=r.rate!==''&&isFinite(+r.rate)?+r.rate:null;if(v!=null&&(r.from||'')<=t&&(!best||(r.from||'')>=best.from))best={from:r.from||'',rate:v}});return best}
@@ -926,7 +936,7 @@ function agExample(d){
     (d.reimburseMiles&&d.office?'<span class="small">On a real day, the drive from home to this agency\'s first school is paid on the office distance instead of the miles driven.</span>':'')}
 function agencyForm(w,d,id){
   var h='<label>Agency name<input id="'+w+'-name" data-agw="'+w+'" data-agf="name" value="'+esc(d.name)+'" placeholder="e.g. Designs for Learning"></label>'+
-    '<label>Agency address<input id="'+w+'-officeAddress" data-agw="'+w+'" data-agf="officeAddress" value="'+esc(d.officeAddress)+'" placeholder="Street, city" autocomplete="off"></label>';
+    '<label>Agency address<span class="geo"><input id="'+w+'-officeAddress" data-geo="1" data-agw="'+w+'" data-agf="officeAddress" value="'+esc(d.officeAddress)+'" placeholder="Start typing the address" autocomplete="off"></span></label>';
   h+='<div class="paysheet"><div class="sect">What they pay you for</div>'+
     '<div class="pl"><b>Time with students</b>'+agMoney(w,'rate',d,'/hr','Base rate per hour')+'<small>Your base rate, for direct and indirect minutes.</small></div>'+
     '<div class="pl"><b>Travel time</b>'+agSwitch(w,'paysTravel',d.paysTravel,'Paid for travel time')+
@@ -969,7 +979,7 @@ function agFields(d){
   var cur=PAY.mileRateOn({mileRates:rates},today());
   return{name:d.name.trim(),rate:n(d.rate),paysTravel:d.paysTravel,travelOwn:!!(d.paysTravel&&d.travelOwn),travelRate:d.paysTravel&&d.travelOwn?n(d.travelRate):null,
     reimburseMiles:d.reimburseMiles,mileRates:d.reimburseMiles?rates:[],mileRate:d.reimburseMiles&&cur?cur.rate:null,
-    mileFrom:d.reimburseMiles&&d.office?'office':'home',officeAddress:d.officeAddress.trim(),taxMiles:d.taxMiles,note:d.note.trim()}}
+    mileFrom:d.reimburseMiles&&d.office?'office':'home',officeAddress:d.officeAddress.trim(),officeLat:d.officeLat==null?null:d.officeLat,officeLon:d.officeLon==null?null:d.officeLon,taxMiles:d.taxMiles,note:d.note.trim()}}
 function agenciesView(){
   var h='<div class="stack"><span class="eyebrow">Agencies</span><h1>Who pays, and how much</h1>'+
     '<span class="muted small">Each school belongs to one agency. Hours and miles are split by agency. A drive is billed to the agency of the school you are driving to, and the drive from home to the first school counts.</span></div>';
@@ -988,9 +998,59 @@ function profileView(){var p=me();
   return '<div class="stack"><span class="eyebrow">My profile</span><h1>About you</h1><span class="muted small">Used for your greeting and for working out drive distances. It stays in this app; nothing here is shared with the agencies or schools.</span></div>'+
     '<div class="panel stack"><label>Your name<input id="pf-name" value="'+esc(p.name||'')+'" placeholder="e.g. Trisha Smith" autocomplete="name"></label>'+
     '<label>Business name (optional)<input id="pf-biz" value="'+esc(p.business||'')+'" placeholder="If you work under a business name" autocomplete="organization"></label>'+
-    '<label>Home address<input id="pf-addr" value="'+esc(p.address||'')+'" placeholder="Street, city, state, ZIP" autocomplete="street-address"></label>'+
+    '<label>Home address<span class="geo"><input id="pf-addr" data-geo="1" value="'+esc(p.address||'')+'" placeholder="Start typing your address" autocomplete="street-address"></span></label>'+
     '<span class="muted small">Your drives start here, unless an agency pays mileage from its office.</span>'+
     '<button class="btn primary" data-act="saveprofile">Save profile</button></div>'}
+/* ---------- address suggestions (Geoapify) ----------
+   Asks only after 3 characters and a 350 ms pause, reuses earlier answers, and cancels a request the moment she types on.
+   The key is limited to this app's web address in the Geoapify dashboard. */
+var GEO_KEY='1def25c0ea4c42b0b724a6d4185f2713';
+var GEO={timer:null,ctrl:null,cache:{},input:null,items:[],sel:-1,picked:{}};
+function geoClose(){var l=document.querySelector('.geo-list');if(l)l.remove();GEO.items=[];GEO.sel=-1;if(GEO.input)GEO.input.setAttribute('aria-expanded','false')}
+function geoShow(input,items,note){
+  geoClose();GEO.input=input;GEO.items=items||[];GEO.sel=-1;
+  var box=document.createElement('div');box.className='geo-list';box.setAttribute('role','listbox');box.id='geo-list';
+  if(note){box.innerHTML='<div class="geo-note">'+esc(note)+'</div>'}
+  else box.innerHTML=GEO.items.map(function(r,i){return '<button type="button" role="option" id="geo-opt-'+i+'" data-geoi="'+i+'" aria-selected="false"><b>'+esc(r.address_line1||r.formatted)+'</b><span>'+esc(r.address_line2||'')+'</span></button>'}).join('')+
+    '<span class="credit">Powered by <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a> · © OpenStreetMap</span>';
+  input.parentNode.appendChild(box);input.setAttribute('aria-expanded','true');input.setAttribute('aria-controls','geo-list');
+}
+function geoMark(i){GEO.sel=i;document.querySelectorAll('.geo-list [data-geoi]').forEach(function(b){b.setAttribute('aria-selected',String(+b.dataset.geoi===i))});
+  if(GEO.input)GEO.input.setAttribute('aria-activedescendant',i>=0?'geo-opt-'+i:'')}
+function geoLookup(input){
+  var q=input.value.trim();clearTimeout(GEO.timer);if(GEO.ctrl)GEO.ctrl.abort();
+  if(q.length<3){geoClose();return}
+  if(GEO.cache[q]){geoShow(input,GEO.cache[q]);return}
+  GEO.timer=setTimeout(function(){
+    var ctrl=window.AbortController?new AbortController():null;GEO.ctrl=ctrl;
+    fetch('https://api.geoapify.com/v1/geocode/autocomplete?text='+encodeURIComponent(q)+'&filter=countrycode:us&format=json&limit=5&lang=en&apiKey='+GEO_KEY,ctrl?{signal:ctrl.signal}:{})
+      .then(function(r){if(!r.ok)throw new Error('status '+r.status);return r.json()})
+      .then(function(j){var items=(j.results||[]).filter(function(r){return r&&r.formatted&&typeof r.lat==='number'&&typeof r.lon==='number'}).map(function(r){var us=/,\s*United States( of America)?$/;
+          return{formatted:r.formatted.replace(us,''),address_line1:r.address_line1,address_line2:(r.address_line2||'').replace(us,''),lat:r.lat,lon:r.lon}});
+        GEO.cache[q]=items;if(document.activeElement===input&&input.value.trim()===q)geoShow(input,items,items.length?'':'No matching addresses. You can keep what you typed.')})
+      .catch(function(e){if(e&&e.name==='AbortError')return;if(document.activeElement===input)geoShow(input,[],'Address suggestions are not available right now. You can type the full address.')});
+  },350);
+}
+function geoPick(i){var r=GEO.items[i],input=GEO.input;if(!r||!input)return;
+  input.value=r.formatted;GEO.picked[input.id]={address:r.formatted,lat:r.lat,lon:r.lon};
+  input.dispatchEvent(new Event('input',{bubbles:true}));geoClose();clearTimeout(GEO.timer);
+  if(input.dataset.agf){var dg=agD(input.dataset.agw);if(dg){dg.officeLat=r.lat;dg.officeLon=r.lon}}}
+/* Coordinates to save with an address: the picked suggestion if the text still matches it, else the stored ones if the address is unchanged. */
+function geoFor(id,address,prev){var g=GEO.picked[id];
+  if(g&&g.address===address)return{lat:g.lat,lon:g.lon};
+  if(prev&&prev.address===address&&typeof prev.lat==='number')return{lat:prev.lat,lon:prev.lon};
+  return{lat:null,lon:null}}
+document.addEventListener('input',function(e){var t=e.target;if(t.dataset&&t.dataset.geo){if(GEO.picked[t.id]&&GEO.picked[t.id].address!==t.value.trim()){delete GEO.picked[t.id];
+  if(t.dataset.agf){var dg=agD(t.dataset.agw);if(dg){dg.officeLat=null;dg.officeLon=null}}}
+  if(!GEO.picked[t.id])geoLookup(t)}});
+document.addEventListener('keydown',function(e){var t=e.target;if(!(t.dataset&&t.dataset.geo)||!document.querySelector('.geo-list'))return;
+  if(e.key==='ArrowDown'&&GEO.items.length){e.preventDefault();geoMark((GEO.sel+1)%GEO.items.length)}
+  else if(e.key==='ArrowUp'&&GEO.items.length){e.preventDefault();geoMark((GEO.sel-1+GEO.items.length)%GEO.items.length)}
+  else if(e.key==='Enter'&&GEO.sel>=0){e.preventDefault();geoPick(GEO.sel)}
+  else if(e.key==='Escape'){e.stopPropagation();geoClose()}},true);
+document.addEventListener('mousedown',function(e){var b=e.target.closest&&e.target.closest('[data-geoi]');if(b){e.preventDefault();geoPick(+b.dataset.geoi)}});
+document.addEventListener('focusout',function(e){if(e.target.dataset&&e.target.dataset.geo)setTimeout(function(){if(!(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.geo))geoClose()},150)});
+
 function placesPanel(){
   var home=S.settings.home||{},ids=['home'].concat(S.schools.map(function(sc){return sc.id})),pairs=[],i,j;
   for(i=0;i<ids.length;i++)for(j=i+1;j<ids.length;j++)pairs.push([ids[i],ids[j]]);
@@ -1062,7 +1122,7 @@ document.addEventListener('click',function(e){
       if(v!=='absent'&&xw&&xw.absent){var slx=stw&&slotOn(stw,S.date),dx=Object.assign({},xw,{absent:false,min:slx?slx.min:(stw&&stw.direct)||0,updated:new Date().toISOString()});delete dx.id;
         return write(function(){return S.db.doc('sessions/'+sidw+'_'+S.date).set(dx)}).then(function(){render()},function(){})}
     });return}
-  else if(a==='saveprofile'){var hd=Object.assign({},S.settings.home||{},{name:val('pf-name'),business:val('pf-biz'),address:val('pf-addr')});delete hd.id;
+  else if(a==='saveprofile'){var pa=val('pf-addr'),pg=geoFor('pf-addr',pa,S.settings.home);var hd=Object.assign({},S.settings.home||{},{name:val('pf-name'),business:val('pf-biz'),address:pa,lat:pg.lat,lon:pg.lon});delete hd.id;
     write(function(){return S.db.doc('settings/home').set(hd)}).then(function(){toast('Profile saved');render()},function(){});return}
   else if(a==='saveleg'){var lk=b.dataset.k,lmi=nv('lm-'+lk),lmn=nv('lt-'+lk);if(lmi==null){toast('Enter the miles first');return}
     write(function(){return S.db.doc('legs/'+lk).set({miles:lmi,min:lmn,test:false})}).then(function(){toast('Distance saved');render()},function(){});return}
@@ -1121,9 +1181,11 @@ document.addEventListener('click',function(e){
     saveDoc('students',s,{goals:s.goals.concat([ng])},'Goal added');return}
   else if(a==='rmgoal'){s=student(b.dataset.id);if(s)saveDoc('students',s,{goals:s.goals.filter(function(x){return x.id!==g})},'Goal removed');return}
   else if(a==='addschool'){var nn=val('n-name');if(!nn){toast('Enter the school name first');return}
-    write(function(){return S.db.doc('schools/sc_'+rid()).set({name:nn,alias:val('n-alias'),address:val('n-addr'),agencyId:val('n-agency'),closed:[],reports:[]})}).then(function(){toast('School added');render()},function(){});return}
+    var na=val('n-addr'),ng0=geoFor('n-addr',na,null);
+    write(function(){return S.db.doc('schools/sc_'+rid()).set({name:nn,alias:val('n-alias'),address:na,lat:ng0.lat,lon:ng0.lon,agencyId:val('n-agency'),closed:[],reports:[]})}).then(function(){delete GEO.picked['n-addr'];toast('School added');render()},function(){});return}
   else if(a==='saveschool'){sc=school(b.dataset.id);if(!sc)return;if(!val('sc-name')){toast('The school name is required');return}
-    saveDoc('schools',sc,{name:val('sc-name'),alias:val('sc-alias'),address:val('sc-addr'),agencyId:val('sc-agency')},'Details saved');return}
+    var sa=val('sc-addr'),sg=geoFor('sc-addr',sa,sc);
+    saveDoc('schools',sc,{name:val('sc-name'),alias:val('sc-alias'),address:sa,lat:sg.lat,lon:sg.lon,agencyId:val('sc-agency')},'Details saved');return}
   else if(a==='addclosed'){sc=school(b.dataset.id);var f=val('c-from'),to=val('c-to')||f;if(!sc)return;
     if(!f){toast('Pick the first day off');return} if(to<f){toast('The end date is before the start date');return}
     saveDoc('schools',sc,{closed:(sc.closed||[]).concat([{from:f,to:to,label:val('c-label')}]).sort(byDate('from'))},'Days off added');return}
