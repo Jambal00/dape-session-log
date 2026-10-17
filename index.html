@@ -145,6 +145,25 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .daytimes{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px 10px;align-items:end}
 .daytimes .dn{font-weight:650;padding-bottom:12px}
 .daytimes label{flex:none}
+.lu{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.lu-row{display:flex;align-items:center;gap:8px;padding:8px 10px 8px 6px;border-top:1px solid var(--line)}
+.lu-row:first-child{border-top:0}
+.lu-row.pinned-row{background:#fffaf1}
+.lu-move{display:flex;flex-direction:column;gap:2px}
+.lu-move button{border:1px solid var(--line);background:var(--surface);border-radius:6px;width:34px;height:26px;cursor:pointer;color:var(--muted);font-size:12px;line-height:1}
+.lu-move button:disabled{opacity:.3;cursor:default}
+.lu-main{flex:1;min-width:0;text-align:left;background:none;border:0;padding:4px 0;cursor:pointer;font:inherit;color:inherit}
+.lu-main .sub{color:var(--muted);font-size:13px}
+.lu-time{text-align:right;font-weight:650;white-space:nowrap}
+.lu-time .sub{display:block;font:500 12px var(--body);color:var(--muted)}
+.lu-more .seg{align-self:flex-start}
+.lu-more{padding:10px 12px 12px 48px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.lu-note{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;border-top:1px solid var(--line);font-size:14px;background:var(--accent-soft)}
+.lu-note.bad{background:#fdecea;color:#8a1c12}
+.lu-note .btn{min-height:34px;padding:4px 10px;font-size:13px}
+.lu-foot{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;border-top:1px solid var(--line);font-size:14px;background:var(--bg)}
+.lu-out{opacity:.75}
+.est{font:500 12px var(--body);color:var(--muted)}
 .example{background:var(--accent-soft);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
 .example .t{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
 .ex{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px;font-variant-numeric:tabular-nums}
@@ -200,6 +219,7 @@ pre.sum{white-space:pre-wrap;word-break:break-word;font:14px/1.45 var(--body);ma
 <body>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="pay.js"></script>
+<script src="plan.js"></script>
 <div class="wrap" id="auth" hidden>
   <div class="stack"><span class="eyebrow">DAPE Session Log</span><h1>Sign in</h1></div>
   <form class="panel stack" id="auth-form">
@@ -264,7 +284,7 @@ var STATUS={active:'Active',graduated:'Graduated',exited:'Exited'};
 function agency(id){return S.agencies.filter(function(a){return a.id===id})[0]}
 function agencyOfStudent(s){var sc=school(s.schoolId);return sc&&sc.agencyId?agency(sc.agencyId):null}
 function dayWord(d){return d===today()?'today':d===shift(today(),1)?'tomorrow':'this day'}
-var PAY=window.DAPE_PAY;
+var PAY=window.DAPE_PAY,PLAN=window.DAPE_PLAN;
 function reimburses(a){return PAY.reimburses(a)}
 function paysTravel(a){return PAY.paysTravel(a)}
 function travelRate(a){return PAY.travelRate(a)}
@@ -394,15 +414,38 @@ function dayDoc(date){return S.days.filter(function(x){return x.id===date})[0]||
 function placeName(id){if(id==='home')return 'Home';if(String(id).indexOf('office_')===0){var oa=agency(id.slice(7));return oa?oa.name+' office':'Agency office'}var sc=school(id);return sc?(sc.alias||sc.name):'Unknown place'}
 function legKey(a,b){return [a,b].sort().join('__')}
 function legOf(a,b){var k=legKey(a,b);return S.legs.filter(function(x){return x.id===k})[0]}
-/* The day's route: schools in the order of their first session, each with its students, and a drive leg into each school starting from home. */
+/* ---------- the day's line-up ----------
+   Day doc fields used by planning: order {schoolId: [studentIds]}, pins {studentId: 'HH:MM' for today only, '' = not pinned today},
+   arrive {schoolId: 'HH:MM' for today only}, adds [{id, min}] students added for this day only. */
+function rowPin(o,date){var p=dayDoc(date).pins||{};if(Object.prototype.hasOwnProperty.call(p,o.s.id))return p[o.s.id]||'';return o.sl&&o.sl.pin?o.sl.pinTime:''}
+function rowMin(o){return o.add&&num(o.add.min)?o.add.min:o.sl?o.sl.min:(num(o.s.direct)?o.s.direct:20)}
+function stopArrive(date,scId){var sc=school(scId),a=(dayDoc(date).arrive||{})[scId];return a||schoolTimes(sc,dow(date)).arrive}
+/* The order she used on the same weekday in the last five weeks: the order sessions actually started in, or else her planned order. */
+function lastOrder(date,scId){
+  for(var k=1;k<=5;k++){var d=shift(date,-7*k);
+    var xs=S.sessions.filter(function(x){var s=student(x.studentId);return x.date===d&&!x.absent&&x.start&&s&&(s.schoolId||'')===scId}).sort(function(a,b){return a.start<b.start?-1:1});
+    if(xs.length)return {order:xs.map(function(x){return x.studentId}),date:d,how:'seen'};
+    var o=(dayDoc(d).order||{})[scId];if(o&&o.length)return {order:o,date:d,how:'planned'}}
+  return null}
+/* The day's route: schools in arrival order, each with its students in her order and estimated times, and a drive leg into each school starting from home. */
 function dayStops(date,keepSkipped){
-  var dd=dayDoc(date),skip=keepSkipped?[]:(dd.skip||[]),skipSc=keepSkipped?[]:(dd.skipSchools||[]),rows=[],grp={};
-  activeStudents().forEach(function(s){var sl=slotOn(s,date);if(sl&&skip.indexOf(s.id)<0&&skipSc.indexOf(s.schoolId||'')<0){rows.push({s:s,sl:sl});var k=(s.schoolId||'')+'|'+sl.time;grp[k]=(grp[k]||0)+1}});
+  var dd=dayDoc(date),skipAll=dd.skip||[],skip=keepSkipped?[]:skipAll,skipSc=keepSkipped?[]:(dd.skipSchools||[]),rows=[],grp={};
+  activeStudents().forEach(function(s){var sl=slotOn(s,date);if(sl&&skip.indexOf(s.id)<0&&skipSc.indexOf(s.schoolId||'')<0){rows.push({s:s,sl:sl});if(sl.time){var k=(s.schoolId||'')+'|'+sl.time;grp[k]=(grp[k]||0)+1}}});
+  (dd.adds||[]).forEach(function(a){var s=student(a.id);if(s&&active(s)&&skip.indexOf(s.id)<0&&skipSc.indexOf(s.schoolId||'')<0&&!rows.some(function(o){return o.s.id===s.id}))rows.push({s:s,sl:null,add:a})});
   S.sessions.forEach(function(x){if(x.date===date&&!rows.some(function(o){return o.s.id===x.studentId})){var s=student(x.studentId);if(s&&skip.indexOf(s.id)<0)rows.push({s:s,sl:null,extra:true})}});
   var by={},order=[];
   rows.forEach(function(o){var k=o.s.schoolId&&school(o.s.schoolId)?o.s.schoolId:'';if(!by[k]){by[k]={id:k,sc:school(k),rows:[]};order.push(k)}by[k].rows.push(o)});
-  function t(o){var x=sess(o.s.id,date);return (o.sl?slotOrderTime(o.sl):(x&&x.time))||'99:99'}
-  order.forEach(function(k){by[k].rows.sort(function(a,b){return t(a)<t(b)?-1:t(a)>t(b)?1:0});by[k].first=t(by[k].rows[0])});
+  order.forEach(function(k){var st=by[k];
+    var live=st.rows.filter(function(o){var x=sess(o.s.id,date);return skipAll.indexOf(o.s.id)<0&&!(x&&x.absent)});
+    var items=live.map(function(o){var g=o.sl&&o.sl.time&&grp[k+'|'+o.sl.time]>1?o.sl.time:'';return{id:o.s.id,min:rowMin(o),pin:rowPin(o,date),hint:o.sl&&o.sl.time||((sess(o.s.id,date)||{}).time)||'',grp:g}});
+    var saved=(dd.order||{})[k],lw=saved?null:lastOrder(date,k);
+    st.items=PLAN.startOrder(items,saved||(lw&&lw.order));st.from=saved?{how:'saved'}:lw;
+    st.arrive=stopArrive(date,k);st.leave=schoolTimes(st.sc,dow(date)).leave;st.gap=schoolGap(st.sc);
+    st.L=PLAN.lineUp({arrive:st.arrive,leave:st.leave,gap:st.gap,items:st.items});
+    var at={},pos={};st.L.rows.forEach(function(r,i){at[r.id]=r;pos[r.id]=i});
+    st.rows.forEach(function(o){var r=at[o.s.id];o.est=r?r.start:'';o.end=r?r.end:'';o.pinT=rowPin(o,date);o.pinned=!!(r&&r.pinned)});
+    st.rows.sort(function(a,b){var pa=a.s.id in pos?pos[a.s.id]:999,pb=b.s.id in pos?pos[b.s.id]:999;return pa-pb});
+    st.first=st.arrive||(st.L.rows[0]&&st.L.rows[0].start)||'99:99'});
   var stops=order.map(function(k){return by[k]}).sort(function(a,b){if(!a.id)return 1;if(!b.id)return -1;return a.first<b.first?-1:a.first>b.first?1:0});
   var prev='home',legs=[];
   stops.forEach(function(st){if(!st.id)return;var l=legOf(prev,st.id);
@@ -412,6 +455,8 @@ function dayStops(date,keepSkipped){
     legs.push(st.leg);prev=st.id});
   return {stops:stops,legs:legs,rows:rows,grp:grp};
 }
+function estFor(sid,date){var r=dayStops(date).rows.filter(function(o){return o.s.id===sid})[0];return r?r.est:''}
+function rowTime(o){var t=o.pinned?o.pinT:o.est;return t?fmtTime(t):''}
 function legRow(l){var ag=agency(l.agencyId);
   return '<div class="leg"><span class="dot">'+ARROW+'</span><span style="flex:1;min-width:0"><strong>'+esc(placeName(l.from))+' to '+esc(placeName(l.to))+'</strong><br>'+
     (l.miles!=null?l.miles+' mi':'Distance not set')+(l.min!=null?' · '+l.min+' min drive':'')+(ag?' · billed to '+esc(ag.name):'')+
@@ -431,14 +476,14 @@ function todayView(){
   if(!rows.length)return h;
   function rowHtml(o){
     var s=o.s,x=sess(s.id,S.date),sc=school(s.schoolId),cl=sc&&closedOn(sc,S.date);
-    var sub=[o.sl?o.sl.min+' direct'+(s.indirect?' / '+s.indirect+' indirect':''):'added for this day',o.sl&&grp[(s.schoolId||'')+'|'+o.sl.time]>1?'group':'',cl?'school closed'+(cl.label?' ('+cl.label+')':''):''].filter(Boolean).join(' · ');
-    var tm=o.sl?slotOrderTime(o.sl):(x&&x.time),pinned=o.sl&&o.sl.pin;
-    return '<button class="item'+(pinned?' pinned-row':'')+'" data-act="open" data-id="'+esc(s.id)+'"><span class="time">'+esc(tm?fmtTime(tm):'')+(pinned?'<br><span class="pin-tag">'+PIN+' pinned</span>':'')+'</span>'+
+    var sub=[o.sl?o.sl.min+' direct'+(s.indirect?' / '+s.indirect+' indirect':''):o.add?rowMin(o)+' min, added for today':'added for this day',o.sl&&o.sl.time&&grp[(s.schoolId||'')+'|'+o.sl.time]>1?'group':'',cl?'school closed'+(cl.label?' ('+cl.label+')':''):''].filter(Boolean).join(' · ');
+    var pinned=o.pinned,tm=rowTime(o);
+    return '<button class="item'+(pinned?' pinned-row':'')+'" data-act="open" data-id="'+esc(s.id)+'"><span class="time">'+esc(tm)+(pinned?'<br><span class="pin-tag">'+PIN+' pinned</span>':tm?'<br><span class="est">about</span>':'')+'</span>'+
       '<span class="nm">'+esc(s.name)+(sub?'<br><span class="sub">'+esc(sub)+'</span>':'')+'</span>'+statusPill(x)+'</button>'}
   P.stops.forEach(function(st){
     if(st.leg)h+=legRow(st.leg);
     var ag=st.sc&&agency(st.sc.agencyId);
-    var stT=st.sc?schoolTimes(st.sc,dow(S.date)):{arrive:''};
+    var stT={arrive:st.arrive||''};
     h+='<div class="stop"><div class="row spread"><h2>'+esc(st.sc?(st.sc.alias||st.sc.name):'No school set')+'</h2><span class="muted small">'+esc([stT.arrive?'Arrive '+fmtTime(stT.arrive):'',ag?ag.name:''].filter(Boolean).join(' · '))+'</span></div>'+
       '<div class="list">'+st.rows.map(rowHtml).join('')+'</div></div>';
   });
@@ -486,7 +531,7 @@ function dayPanel(P){
 }
 
 /* ---------- Plan my Day wizard ---------- */
-var WZ=['Day','Schools','Students','Lesson plans','Review'];
+var WZ=['Day','Schools','Line up','Lesson plans','Review'];
 function wzStudents(date){/* students she will see, in route order */var P=dayStops(date),out=[];
   P.stops.forEach(function(st){st.rows.forEach(function(o){var x=sess(o.s.id,date);if(!(x&&x.absent))out.push(o)})});return out}
 function wizardView(){
@@ -506,7 +551,7 @@ function wizardView(){
     var ids=all.stops.filter(function(st){return st.id});
     h+='<span class="muted">Untick a school you will not visit '+dayWord(d)+'.</span>';
     h+=ids.length?'<div class="list">'+ids.map(function(st){var on=(dd.skipSchools||[]).indexOf(st.id)<0,cl=closedOn(st.sc,d);
-      var times=st.rows.filter(function(o){return o.sl}).map(function(o){return o.sl.time}).sort();
+      var times=[st.arrive||(st.L.rows[0]&&st.L.rows[0].start)||'',st.L.done||''].filter(Boolean);
       return '<button class="check'+(on?' on':'')+'" data-act="wzschool" data-id="'+esc(st.id)+'" aria-pressed="'+on+'"><span class="box">'+(on?TICK:'')+'</span><span style="flex:1;min-width:0"><strong>'+esc(st.sc.alias||st.sc.name)+'</strong><br><span class="muted small">'+
         st.rows.length+' student'+(st.rows.length===1?'':'s')+(times.length?' · '+esc(fmtTime(times[0]))+(times.length>1?' to '+esc(fmtTime(times[times.length-1])):''):'')+(agency(st.sc.agencyId)?' · '+esc(agency(st.sc.agencyId).name):'')+'</span>'+
         (cl?'<br><span class="small" style="color:var(--warn)">School closed'+(cl.label?': '+esc(cl.label):'')+'</span>':'')+'</span></button>'}).join('')+'</div>':
@@ -514,16 +559,10 @@ function wizardView(){
     return h+wzActions(true,true);
   }
   if(w.step===3){
-    var P=dayStops(d),skip=dd.skip||[],stops=all.stops.filter(function(st){return (dd.skipSchools||[]).indexOf(st.id)<0});
-    h+='<span class="muted">Mark anyone who is out. Absent students stay on the day as absent; Not today removes them from this day only.</span>';
-    if(!stops.length)h+='<div class="list"><div class="empty">No schools left for this day. Go back and tick at least one.</div></div>';
-    stops.forEach(function(st){
-      h+='<div class="stop"><h2>'+esc(st.sc?(st.sc.alias||st.sc.name):'No school set')+'</h2><div class="list">'+st.rows.map(function(o){
-        var s=o.s,x=sess(s.id,d),state=skip.indexOf(s.id)>=0?'skip':(x&&x.absent)?'absent':'in';
-        return '<div class="wzrow"><span class="nm">'+(o.sl?'<span class="time" style="display:inline-block;min-width:64px;margin-right:10px">'+esc(fmtTime(o.sl.time))+'</span>':'')+esc(s.name)+'</span>'+
-          '<span class="seg" role="group" aria-label="'+esc(s.name)+'">'+[['in','Seeing'],['absent','Absent'],['skip','Not today']].map(function(v){
-            return '<button class="'+(state===v[0]?'on'+(v[0]==='absent'?' abs':''):'')+'" data-act="wzst" data-id="'+esc(s.id)+'" data-v="'+v[0]+'" aria-pressed="'+(state===v[0])+'">'+v[1]+'</button>'}).join('')+'</span></div>'}).join('')+'</div></div>';
-    });
+    var stops3=all.stops.filter(function(st){return (dd.skipSchools||[]).indexOf(st.id)<0});
+    h+='<span class="muted">Times are estimates from your arrival time, each student\'s minutes and the gap between students. Move students with the arrows. Pinned students keep their time. Tap a name for more.</span>';
+    if(!stops3.length)h+='<div class="list"><div class="empty">No schools left for this day. Go back and tick at least one.</div></div>';
+    stops3.forEach(function(st){h+=lineupStop(st,d)});
     return h+wzActions(true,true);
   }
   if(w.step===4){
@@ -532,7 +571,7 @@ function wizardView(){
     if(w.i>=list.length)w.i=list.length-1;
     var o=list[w.i],s=o.s;if(S.open!==s.id)openEntry(s.id);
     h+='<div class="row">'+list.map(function(q,k){var x=sess(q.s.id,d);return '<button class="chip'+(k===w.i?' on':'')+'" data-act="wzjump" data-i="'+k+'">'+(x?'✓ ':'')+esc(q.s.name)+'</button>'}).join('')+'</div>';
-    h+='<div><span class="eyebrow">Student '+(w.i+1)+' of '+list.length+'</span><h2 style="font-size:26px">'+esc(s.name)+'</h2><span class="muted">'+esc([schoolLabel(s),o.sl?fmtTime(o.sl.time):'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · '))+'</span></div>';
+    h+='<div><span class="eyebrow">Student '+(w.i+1)+' of '+list.length+'</span><h2 style="font-size:26px">'+esc(s.name)+'</h2><span class="muted">'+esc([schoolLabel(s),rowTime(o)?(o.pinned?'pinned ':'about ')+rowTime(o):'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · '))+'</span></div>';
     var lastS=history(s.id);if(lastS.length){var ls=lastS[lastS.length-1];h+='<span class="muted small">Last session '+esc(md(ls.date))+(ls.acts&&ls.acts.length?': '+esc(ls.acts.join(', ')):'')+'. Its activities are pre-selected.</span>'}
     h+=minutesPanel(s,S.draft);
     h+='<label>Plan notes<textarea id="note" placeholder="Equipment to bring, what to try. Initials or nicknames only.">'+esc(S.draft.note)+'</textarea></label>';
@@ -541,7 +580,7 @@ function wizardView(){
   }
   /* step 5: review */
   var P5=dayStops(d),T=dayTotals(d,P5),list5=wzStudents(d),planned=list5.filter(function(o){return sess(o.s.id,d)}).length,stu=0,trav=0,miles=0,absN=P5.rows.length-list5.length;
-  list5.forEach(function(o){stu+=(o.sl?o.sl.min:(o.s.direct||0))+(o.s.indirect||0)});
+  list5.forEach(function(o){stu+=rowMin(o)+(o.s.indirect||0)});
   P5.legs.forEach(function(l){if(num(l.min))trav+=l.min;if(num(l.miles))miles+=l.miles});
   h+='<div class="panel stack"><div class="row" style="gap:22px"><div><div class="stat">'+list5.length+'</div><span class="muted small">students<br>'+planned+' with a plan</span></div>'+
     '<div><div class="stat">'+hrs(stu+trav)+'</div><span class="muted small">hours expected<br>'+hrs(trav)+' of it driving</span></div>'+
@@ -549,14 +588,68 @@ function wizardView(){
     (absN?'<span class="muted small">'+absN+' marked absent.</span>':'')+'</div>';
   P5.stops.forEach(function(st){if(st.leg)h+=legRow(st.leg);
     h+='<div class="stop"><h2>'+esc(st.sc?(st.sc.alias||st.sc.name):'No school set')+'</h2><div class="list">'+st.rows.map(function(o){var x=sess(o.s.id,d);
-      return '<div class="item" style="cursor:default"><span class="time">'+esc(o.sl?fmtTime(o.sl.time):'')+'</span><span class="nm">'+esc(o.s.name)+(x&&x.acts&&x.acts.length&&!x.absent?'<br><span class="sub">'+esc(x.acts.join(', '))+'</span>':'')+'</span>'+statusPill(x)+'</div>'}).join('')+'</div></div>'});
+      return '<div class="item" style="cursor:default"><span class="time">'+esc(rowTime(o))+(o.pinned?'<br><span class="pin-tag">'+PIN+' pinned</span>':'')+'</span><span class="nm">'+esc(o.s.name)+(x&&x.acts&&x.acts.length&&!x.absent?'<br><span class="sub">'+esc(x.acts.join(', '))+'</span>':'')+'</span>'+statusPill(x)+'</div>'}).join('')+'</div></div>'});
   var ks=Object.keys(T);
   if(ks.length&&S.agencies.length)h+='<div class="panel stack"><span class="eyebrow">Expected by agency</span><div class="split">'+ks.map(function(k){var a=agency(k);
-      var stuK=0;list5.forEach(function(o){var ak=agencyOfStudent(o.s);if((ak?ak.id:'')===k)stuK+=(o.sl?o.sl.min:(o.s.direct||0))+(o.s.indirect||0)});
+      var stuK=0;list5.forEach(function(o){var ak=agencyOfStudent(o.s);if((ak?ak.id:'')===k)stuK+=rowMin(o)+(o.s.indirect||0)});
       return '<span>'+esc(a?a.name:'No agency set')+'</span><span class="muted small">'+hrs(stuK+T[k].trav)+' hrs</span><span class="n">'+r1(T[k].miles)+' mi</span>'}).join('')+'</div></div>';
   h+='<div class="sticky-actions"><button class="btn" data-act="wzback">Back</button><button class="btn primary" style="flex:1" data-act="wzdone">Open this day in Today\'s Plan</button></div>';
   return h;
 }
+/* One school in the line-up: arrival, students in order with estimated times, free time, collisions and the finish time. */
+function lineupStop(st,d){
+  var w=S.wz,dd=dayDoc(d),sid=st.id,L=st.L,ids=st.items.map(function(it){return it.id}),byId={};st.rows.forEach(function(o){byId[o.s.id]=o});
+  var name=st.sc?(st.sc.alias||st.sc.name):'No school set',fits={},bad={};
+  L.fits.forEach(function(f){fits[f.beforeId]=f});
+  L.issues.forEach(function(x){if(x.type==='pin')bad[x.id]=x});
+  var h='<div class="stop stack" style="gap:8px"><div class="row spread"><h2>'+esc(name)+'</h2>'+(sid?'<label class="row" style="flex:0 0 auto;gap:6px;align-items:center;font-weight:500">Arrive<input type="time" style="width:130px" data-luarr="'+esc(sid)+'" value="'+esc(st.arrive||'')+'"></label>':'')+'</div>';
+  if(st.from&&st.from.how==='saved')h+='<span class="muted small">Your order for this day. <button type="button" class="linkbtn" data-act="lureset" data-sc="'+esc(sid)+'">Start over from last week</button></span>';
+  else if(st.from)h+='<span class="muted small">Same order as '+esc(DAYS[dow(st.from.date)])+' '+esc(md(st.from.date))+(st.from.how==='seen'?', the order you actually saw them':'')+'. Change anything.</span>';
+  if(!st.arrive&&sid)h+='<span class="muted small">No arrival time for '+esc(DAYS[dow(d)])+' at '+esc(name)+'. Set it here for today, or for every week under Schools.</span>';
+  h+='<div class="lu">';
+  L.rows.forEach(function(r,i){var o=byId[r.id],s=o.s,open=w.x===s.id,f=fits[r.id],x=bad[r.id];
+    if(f)h+='<div class="lu-note">'+f.free+' min free before '+esc(s.name)+'<button class="btn" data-act="lufit" data-sc="'+esc(sid)+'" data-id="'+esc(f.id)+'" data-before="'+esc(r.id)+'">Move '+esc(byId[f.id].s.name)+' here ('+f.min+' min)</button></div>';
+    else if(r.pinned&&r.freeBefore>st.gap)h+='<div class="lu-note">'+r.freeBefore+' min free before '+esc(s.name)+' (good for indirect work)</div>';
+    if(x){var fx=PLAN.fixFor({arrive:st.arrive,leave:st.leave,gap:st.gap,items:st.items},x),pv=byId[x.prevId];
+      h+='<div class="lu-note bad">'+(pv?esc(pv.s.name)+' runs ':'Running ')+x.overBy+' min into '+esc(s.name)+'\'s '+esc(fmtTime(x.pin))+' pin.'+
+        (fx?'<button class="btn" data-act="lufix" data-sc="'+esc(sid)+'" data-id="'+esc(fx.id)+'" data-after="'+esc(fx.afterId)+'">Move '+esc(byId[fx.id].s.name)+' after '+esc(s.name)+'</button>':' Move someone or shorten a session.')+'</div>'}
+    var sub=[rowMin(o)+' min',o.add?'added for today':'',r.withPrev?'with the student above':'',Object.prototype.hasOwnProperty.call(dd.pins||{},s.id)?(o.pinT?'pinned for today':'not pinned today'):''].filter(Boolean).join(' · ');
+    h+='<div class="lu-row'+(r.pinned?' pinned-row':'')+'"><span class="lu-move"><button data-act="lumove" data-sc="'+esc(sid)+'" data-id="'+esc(s.id)+'" data-n="-1" aria-label="Move '+esc(s.name)+' up"'+(i?'':' disabled')+'>▲</button>'+
+      '<button data-act="lumove" data-sc="'+esc(sid)+'" data-id="'+esc(s.id)+'" data-n="1" aria-label="Move '+esc(s.name)+' down"'+(i<L.rows.length-1?'':' disabled')+'>▼</button></span>'+
+      '<button class="lu-main" data-act="luopen" data-id="'+esc(s.id)+'" aria-expanded="'+open+'"><strong>'+(r.pinned?PIN+' ':'')+esc(s.name)+'</strong><br><span class="sub">'+esc(sub)+'</span></button>'+
+      '<span class="lu-time">'+esc(r.start?fmtTime(r.start):'')+'<span class="sub">'+(r.pinned?'pinned':r.start?'about':'')+'</span></span></div>';
+    if(open)h+=lineupMore(o,d);
+  });
+  if(!L.rows.length)h+='<div class="lu-row"><span class="muted" style="padding:6px">No one left to see here today.</span></div>';
+  if(L.done){var ov=L.overLeave;
+    h+='<div class="lu-foot"><span>Done about '+esc(fmtTime(L.done))+(st.leave?' · usual leave '+esc(fmtTime(st.leave)):'')+'</span>'+
+      (st.leave?(ov?'<span style="color:var(--warn);font-weight:650;white-space:nowrap">'+ov+' min over</span>':'<span style="color:var(--accent);font-weight:650;white-space:nowrap">Fits ✓</span>'):'')+'</div>'}
+  /* students who are out or not seen today */
+  st.rows.filter(function(o){return ids.indexOf(o.s.id)<0}).forEach(function(o){var x=sess(o.s.id,d),sk=(dd.skip||[]).indexOf(o.s.id)>=0;
+    h+='<div class="lu-row lu-out"><span style="width:34px"></span><span class="lu-main" style="cursor:default"><strong>'+esc(o.s.name)+'</strong><br><span class="sub">'+(sk?'Not today':'Absent')+'</span></span>'+
+      '<button class="chip" data-act="wzst" data-id="'+esc(o.s.id)+'" data-v="in">Seeing</button></div>'});
+  h+='</div>';
+  if(w.add===sid){var here=st.rows.map(function(o){return o.s.id});
+    var cand=activeStudents().filter(function(s){return here.indexOf(s.id)<0&&(s.schoolId||'')===sid});
+    h+='<div class="panel stack" style="padding:12px"><strong>Add someone for '+esc(md(d))+' only</strong>'+
+      (cand.length?'<div class="row"><label>Student<select id="lu-add-s">'+cand.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'}).join('')+'</select></label>'+
+        '<label style="flex:0 1 120px">Minutes<input type="number" inputmode="numeric" id="lu-add-m" value="20"></label></div>'+
+        '<div class="row"><button class="btn primary" style="flex:1" data-act="luadd" data-sc="'+esc(sid)+'">Add for today</button><button class="btn" data-act="luaddform" data-sc="">Cancel</button></div>':
+        '<span class="muted small">Everyone at '+esc(name)+' is already on today\'s list.</span><button class="btn" data-act="luaddform" data-sc="">Close</button>')+'</div>'}
+  else if(sid)h+='<button type="button" class="linkbtn" style="align-self:flex-start" data-act="luaddform" data-sc="'+esc(sid)+'">+ Add someone at '+esc(name)+' for today</button>';
+  return h+'</div>'}
+function lineupMore(o,d){var s=o.s,x=sess(s.id,d),dd=dayDoc(d),state=(dd.skip||[]).indexOf(s.id)>=0?'skip':(x&&x.absent)?'absent':'in';
+  var regular=o.sl&&o.sl.pin?o.sl.pinTime:'',today=Object.prototype.hasOwnProperty.call(dd.pins||{},s.id);
+  var h='<div class="lu-more"><span class="seg" role="group" aria-label="'+esc(s.name)+'">'+[['in','Seeing'],['absent','Absent'],['skip','Not today']].map(function(v){
+      return '<button class="'+(state===v[0]?'on'+(v[0]==='absent'?' abs':''):'')+'" data-act="wzst" data-id="'+esc(s.id)+'" data-v="'+v[0]+'" aria-pressed="'+(state===v[0])+'">'+v[1]+'</button>'}).join('')+'</span>';
+  if(o.pinned)h+='<span class="small">'+(today?'Pinned at '+esc(fmtTime(o.pinT))+' for today only.':'Pinned every '+esc(DAYS[dow(d)])+' at '+esc(fmtTime(regular))+(o.sl.pinReason?': '+esc(o.sl.pinReason):'')+'.')+'</span>';
+  h+='<div class="row end"><label style="flex:0 1 150px">'+(o.pinned?'Change pin for today':'Pin for today only')+'<input type="time" id="lu-pin-'+esc(s.id)+'" value="'+esc(o.pinT||o.est||'')+'"></label>'+
+    '<button class="btn" data-act="lupin" data-id="'+esc(s.id)+'">Pin</button>'+(o.pinned&&regular?'<button class="btn" data-act="lupin" data-id="'+esc(s.id)+'" data-v="off">Unpin today</button>':o.pinned?'<button class="btn" data-act="lupin" data-id="'+esc(s.id)+'" data-v="usual">Unpin</button>':'')+'</div>';
+  if(today&&regular)h+='<button type="button" class="linkbtn" style="align-self:flex-start" data-act="lupin" data-id="'+esc(s.id)+'" data-v="usual">Back to the usual pin ('+esc(fmtTime(regular))+')</button>';
+  if(o.add)h+='<button type="button" class="linkbtn" style="align-self:flex-start" data-act="lurmadd" data-id="'+esc(s.id)+'">Remove from today</button>';
+  return h+'</div>'}
+function luStop(sc){return dayStops(S.date,true).stops.filter(function(st){return st.id===sc})[0]}
+function luSaveOrder(sc,order){var dd=dayDoc(S.date),o=Object.assign({},dd.order||{});o[sc]=order;return saveDay(S.date,{order:o})}
 function wzActions(back,next){return '<div class="sticky-actions">'+(back?'<button class="btn" data-act="wzback">Back</button>':'')+
   '<button class="btn primary" style="flex:1" data-act="wznext"'+(next?'':' disabled')+'>Next: '+esc(WZ[S.wz.step])+'</button></div>'}
 function saveDay(date,patch,msg){var o=Object.assign({},dayDoc(date),patch);delete o.id;
@@ -564,7 +657,7 @@ function saveDay(date,patch,msg){var o=Object.assign({},dayDoc(date),patch);dele
 function saveSession(kind,after){var d=S.draft,id=S.open,date=S.date;
   var vals={};Object.keys(d.values).forEach(function(k){if(num(d.values[k]))vals[k]=d.values[k]});
   var doc={studentId:id,date:date,absent:d.absent,values:d.absent?{}:vals,variants:d.absent?{}:d.variants,note:d.note.trim(),updated:new Date().toISOString()};
-  var s=student(id),sl=s&&slotOn(s,date);if(sl)doc.time=sl.time;
+  var s=student(id),est=estFor(id,date);if(est)doc.time=est;
   doc.min=d.absent?0:(num(d.min)?d.min:0);doc.indirect=num(d.indirect)?d.indirect:0;doc.acts=d.absent?[]:d.acts;doc.outof=d.absent?{}:d.outof;doc.help=d.absent?{}:d.help;
   var x0=sess(id,date);doc.status=(kind==='save'||(x0&&x0.status!=='planned'))?'logged':'planned';
   S.saving=true;render();
@@ -585,7 +678,7 @@ function minutesPanel(s,d){
 
 function entryView(){
   var s=student(S.open),d=S.draft; if(!s){S.open=null;return todayView()}
-  var sl=slotOn(s,S.date),where=[schoolLabel(s),sl?fmtTime(sl.time):'',(s.direct||s.indirect)?'IEP '+(s.direct||0)+' direct / '+(s.indirect||0)+' indirect':'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · ');
+  var est=estFor(s.id,S.date),where=[schoolLabel(s),est?'about '+fmtTime(est):'',(s.direct||s.indirect)?'IEP '+(s.direct||0)+' direct / '+(s.indirect||0)+' indirect':'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · ');
   var h='<div class="row spread"><button class="btn ghost" data-act="back">‹ '+(S.view==='plan'?'Back to plan':S.fromStu?'Back to '+s.name:'Back to the day')+'</button><span class="muted small">'+esc(md(S.date))+'</span></div>'+
     '<div><h1>'+esc(s.name)+'</h1>'+(where?'<span class="muted">'+esc(where)+'</span>':'')+'</div>'+
     '<h2>Lesson plan</h2>'+minutesPanel(s,d)+'<button class="btn" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
@@ -601,6 +694,7 @@ function entryView(){
         '<div class="stepper"><button data-act="step" data-g="'+esc(g.id)+'" data-n="-1" aria-label="Less">−</button>'+
         '<input type="number" inputmode="decimal" id="val-'+esc(g.id)+'" data-g="'+esc(g.id)+'" value="'+(num(v)?v:'')+'" placeholder="–" aria-label="'+esc(g.label)+'">'+
         '<button data-act="step" data-g="'+esc(g.id)+'" data-n="1" aria-label="More">+</button><span class="muted">'+esc(g.unit)+'</span></div>'+extraInputs(g,d);
+      if(g.variants&&g.variants.length&&!sess(s.id,S.date)&&last&&last.variants&&last.variants[g.id]&&d.variants[g.id]===last.variants[g.id])h+='<span class="muted small">Starting at last time\'s level ('+esc(md(last.date))+').</span>';
       if(g.variants&&g.variants.length)h+='<div class="row">'+g.variants.map(function(vr){
         return '<button class="chip '+(d.variants[g.id]===vr?'on':'')+'" data-act="variant" data-g="'+esc(g.id)+'" data-v="'+esc(vr)+'">'+esc(vr)+'</button>'}).join('')+'</div>';
       if(last)h+='<div><button class="chip" data-act="same" data-g="'+esc(g.id)+'">Same as '+esc(md(last.date))+': '+last.values[g.id]+
@@ -1155,7 +1249,7 @@ function openEntry(id){var x=sess(id,S.date);S.open=id;S.confirmDel=false;
   S.draft={absent:!!(x&&x.absent),values:Object.assign({},x&&x.values),variants:Object.assign({},x&&x.variants),note:(x&&x.note)||'',acts:((x&&x.acts)||[]).slice(),outof:Object.assign({},x&&x.outof),help:Object.assign({},x&&x.help)};
   var s=student(id);
   if(x){S.draft.min=x.min;S.draft.indirect=x.indirect}
-  else if(s){var sl0=slotOn(s,S.date),h0=history(id);S.draft.min=sl0?sl0.min:s.direct;S.draft.indirect=s.indirect;if(h0.length)S.draft.acts=(h0[h0.length-1].acts||[]).slice()}
+  else if(s){var sl0=slotOn(s,S.date),ad0=(dayDoc(S.date).adds||[]).filter(function(a){return a.id===id})[0],h0=history(id);S.draft.min=sl0?sl0.min:ad0&&num(ad0.min)?ad0.min:s.direct;S.draft.indirect=s.indirect;if(h0.length)S.draft.acts=(h0[h0.length-1].acts||[]).slice()}
 if(!x&&s)liveGoals(s).forEach(function(g){var l=lastVal(id,g.id,S.date);if(l&&l.variants&&l.variants[g.id])S.draft.variants[g.id]=l.variants[g.id]});}
 function leaveEntry(){S.open=null;if(S.fromStu){S.view='students';S.editId=S.fromStu;S.date=S.fromDate||S.date;S.fromStu=null;window.scrollTo(0,0)}}
 function val(id){var e=document.getElementById(id);return e?e.value.trim():''}
@@ -1196,6 +1290,20 @@ document.addEventListener('click',function(e){
   else if(a==='wzjump'){S.wz.i=i;S.open=null}
   else if(a==='wzsave'){var nList=wzStudents(S.date).length;saveSession('saveplan',function(){S.open=null;if(S.wz.i<nList-1)S.wz.i++;else S.wz.step=5;window.scrollTo(0,0)});return}
   else if(a==='wzdone'){S.view='today';S.open=null;window.scrollTo(0,0)}
+  else if(a==='luopen'){S.wz.x=S.wz.x===b.dataset.id?null:b.dataset.id}
+  else if(a==='lumove'){var stm=luStop(b.dataset.sc);if(!stm)return;var om=stm.items.map(function(it){return it.id}),km=om.indexOf(b.dataset.id),nm=km+(+b.dataset.n);
+    if(km<0||nm<0||nm>=om.length)return;om.splice(km,1);om.splice(nm,0,b.dataset.id);luSaveOrder(b.dataset.sc,om);return}
+  else if(a==='lufit'){var stf=luStop(b.dataset.sc);if(!stf)return;luSaveOrder(b.dataset.sc,PLAN.moveBefore(stf.items.map(function(it){return it.id}),b.dataset.id,b.dataset.before)).then(function(){toast('Moved')});return}
+  else if(a==='lufix'){var stx=luStop(b.dataset.sc);if(!stx)return;luSaveOrder(b.dataset.sc,PLAN.moveAfter(stx.items.map(function(it){return it.id}),b.dataset.id,b.dataset.after)).then(function(){toast('Moved')});return}
+  else if(a==='lureset'){var ddr=dayDoc(S.date),orr=Object.assign({},ddr.order||{});delete orr[b.dataset.sc];saveDay(S.date,{order:orr},'Back to last week\'s order');return}
+  else if(a==='lupin'){var ddp=dayDoc(S.date),pp=Object.assign({},ddp.pins||{}),ps=b.dataset.id,pv=b.dataset.v;
+    if(pv==='usual')delete pp[ps];else if(pv==='off')pp[ps]='';else{var pt=val('lu-pin-'+ps);if(!pt){toast('Pick a time');return}pp[ps]=pt}
+    saveDay(S.date,{pins:pp},pv==='usual'?'Back to usual':pv==='off'?'Not pinned today':'Pinned for today');return}
+  else if(a==='luaddform'){S.wz.add=b.dataset.sc||null}
+  else if(a==='luadd'){var as=val('lu-add-s'),am=nv('lu-add-m');if(!as)return;if(!(am>0)){toast('Enter the minutes');return}
+    var dda=dayDoc(S.date),adds=(dda.adds||[]).filter(function(x){return x.id!==as}).concat([{id:as,min:am}]),ska=(dda.skip||[]).filter(function(x){return x!==as});
+    S.wz.add=null;saveDay(S.date,{adds:adds,skip:ska},'Added for today');return}
+  else if(a==='lurmadd'){var ddm=dayDoc(S.date);S.wz.x=null;saveDay(S.date,{adds:(ddm.adds||[]).filter(function(x){return x.id!==b.dataset.id})},'Removed from today');return}
   else if(a==='wzschool'){var dd0=dayDoc(S.date),ss=(dd0.skipSchools||[]).slice(),xi=ss.indexOf(b.dataset.id);if(xi<0)ss.push(b.dataset.id);else ss.splice(xi,1);
     saveDay(S.date,{skipSchools:ss});return}
   else if(a==='wzst'){var sidw=b.dataset.id,v=b.dataset.v,dd1=dayDoc(S.date),sk=(dd1.skip||[]).filter(function(x){return x!==sidw}),xw=sess(sidw,S.date),stw=student(sidw);
@@ -1309,6 +1417,7 @@ document.addEventListener('input',iepInput);document.addEventListener('change',f
 document.addEventListener('input',function(e){var t=e.target;if(!t.dataset||!(t.dataset.agf||t.dataset.agr))return;var dd=agD(t.dataset.agw);if(!dd)return;
   if(t.dataset.agf)dd[t.dataset.agf]=t.value;else if(dd.mileRates[+t.dataset.agr])dd.mileRates[+t.dataset.agr][t.dataset.agk]=t.value;
   var ex=document.getElementById(t.dataset.agw+'-ex');if(ex)ex.innerHTML=agExample(dd)});
+document.addEventListener('change',function(e){var t=e.target;if(t.dataset&&t.dataset.luarr!=null){var dd=dayDoc(S.date),ar=Object.assign({},dd.arrive||{});if(t.value)ar[t.dataset.luarr]=t.value;else delete ar[t.dataset.luarr];saveDay(S.date,{arrive:ar},'Arrival changed for today')}});
 document.addEventListener('change',function(e){if(e.target.id==='sl-when'){var r=document.getElementById('sl-pinrow');if(r)r.hidden=e.target.value!=='pin'}});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&S.menu){S.menu=false;render()}});
 menuEl.addEventListener('click',function(e){if(e.target===menuEl){S.menu=false;render()}});
