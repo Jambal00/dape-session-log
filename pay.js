@@ -16,8 +16,8 @@
    - Quarter-hour rounding (Pete, 2026-10-17): for agencies that pay per session, each session's time with the student
      (direct and indirect combined) rounds up to the next 15 minutes. 15 direct + 10 indirect = 25, billed as 30.
      A session already on a quarter hour stays as it is. Sessions are passed in as sessionMin: {agencyId: [minutes or {min, round}, ...]}.
-   - The rounding step is set per school (Pete, 2026-10-17, "to handle variations"): round is 0 (no rounding), 6, 15, 30 or 60
-     minutes. A school with no setting uses 15.
+   - The rounding step is set per agency (Pete, 2026-10-17, "to handle variations"; moved from schools to agencies the same day):
+     round is 0 (no rounding), 6, 15, 30 or 60 minutes. An agency with no setting uses 15.
      On-site agencies are not rounded this way; their session minutes are kept for the record only. */
 (function(root){
   function num(v){return typeof v==='number'&&isFinite(v)}
