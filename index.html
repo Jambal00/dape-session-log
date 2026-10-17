@@ -1627,7 +1627,9 @@ document.addEventListener('click',function(e){
   else if(a==='scadd'){S.scAdding=!S.scAdding;if(S.scAdding){S.schoolEdit=null;S.scDraft=null}}
   else if(a==='placestoggle'){S.placesOpen=!S.placesOpen}
   else if(a==='scdayd'){scSweep();var dd0=S.scDraft;if(!dd0)return;var di0=dd0.days.indexOf(i);if(di0<0)dd0.days.push(i);else dd0.days.splice(di0,1);dd0.days.sort()}
-  else if(a==='savesched'){scSweep();sc=school(b.dataset.id);var ds=S.scDraft;if(!sc||!ds)return;var tt={},bad='';
+  else if(a==='savesched'){var part=[].filter.call(document.querySelectorAll('[data-scf=arrive],[data-scf=leave]'),function(x){return x.validity&&x.validity.badInput})[0];
+    if(part){toast('Finish the '+(part.dataset.scf==='arrive'?'arrival':'leave')+' time for '+DAYS[+part.dataset.day]+', including AM or PM');part.focus();return}
+    scSweep();sc=school(b.dataset.id);var ds=S.scDraft;if(!sc||!ds)return;var tt={},bad='';
     ds.days.forEach(function(x){var t=ds.times[x]||{};if(t.leave&&t.arrive&&t.leave<=t.arrive)bad=DAYS[x];if(t.arrive||t.leave)tt[x]={arrive:t.arrive||'',leave:t.leave||''}});
     if(bad){toast('On '+bad+', leave time is before arrival');return}
     var gp=ds.gap!==''&&isFinite(+ds.gap)&&+ds.gap>=0?+ds.gap:5;
