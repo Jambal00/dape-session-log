@@ -246,6 +246,12 @@ pre.sum{white-space:pre-wrap;word-break:break-word;font:14px/1.45 var(--body);ma
 .tile .warn{font:600 12px var(--body);color:var(--warn)}
 .minis{display:flex;flex-wrap:wrap;gap:8px}
 .mini{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:99px;padding:8px 14px;min-height:40px;cursor:pointer;font:600 14px var(--body)}
+.pinned .menu{inset:0 auto 0 0;width:300px;background:none;z-index:25}
+.pinned .menu .sheet{width:300px;border-right:1px solid var(--line)}
+.pinned .menu .head{padding-left:18px}
+.pinned .top{display:none}
+.pinned .wrap{padding-top:28px}
+.pinned{padding-left:300px}
 .menu .grp{font:600 11px var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:14px 18px 4px}
 .iep{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
 .iep .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px}
@@ -367,13 +373,16 @@ function saveDoc(coll,o,patch,msg){var d=Object.assign({},o,patch);delete d.id;
   write(function(){return S.db.doc(coll+'/'+o.id).set(d)}).then(function(){toast(msg);render()},function(){})}
 
 /* ---------- views ---------- */
+var WIDE=window.matchMedia('(min-width: 1000px)');
 function render(){
   if(S.loaded)routeSoon();
   var cur=NAV.filter(function(n){return n[0]===S.view})[0];
   topEl.innerHTML='<div class="in"><button class="burger" data-act="menu" aria-label="Open menu" aria-expanded="'+S.menu+'">'+BURGER+'</button>'+
     '<button class="brand" data-act="go" data-v="home">DAPE Log</button>'+(cur&&S.view!=='home'?'<span class="where">'+esc(cur[1])+'</span>':'')+'</div>';
-  menuEl.hidden=!S.menu;
-  menuEl.innerHTML=S.menu?'<div class="sheet" role="dialog" aria-label="Menu"><div class="head"><button class="burger" data-act="menu" aria-label="Close menu">'+CLOSE+'</button><span class="brand" style="font:700 20px var(--display)">DAPE Log</span></div>'+
+  /* On a wide screen (a desktop or laptop) the menu stays open on the left the whole time. Phones keep the slide-out menu. */
+  var pinned=WIDE.matches;document.body.classList.toggle('pinned',pinned);
+  menuEl.hidden=!(S.menu||pinned);
+  menuEl.innerHTML=(S.menu||pinned)?'<div class="sheet" role="'+(pinned?'navigation':'dialog')+'" aria-label="Menu"><div class="head">'+(pinned?'':'<button class="burger" data-act="menu" aria-label="Close menu">'+CLOSE+'</button>')+'<span class="brand" style="font:700 20px var(--display)">DAPE Log</span></div>'+
     NAV.map(function(n,k){return (n[3]&&(k===0||NAV[k-1][3]!==n[3])?'<div class="grp">'+esc(n[3])+'</div>':'')+'<button class="go'+(S.view===n[0]||(S.view==='iep'&&n[0]==='students')?' on':'')+'" data-act="go" data-v="'+n[0]+'"><b>'+esc(n[1])+'</b><span>'+esc(n[2])+'</span></button>'}).join('')+
     '<button class="go" data-act="signout" style="margin-top:auto"><b>Sign out</b><span>You will need your email and password to sign back in</span></button></div>':'';
   var h='';
@@ -1753,6 +1762,7 @@ setInterval(function(){if(!S.loaded||S.date!==today())return;
   if(S.open){var el=document.getElementById('elapsed');if(el&&S.draft&&S.draft.start)el.textContent=Math.max(0,minsBetween(S.draft.start,nowHM()))+' min';return}
   if(S.view==='today')softRender()},30000);
 menuEl.addEventListener('click',function(e){if(e.target===menuEl){S.menu=false;render()}});
+if(WIDE.addEventListener)WIDE.addEventListener('change',function(){S.menu=false;if(!app.hidden)render()});else if(WIDE.addListener)WIDE.addListener(function(){S.menu=false;if(!app.hidden)render()});
 window.DAPE_START=start;
 })();
 </script>
@@ -1764,7 +1774,7 @@ var SUPABASE_URL='https://yqkgglqlikkerkifmdzq.supabase.co';
 var SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlxa2dnbHFsaWtrZXJraWZtZHpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3Mzc2MjYsImV4cCI6MjEwNzMxMzYyNn0.UcdUU24d0C4IVepzIizyr5FhSkP_5e4cXEoUMEUO8sc';
 function $(id){return document.getElementById(id)}
 var auth=$('auth'),app=$('app'),top=$('top'),msg=$('auth-msg'),started=false;
-function show(signedIn){auth.hidden=signedIn;app.hidden=!signedIn;top.hidden=!signedIn}
+function show(signedIn){auth.hidden=signedIn;app.hidden=!signedIn;top.hidden=!signedIn;if(!signedIn){var m=document.getElementById('menu');if(m)m.hidden=true;document.body.classList.remove('pinned')}}
 if(!(window.supabase&&window.supabase.createClient)){show(false);msg.textContent='The app could not finish loading. Check your connection and reload.';return}
 var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
