@@ -145,4 +145,15 @@ check('Rounding is per session, not per day, and on-site agencies are not rounde
   assert.strictEqual(s.sessionMin,75);assert.strictEqual(s.studentMin,92);assert.strictEqual(s.pay.students,88.93);
 });
 
+check('Rounding step set per school: none, tenth hour, quarter hour, half hour, hour',function(){
+  // 25 minutes: no rounding 25; 6-min steps -> 30; 15 -> 30; 30 -> 30; 60 -> 60. 32 minutes: 6 -> 36, 15 -> 45, 30 -> 60.
+  assert.strictEqual(P.roundUp(25,0),25);assert.strictEqual(P.roundUp(25,6),30);assert.strictEqual(P.roundUp(25,15),30);
+  assert.strictEqual(P.roundUp(25,30),30);assert.strictEqual(P.roundUp(25,60),60);
+  assert.strictEqual(P.roundUp(32,6),36);assert.strictEqual(P.roundUp(32,15),45);assert.strictEqual(P.roundUp(32,30),60);
+  // Same agency, two schools: school A rounds to 15 (20 -> 30), school B doesn't round (20 stays 20). Billed 50.
+  // 50/60 x 62 = 51.6667 -> $51.67
+  var r=P.dayPay({date:'2026-10-26',agencies:{N:N},sessionMin:{N:[{min:20,round:15},{min:20,round:0}]},legs:[]}).byAgency.N;
+  assert.strictEqual(r.studentMin,50);assert.strictEqual(r.roundedUp,10);assert.strictEqual(r.pay.students,51.67);
+});
+
 console.log('\nAll pay checks passed ('+n+')');

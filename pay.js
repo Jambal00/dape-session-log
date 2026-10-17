@@ -15,7 +15,9 @@
    - Indirect time and meetings outside her time on site are billable on top (Pete, 2026-10-17): passed in as addMin per agency.
    - Quarter-hour rounding (Pete, 2026-10-17): for agencies that pay per session, each session's time with the student
      (direct and indirect combined) rounds up to the next 15 minutes. 15 direct + 10 indirect = 25, billed as 30.
-     A session already on a quarter hour stays as it is. Sessions are passed in as sessionMin: {agencyId: [minutes, ...]}.
+     A session already on a quarter hour stays as it is. Sessions are passed in as sessionMin: {agencyId: [minutes or {min, round}, ...]}.
+   - The rounding step is set per school (Pete, 2026-10-17, "to handle variations"): round is 0 (no rounding), 6, 15, 30 or 60
+     minutes. A school with no setting uses 15.
      On-site agencies are not rounded this way; their session minutes are kept for the record only. */
 (function(root){
   function num(v){return typeof v==='number'&&isFinite(v)}
@@ -27,7 +29,8 @@
   function tracksTax(a){return !a||a.taxMiles!==false}
   function officeStart(a){return reimburses(a)&&a.mileFrom==='office'}
   function onSite(a){return !!a&&a.payClock==='onsite'}
-  function quarterUp(m){return num(m)&&m>0?Math.ceil(m/15-1e-9)*15:0}
+  function roundUp(m,step){if(!num(m)||m<=0)return 0;step=num(step)?step:15;return step>0?Math.ceil(m/step-1e-9)*step:m}
+  function quarterUp(m){return roundUp(m,15)}
 
   /* Mileage rates as a list sorted by start date. An empty start date means "from the beginning".
      Agencies saved before dated rates existed have a single mileRate. */
@@ -60,8 +63,8 @@
       missing:[],unpaid:[],officeUsed:false,clock:'session',sessionMin:0})}
     Object.keys(input.studentMin||{}).forEach(function(k){if(num(input.studentMin[k]))b(k).studentMin+=input.studentMin[k]});
     var sm=input.sessionMin||{};
-    Object.keys(sm).forEach(function(k){var list=(sm[k]||[]).filter(num),x=b(k),a=(input.agencies||{})[k],raw=0,billed=0;
-      list.forEach(function(m){raw+=m;billed+=onSite(a)?m:quarterUp(m)});
+    Object.keys(sm).forEach(function(k){var list=sm[k]||[],x=b(k),a=(input.agencies||{})[k],raw=0,billed=0;
+      list.forEach(function(e){var m=typeof e==='object'?e.min:e,st=typeof e==='object'?e.round:15;if(!num(m))return;raw+=m;billed+=onSite(a)?m:roundUp(m,st)});
       x.studentMin+=billed;x.loggedMin=(x.loggedMin||0)+raw;x.roundedUp=(x.roundedUp||0)+(billed-raw)});
     var os=input.onSiteMin||{};
     Object.keys(input.agencies||{}).forEach(function(k){var a=input.agencies[k];if(!onSite(a))return;
@@ -98,7 +101,7 @@
     return{byAgency:out,totals:T};
   }
 
-  var api={cents:cents,paysTravel:paysTravel,travelRate:travelRate,reimburses:reimburses,tracksTax:tracksTax,officeStart:officeStart,onSite:onSite,quarterUp:quarterUp,
+  var api={cents:cents,paysTravel:paysTravel,travelRate:travelRate,reimburses:reimburses,tracksTax:tracksTax,officeStart:officeStart,onSite:onSite,quarterUp:quarterUp,roundUp:roundUp,
     mileRates:mileRates,mileRateOn:mileRateOn,paidMiles:paidMiles,dayPay:dayPay};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DAPE_PAY=api;
 })(this);

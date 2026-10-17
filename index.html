@@ -297,6 +297,9 @@ function slotOrderTime(sl){return sl?(sl.pin?sl.pinTime:sl.time)||'':''}
 /* A school's usual times on a weekday: {arrive, leave} (either may be ''). */
 function schoolTimes(sc,day){var t=sc&&sc.times&&sc.times[day];return{arrive:(t&&t.arrive)||'',leave:(t&&t.leave)||''}}
 function schoolGap(sc){return sc&&num(sc.gap)?sc.gap:5}
+/* Billing round-up step for each session at a school, in minutes (0 = no rounding). Pete's default: the quarter hour. */
+var ROUNDS=[[0,'No rounding'],[6,'6 min (tenth of an hour)'],[15,'15 min (quarter hour)'],[30,'30 min (half hour)'],[60,'1 hour']];
+function schoolRound(sc){return sc&&num(sc.roundTo)?sc.roundTo:15}
 var PIN='📌';
 function sess(sid,date){return S.sessions.filter(function(x){return x.studentId===sid&&x.date===date})[0]}
 function history(sid){return S.sessions.filter(function(x){return x.studentId===sid&&x.status!=='planned'}).sort(function(a,b){return a.date<b.date?-1:1})}
@@ -597,7 +600,7 @@ function entryAgency(x){var sc=school(entrySchoolId(x));return sc&&sc.agencyId?a
 /* Each logged session's combined direct and indirect minutes, by agency: pay.js rounds these up per session. */
 function sessionsByAgency(date){var out={};
   S.sessions.forEach(function(x){if(x.date!==date||x.status==='planned')return;var m=(!x.absent&&num(x.min)?x.min:0)+(num(x.indirect)?x.indirect:0);if(!m)return;
-    var s=student(x.studentId),a=s&&agencyOfStudent(s),k=a?a.id:'';(out[k]=out[k]||[]).push(m)});
+    var s=student(x.studentId),a=s&&agencyOfStudent(s),k=a?a.id:'';(out[k]=out[k]||[]).push({min:m,round:schoolRound(s&&school(s.schoolId))})});
   return out}
 /* Separately logged indirect time and meetings, by agency (on-site agencies are handled by indirectOutside). */
 function entriesByAgency(date){var out={};
@@ -648,7 +651,7 @@ function dayPanel(P){
     (r1(T.taxMiles)!==r1(T.miles)?'<div><div class="stat">'+r1(T.taxMiles)+'</div><span class="muted small">miles<br>for taxes</span></div>':'')+'</div>';
   if(ks.length)h+='<div class="split">'+ks.map(function(k){var a=agency(k),x=R.byAgency[k],paid=a&&(x.rates.base!=null||x.rates.travel!=null||x.rates.mile!=null);
       var bits=[hrs(x.studentMin+x.travelMin)+' hrs'+(x.clock==='onsite'?' ('+hrs(x.studentMin-(x.addMin||0))+' on site'+(x.addMin?', '+hrs(x.addMin)+' outside':'')+')':''),r1(x.miles)+' mi'];
-      if(x.clock!=='onsite'&&x.roundedUp)bits.push('sessions rounded up to the quarter hour (+'+x.roundedUp+' min)');
+      if(x.clock!=='onsite'&&x.roundedUp)bits.push('sessions rounded up (+'+x.roundedUp+' min)');
       if(a&&reimburses(a)&&r1(x.paidMiles)!==r1(x.miles))bits.push(r1(x.paidMiles)+' mi paid'+(x.officeUsed?' (from office)':''));
       if(a&&reimburses(a)&&x.rates.mile!=null&&x.paidMiles)bits.push(money(x.rates.mile)+'/mi');
       var note=(x.unpaid.length?' ('+x.unpaid.join(' and ')+' not paid)':'')+(x.missing.length?' · missing '+x.missing.filter(function(v,i,s){return s.indexOf(v)===i}).join(', '):'');
@@ -798,7 +801,7 @@ function extraInputs(g,d){var h='';
   return h+'<div class="row">'+HELP.map(function(v){return '<button class="chip '+(d.help[g.id]===v?'on':'')+'" data-act="help" data-g="'+esc(g.id)+'" data-v="'+v+'">'+v+'</button>'}).join('')+'</div>'}
 /* For per-session agencies: what this session bills after rounding up to the quarter hour. */
 function billedNote(s,d){var a=agencyOfStudent(s);if(!a||PAY.onSite(a))return '';var m=(d.absent?0:(num(d.min)?d.min:0))+(num(d.indirect)?d.indirect:0);if(!m)return '<span class="muted small" id="billed"></span>';
-  var q=PAY.quarterUp(m);return '<span class="muted small" id="billed">'+(q===m?'Bills '+m+' min.':m+' min logged, bills '+q+' min (rounded up to the quarter hour).')+'</span>'}
+  var st=schoolRound(school(s.schoolId)),q=PAY.roundUp(m,st);return '<span class="muted small" id="billed">'+(q===m?'Bills '+m+' min.':m+' min logged, bills '+q+' min (rounded up to the '+(st===15?'quarter hour':st===30?'half hour':st===60?'hour':st+' min')+').')+'</span>'}
 function refreshBilled(){var bn=document.getElementById('billed'),bs=student(S.open);if(bn&&bs&&S.draft){var tmp=document.createElement('div');tmp.innerHTML=billedNote(bs,S.draft);bn.textContent=tmp.textContent}}
 function minutesPanel(s,d){
   var h='<div class="panel stack"><div class="row"><label>Direct minutes<input type="number" inputmode="numeric" id="e-min" value="'+(num(d.min)?d.min:'')+'"'+(d.absent?' disabled':'')+'></label>'+
@@ -1195,6 +1198,9 @@ function studentsView(){
   return h;
 }
 
+function schoolRoundEditor(sc){var a=agency(sc.agencyId),v=schoolRound(sc);
+  return '<h2 style="margin-top:8px">Billing</h2><label>Round each session up to<select data-scround="'+esc(sc.id)+'">'+ROUNDS.map(function(r){return '<option value="'+r[0]+'"'+(r[0]===v?' selected':'')+'>'+r[1]+'</option>'}).join('')+'</select></label>'+
+    '<span class="muted small">'+(PAY.onSite(a)?esc(a.name)+' pays for time on site, so sessions here are not rounded.':'Direct and indirect minutes together, per session. With the quarter hour, 15 direct + 10 indirect bills 30.')+'</span>'}
 function schoolTimesEditor(sc){var ds=(sc.days||[]).slice().sort();
   if(!ds.length)return '<span class="muted small">Pick the days you are here to set your usual times.</span>';
   return '<div class="daytimes">'+ds.map(function(d){var t=schoolTimes(sc,d);
@@ -1216,7 +1222,7 @@ function schoolsView(){
       '<button class="btn primary" data-act="saveschool" data-id="'+esc(sc.id)+'">Save details</button>'+
       '<h2 style="margin-top:8px">Days you are here</h2><div class="row">'+DAYS.map(function(dn,di){var on=(sc.days||[]).indexOf(di)>=0;
         return '<button class="chip '+(on?'on':'')+'" data-act="scday" data-id="'+esc(sc.id)+'" data-i="'+di+'" aria-pressed="'+on+'">'+dn+'</button>'}).join('')+'</div>'+
-      schoolTimesEditor(sc)+
+      schoolTimesEditor(sc)+schoolRoundEditor(sc)+
       '<h2 style="margin-top:8px">Days off</h2>'+
       ((sc.closed||[]).length?sc.closed.map(function(c,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(md(c.from)+(c.to&&c.to!==c.from?' to '+md(c.to):'')+(c.label?', '+c.label:''))+'</span><button class="chip" data-act="rmclosed" data-id="'+esc(sc.id)+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No days off entered. Holidays and breaks show on the session list as school closed.</span>')+
       '<div class="row"><label>From<input type="date" id="c-from"></label><label>To (optional)<input type="date" id="c-to"></label></div>'+
@@ -1648,6 +1654,7 @@ document.addEventListener('input',function(e){var t=e.target;if(!t.dataset||!(t.
   if(t.dataset.agf)dd[t.dataset.agf]=t.value;else if(dd.mileRates[+t.dataset.agr])dd.mileRates[+t.dataset.agr][t.dataset.agk]=t.value;
   var ex=document.getElementById(t.dataset.agw+'-ex');if(ex)ex.innerHTML=agExample(dd)});
 document.addEventListener('change',function(e){var t=e.target;if(t.dataset&&t.dataset.luarr!=null){var dd=dayDoc(S.date),ar=Object.assign({},dd.arrive||{});if(t.value)ar[t.dataset.luarr]=t.value;else delete ar[t.dataset.luarr];saveDay(S.date,{arrive:ar},'Arrival changed for today')}});
+document.addEventListener('change',function(e){var t=e.target;if(t.dataset&&t.dataset.scround){var sc=school(t.dataset.scround);if(sc)saveDoc('schools',sc,{roundTo:+t.value},'Rounding saved')}});
 document.addEventListener('change',function(e){if(e.target.id==='sl-when'){var r=document.getElementById('sl-pinrow');if(r)r.hidden=e.target.value!=='pin'}});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&S.menu){S.menu=false;render()}});
 setInterval(function(){if(!S.loaded||S.date!==today())return;
