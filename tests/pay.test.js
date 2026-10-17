@@ -170,4 +170,12 @@ check('On-site agency: the day\'s total time on site rounds up, not each session
   assert.strictEqual(m.studentMin,120);assert.strictEqual(m.pay.students,116);
 });
 
+check('On-site agency with two schools in a day: each visit rounds on its own, then the rounded times add up',function(){
+  // Visit 1: 1:00 to 2:17 = 77 -> 90. Visit 2: 40 -> 45. Billed 135 (rounding the 117-minute total would have given 120).
+  // 135/60 x 58 = $130.50
+  var OSQ={id:'S',rate:58,paysTravel:false,reimburseMiles:false,payClock:'onsite',roundTo:15};
+  var r=P.dayPay({date:'2026-10-26',agencies:{S:OSQ},onSiteMin:{S:[77,40]},legs:[]}).byAgency.S;
+  assert.strictEqual(r.studentMin,135);assert.strictEqual(r.onSiteLogged,117);assert.strictEqual(r.roundedUp,18);assert.strictEqual(r.visits,2);assert.strictEqual(r.pay.students,130.5);
+});
+
 console.log('\nAll pay checks passed ('+n+')');

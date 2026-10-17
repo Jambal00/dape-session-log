@@ -492,10 +492,10 @@ function siteTimes(date,scId){var at=(dayDoc(date).at||{})[scId]||{};
   var xs=S.sessions.filter(function(x){var s=student(x.studentId);return x.date===date&&!x.absent&&s&&(s.schoolId||'')===scId});
   var st=xs.map(function(x){return x.start}).filter(Boolean).sort(),en=xs.map(function(x){return x.end}).filter(Boolean).sort();
   return {arrive:at.arrive||st[0]||'',leave:at.leave||en[en.length-1]||'',tapA:!!at.arrive,tapL:!!at.leave}}
-/* Minutes on site by agency, for agencies that pay for time on site. */
+/* Minutes on site by agency, one entry per school visit, for agencies that pay for time on site (each visit is rounded on its own). */
 function onSiteByAgency(date,P){var out={};
   P.stops.forEach(function(st){if(!st.id)return;var a=agency(st.sc.agencyId);if(!PAY.onSite(a))return;var t=siteTimes(date,st.id);
-    if(t.arrive&&t.leave&&t.leave>t.arrive)out[a.id]=(out[a.id]||0)+minsBetween(t.arrive,t.leave)});
+    if(t.arrive&&t.leave&&t.leave>t.arrive)(out[a.id]=out[a.id]||[]).push(minsBetween(t.arrive,t.leave))});
   return out}
 function inSession(x){return !!(x&&x.start&&!x.end&&x.status!=='logged'&&!x.absent)}
 function settled(o,date){var x=sess(o.s.id,date);return !!(x&&(x.absent||x.start||x.status==='logged'))||(dayDoc(date).skip||[]).indexOf(o.s.id)>=0}
@@ -1204,7 +1204,7 @@ function studentsView(){
 /* Read-only: a school bills the way its agency is set up. */
 function schoolBillingLine(sc){var a=agency(sc.agencyId);
   return '<h2 style="margin-top:8px">Billing</h2><span class="muted small">'+(!a?'Pick the agency that pays for this school to set how it bills.':
-    esc(a.name)+(PAY.onSite(a)?' pays for time on site'+(agencyRound(a)?', with the day\'s total rounded up to the '+esc(roundName(agencyRound(a))):', not rounded')+'.':agencyRound(a)?' rounds each session up to the '+esc(roundName(agencyRound(a)))+'.':' bills sessions as logged, with no rounding.')+' This school uses its agency\'s settings; change them under Agencies.')+'</span>'}
+    esc(a.name)+(PAY.onSite(a)?' pays for time on site'+(agencyRound(a)?', with each visit rounded up to the '+esc(roundName(agencyRound(a))):', not rounded')+'.':agencyRound(a)?' rounds each session up to the '+esc(roundName(agencyRound(a)))+'.':' bills sessions as logged, with no rounding.')+' This school uses its agency\'s settings; change them under Agencies.')+'</span>'}
 function schoolTimesEditor(sc){var ds=(sc.days||[]).slice().sort();
   if(!ds.length)return '<span class="muted small">Pick the days you are here to set your usual times.</span>';
   return '<div class="daytimes">'+ds.map(function(d){var t=schoolTimes(sc,d);
@@ -1281,9 +1281,9 @@ function agencyForm(w,d,id){
     '<div class="pl"><b>Your time</b>'+agMoney(w,'rate',d,'/hr','Base rate per hour')+'<small>Your base rate.</small><div class="sub" style="flex-direction:column;align-items:flex-start;gap:6px"><span class="small" style="font-weight:600">They pay for</span>'+
       '<span class="seg" role="group" aria-label="They pay for">'+[[false,'Each session'],[true,'Time on site']].map(function(o){return '<button type="button" class="'+(d.onsite===o[0]?'on':'')+'" data-act="agq" data-w="'+w+'" data-f="onsite" data-v="'+(o[0]?1:0)+'" aria-pressed="'+(d.onsite===o[0])+'">'+o[1]+'</button>'}).join('')+'</span>'+
       '<span class="small muted">'+(d.onsite?'From when you arrive at their school to when you leave. You still log each student\'s minutes for their records.':'The direct and indirect minutes you log for each student.')+'</span>'+
-      '<span class="small" style="font-weight:600;margin-top:4px">'+(d.onsite?'Round the day\'s time on site up to':'Round each session up to')+'</span>'+
+      '<span class="small" style="font-weight:600;margin-top:4px">'+(d.onsite?'Round each school visit up to':'Round each session up to')+'</span>'+
       '<span class="seg" role="group" aria-label="Rounding">'+ROUNDS.map(function(r){var on=String(r[0])===String(d.roundTo);return '<button type="button" class="'+(on?'on':'')+'" data-act="aground" data-w="'+w+'" data-v="'+r[0]+'" aria-pressed="'+on+'">'+r[2]+'</button>'}).join('')+'</span>'+
-      '<span class="small muted">'+(d.onsite?'Total time at this agency\'s schools for the day. With the quarter hour, 1:00 to 2:17 bills 1.5 hours.':'Direct and indirect together, per session. With the quarter hour, 15 direct + 10 indirect bills 30.')+'</span></div></div>'+
+      '<span class="small muted">'+(d.onsite?'Each school visit is rounded on its own, then added up. With the quarter hour, 1:00 to 2:17 bills 1.5 hours.':'Direct and indirect together, per session. With the quarter hour, 15 direct + 10 indirect bills 30.')+'</span></div></div>'+
     '<div class="pl"><b>Travel time</b>'+agSwitch(w,'paysTravel',d.paysTravel,'Paid for travel time')+
       (d.paysTravel?'<small>Driving to and between schools.</small><div class="sub"><span class="seg" role="group" aria-label="Travel pay rate">'+
         [[false,'Base Rate'],[true,'Travel Rate']].map(function(o){return '<button type="button" class="'+(d.travelOwn===o[0]?'on':'')+'" data-act="agq" data-w="'+w+'" data-f="travelOwn" data-v="'+(o[0]?1:0)+'" aria-pressed="'+(d.travelOwn===o[0])+'">'+o[1]+'</button>'}).join('')+'</span>'+

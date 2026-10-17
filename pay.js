@@ -18,8 +18,9 @@
      A session already on a quarter hour stays as it is. Sessions are passed in as sessionMin: {agencyId: [minutes or {min, round}, ...]}.
    - The rounding step is set per agency (Pete, 2026-10-17, "to handle variations"; moved from schools to agencies the same day):
      round is 0 (no rounding), 6, 15, 30 or 60 minutes. An agency with no setting uses 15.
-   - On-site agencies round too (Pete, 2026-10-17), but the day's total time on site for that agency, not each session:
-     arrive 1:00, leave 2:17 = 77 minutes, billed as 90 at the quarter hour. Meetings outside time on site are added after,
+   - On-site agencies round too (Pete, 2026-10-17), per school visit, not per session: arrive 1:00, leave 2:17 = 77 minutes,
+     billed as 90 at the quarter hour. With two of the agency's schools in one day, each visit is rounded and the rounded
+     times are added. onSiteMin can be a list of visit minutes per agency. Meetings outside time on site are added after,
      as logged. The same agency setting (roundTo) controls it.
      On-site agencies are not rounded this way; their session minutes are kept for the record only. */
 (function(root){
@@ -71,11 +72,12 @@
       x.studentMin+=billed;x.loggedMin=(x.loggedMin||0)+raw;x.roundedUp=(x.roundedUp||0)+(billed-raw)});
     var os=input.onSiteMin||{};
     Object.keys(input.agencies||{}).forEach(function(k){var a=input.agencies[k];if(!onSite(a))return;
-      if(!(k in out)&&!num(os[k]))return;
+      if(!(k in out)&&!num(os[k])&&!Array.isArray(os[k]))return;
       var x=b(k);x.clock='onsite';x.sessionMin=x.studentMin;
-      var st=num(a.roundTo)?a.roundTo:15,base=num(os[k])?os[k]:x.sessionMin;
-      if(!num(os[k])&&x.sessionMin)x.missing.push('arrive and leave times (paid on session minutes)');
-      x.studentMin=roundUp(base,st);x.onSiteLogged=base;x.roundedUp=(x.studentMin-base)||0});
+      var st=num(a.roundTo)?a.roundTo:15,visits=Array.isArray(os[k])?os[k].filter(num):num(os[k])?[os[k]]:null;
+      if(!visits||!visits.length){visits=[x.sessionMin];if(x.sessionMin)x.missing.push('arrive and leave times (paid on session minutes)')}
+      var base=0,billed=0;visits.forEach(function(v){base+=v;billed+=roundUp(v,st)});
+      x.studentMin=billed;x.onSiteLogged=base;x.roundedUp=(billed-base)||0;x.visits=visits.length});
     var am=input.addMin||{};
     Object.keys(am).forEach(function(k){if(num(am[k])&&am[k]>0){var x=b(k);x.studentMin+=am[k];x.addMin=(x.addMin||0)+am[k]}});
     (input.legs||[]).forEach(function(l){
