@@ -187,6 +187,7 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .wk-card{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;font-size:14px}
 .wk-card b{white-space:nowrap}
 .suggest{border:1px dashed var(--accent);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--accent-soft)}
+.chev{color:var(--muted);font-size:14px;padding-left:8px}
 .example{background:var(--accent-soft);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
 .example .t{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
 .ex{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px;font-variant-numeric:tabular-nums}
@@ -372,6 +373,7 @@ function render(){
   else h+=schoolsView();
   app.innerHTML=h;
   if(S.scrollTo){var st0=document.getElementById(S.scrollTo);S.scrollTo=null;if(st0)st0.scrollIntoView({block:'start'})}
+  if(S.scrollToEl){var se=document.querySelector(S.scrollToEl);S.scrollToEl=null;if(se){var y=se.getBoundingClientRect().top+window.scrollY-70;window.scrollTo(0,Math.max(0,y))}}
 }
 var BURGER='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
 var CLOSE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
@@ -1328,11 +1330,14 @@ function agenciesView(){
   if(!S.loaded)return h+'<div class="list"><div class="empty">Loading agencies…</div></div>';
   h+=S.agencies.length?'<div class="list">'+S.agencies.map(function(a){
     var open=S.agEdit===a.id,ns=S.schools.filter(function(sc){return sc.agencyId===a.id});
-    var sub=agSummary(a).filter(Boolean).concat([ns.length?ns.map(function(sc){return sc.alias||sc.name}).join(', '):'no schools']).join(' · ');
-    var o='<button class="item" data-act="editag" data-id="'+esc(a.id)+'" aria-expanded="'+open+'"><span class="nm">'+esc(a.name)+'<br><span class="sub">'+esc(sub)+'</span></span></button>';
+    /* Collapsed: name, rate and how time is paid, and its schools. The full pay sheet opens one agency at a time. */
+    var sub=[num(a.rate)?money(a.rate)+'/hr':'no rate yet',PAY.onSite(a)?'time on site':'per session',ns.length?ns.map(function(sc){return sc.alias||sc.name}).join(', '):'no schools'].join(' · ');
+    var o='<button class="item" data-act="editag" data-id="'+esc(a.id)+'" aria-expanded="'+open+'"'+(open?' style="background:var(--accent-soft)"':'')+'><span class="nm">'+esc(a.name)+'<br><span class="sub">'+esc(sub)+'</span></span><span class="chev" aria-hidden="true">'+(open?'▾':'▸')+'</span></button>';
     if(open)o+='<div class="stack edit">'+agencyForm('edit',S.agDraft,a.id)+'</div>';
     return o}).join('')+'</div>':'<div class="list"><div class="empty">No agencies yet. Add the first one below, then pick it on each school.</div></div>';
-  h+='<div class="panel stack"><h2>Add an agency</h2>'+agencyForm('new',agD('new'))+'</div>';
+  h+=S.agAdding?'<div class="panel stack"><div class="row spread"><h2>Add an agency</h2><button class="btn ghost" data-act="agadd">Cancel</button></div>'+agencyForm('new',agD('new'))+'</div>':
+    '<button class="btn" data-act="agadd">+ Add an agency</button>';
+  if(S.agencies.length&&!S.agEdit&&!S.agAdding)h+='<span class="muted small">Tap an agency to see and change how it pays.</span>';
   return h;
 }
 
@@ -1470,19 +1475,22 @@ document.addEventListener('click',function(e){
   if(a==='menu'){S.menu=!S.menu}
   else if(a==='go'){var v=b.dataset.v;S.menu=false;S.open=null;S.fromStu=null;
     if(v==='today')S.date=today();else if(v==='plan'){S.date=nextWorkDay(today());S.wz={step:1,i:0}}
+    if(v==='agencies'){S.agEdit=null;S.agDraft=null;S.agAdding=false}
     S.view=v;S.iepEd=null;S.scrollTo=b.dataset.scroll||null;window.scrollTo(0,0)}
   else if(a==='signout'){if(window.DAPE_SIGNOUT)window.DAPE_SIGNOUT();return}
   else if(a==='opensess'){S.menu=false;S.fromStu=b.dataset.id;S.fromDate=S.date;S.view='today';S.date=b.dataset.date;openEntry(b.dataset.id);window.scrollTo(0,0)}
   else if(a==='stfilter'){S.stFilter=b.dataset.v;S.editId=null}
   else if(a==='pickprog'){S.progId=b.dataset.id}
   else if(a==='progfor'){S.progId=b.dataset.id;S.view='progress';S.progQ='';window.scrollTo(0,0)}
-  else if(a==='editag'){S.agEdit=S.agEdit===b.dataset.id?null:b.dataset.id;S.agDraft=S.agEdit?agDraftFrom(agency(S.agEdit)):null}
+  else if(a==='editag'){S.agEdit=S.agEdit===b.dataset.id?null:b.dataset.id;S.agDraft=S.agEdit?agDraftFrom(agency(S.agEdit)):null;S.agAdding=false;
+    if(S.agEdit)S.scrollToEl='[data-act=editag][data-id="'+S.agEdit+'"]'}
+  else if(a==='agadd'){S.agAdding=!S.agAdding;if(S.agAdding){S.agEdit=null;S.agDraft=null}}
   else if(a==='agq'){var dq=agD(b.dataset.w);if(!dq)return;dq[b.dataset.f]=b.dataset.v==='1'}
   else if(a==='agsw'){var ds=agD(b.dataset.w);if(!ds)return;ds[b.dataset.f]=!ds[b.dataset.f]}
   else if(a==='agrate+'){var dr=agD(b.dataset.w);if(!dr)return;dr.mileRates.push({from:'',rate:''})}
   else if(a==='agrate-'){var dx=agD(b.dataset.w);if(!dx)return;dx.mileRates.splice(i,1)}
   else if(a==='addag'){var fa=agFields(agD('new'));if(typeof fa==='string'){toast(fa);return}
-    write(function(){return S.db.doc('agencies/ag_'+rid()).set(fa)}).then(function(){S.agNew=null;toast('Agency added');render()},function(){});return}
+    write(function(){return S.db.doc('agencies/ag_'+rid()).set(fa)}).then(function(){S.agNew=null;S.agAdding=false;toast('Agency added');render()},function(){});return}
   else if(a==='saveag'){var ag=agency(b.dataset.id);if(!ag||!S.agDraft)return;var fe=agFields(S.agDraft);if(typeof fe==='string'){toast(fe);return}
     S.agEdit=null;S.agDraft=null;saveDoc('agencies',ag,fe,'Agency saved');return}
   else if(a==='day'){S.date=shift(S.date,+b.dataset.n);S.open=null}
