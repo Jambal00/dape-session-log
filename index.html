@@ -188,6 +188,15 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .wk-card b{white-space:nowrap}
 .suggest{border:1px dashed var(--accent);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--accent-soft)}
 .chev{color:var(--muted);font-size:14px;padding-left:8px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.tabs button{border:0;border-left:1px solid var(--line);background:var(--surface);padding:10px 4px;min-height:44px;cursor:pointer;font:600 13px var(--body);color:var(--muted);position:relative}
+.tabs button:first-child{border-left:0}
+.tabs button.on{background:var(--accent);color:var(--accent-ink)}
+.tabs button .dot{position:absolute;top:6px;right:8px;width:7px;height:7px;border-radius:50%;background:var(--warn)}
+.tabbody{display:flex;flex-direction:column;gap:12px;padding-top:4px}
+.tabbody h3{margin:4px 0 0;font:650 15px var(--body)}
+.savebar{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:12px;margin-top:4px}
+.savebar .btn{width:100%}
 .example{background:var(--accent-soft);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
 .example .t{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
 .ex{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px;font-variant-numeric:tabular-nums}
@@ -813,7 +822,7 @@ function minutesPanel(s,d){
   var names=S.activities.map(function(a){return String(a.name)});d.acts.forEach(function(n){if(names.indexOf(n)<0)names.push(n)});
   return h+'<div class="panel stack"><strong>Activities</strong>'+
     (names.length?'<div class="row">'+names.map(function(n){return '<button class="chip '+(d.acts.indexOf(n)>=0?'on':'')+'" data-act="act" data-v="'+esc(n)+'">'+esc(n)+'</button>'}).join('')+'</div>':'<span class="muted small">No activities in the list yet. Add the first one below.</span>')+
-    '<div class="row end"><label>New activity<input id="act-new" placeholder="Invented one? Add it here"></label><button class="btn" data-act="addact">Add</button></div></div>';
+    '<div class="row end"><label>New activity<input id="act-new" placeholder="Invented one? Add it here"></label><button class="btn primary" data-act="addact">Add</button></div></div>';
 }
 
 /* Session start and end. Times come from the taps and can be corrected; direct minutes follow them. */
@@ -830,7 +839,7 @@ function entryView(){
   var est=estFor(s.id,S.date),where=[schoolLabel(s),est?'about '+fmtTime(est):'',(s.direct||s.indirect)?'IEP '+(s.direct||0)+' direct / '+(s.indirect||0)+' indirect':'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · ');
   var h='<div class="row spread"><button class="btn ghost" data-act="back">‹ '+(S.view==='plan'?'Back to plan':S.fromStu?'Back to '+s.name:'Back to the day')+'</button><span class="muted small">'+esc(md(S.date))+'</span></div>'+
     '<div><h1>'+esc(s.name)+'</h1>'+(where?'<span class="muted">'+esc(where)+'</span>':'')+'</div>'+
-    worksCard(s)+timerPanel(s,d)+'<h2>Lesson plan</h2>'+minutesPanel(s,d)+'<button class="btn" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
+    worksCard(s)+timerPanel(s,d)+'<h2>Lesson plan</h2>'+minutesPanel(s,d)+'<button class="btn primary" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
     '<button class="btn '+(d.absent?'on':'')+'" data-act="absent" aria-pressed="'+!!d.absent+'">'+(d.absent?'Marked absent':'Mark absent')+'</button>';
   if(!d.absent){
     h+='<div class="panel">';
@@ -1119,7 +1128,7 @@ function worksEditor(s){var w=works(s),f=S.wkAdd&&S.wkAdd.sid===s.id?S.wkAdd:nul
       (ol.length?'<span class="muted small">Or tap one you already use with other students</span><div class="row">'+ol.map(function(v){return '<button class="chip" data-act="wkadd" data-id="'+esc(s.id)+'" data-k="'+k+'" data-v="'+esc(v)+'">'+esc(v)+'</button>'}).join('')+'</div>':'')+
       '<button type="button" class="linkbtn" style="align-self:flex-start" data-act="wkform" data-id="">Done</button></div>'}
   h+='<label>Notes on what works<textarea id="wk-note" placeholder="e.g. Scooter only as a reward at the end, not as a warm-up">'+esc(w.note)+'</textarea></label>'+
-    '<button class="btn" data-act="wknote" data-id="'+esc(s.id)+'">Save note</button>'+
+    '<button class="btn primary" data-act="wknote" data-id="'+esc(s.id)+'">Save note</button>'+
     '<span class="muted small">Keep it practical and behavioral. Medical and family details stay in the school\'s records.</span></div>';
   return h}
 /* The short "what works" card at the top of a session. */
@@ -1168,7 +1177,7 @@ function slotEditor(s){
     '<label>When<select id="sl-when"><option value="any">Any time: placed when you plan the day</option><option value="pin"'+(pinOn?' selected':'')+'>Pinned time: should not move</option></select></label>'+
     '<div class="row" id="sl-pinrow"'+(pinOn?'':' hidden')+'><label style="flex:0 1 140px">Pinned at<input type="time" id="sl-time" value="'+esc(cur.pinTime||'')+'"></label>'+
       '<label>Why (optional)<input id="sl-reason" value="'+esc(cur.pinReason||'')+'" placeholder="e.g. class leaves for lunch at 10:05"></label></div>'+
-    '<div class="row"><button class="btn'+(ed?' primary':'')+'" style="flex:1" data-act="addslot" data-id="'+esc(s.id)+'">'+(ed?'Save changes':'Add day')+'</button>'+(ed?'<button class="btn" data-act="cancelslot">Cancel</button>':'')+'</div>'+
+    '<div class="row"><button class="btn primary" style="flex:1" data-act="addslot" data-id="'+esc(s.id)+'">'+(ed?'Save changes':'Add day')+'</button>'+(ed?'<button class="btn" data-act="cancelslot">Cancel</button>':'')+'</div>'+
     '<span class="muted small">Most students are "Any time". Pin only the ones whose time really can\'t move.</span></div>';
   return h}
 function studentsView(){
@@ -1205,41 +1214,57 @@ function studentsView(){
 function schoolBillingLine(sc){var a=agency(sc.agencyId);
   return '<h2 style="margin-top:8px">Billing</h2><span class="muted small">'+(!a?'Pick the agency that pays for this school to set how it bills.':
     esc(a.name)+(PAY.onSite(a)?' pays for time on site'+(agencyRound(a)?', with each visit rounded up to the '+esc(roundName(agencyRound(a))):', not rounded')+'.':agencyRound(a)?' rounds each session up to the '+esc(roundName(agencyRound(a)))+'.':' bills sessions as logged, with no rounding.')+' This school uses its agency\'s settings; change them under Agencies.')+'</span>'}
-function schoolTimesEditor(sc){var ds=(sc.days||[]).slice().sort();
-  if(!ds.length)return '<span class="muted small">Pick the days you are here to set your usual times.</span>';
-  return '<div class="daytimes">'+ds.map(function(d){var t=schoolTimes(sc,d);
-      return '<span class="dn">'+DAYS[d]+'</span><label>Usually arrive<input type="time" id="st-arr-'+d+'" value="'+esc(t.arrive)+'"></label><label>Usually leave<input type="time" id="st-lv-'+d+'" value="'+esc(t.leave)+'"></label>'}).join('')+'</div>'+
-    '<div class="row end"><label style="flex:0 1 200px">Minutes between students<input type="number" inputmode="numeric" id="st-gap" value="'+schoolGap(sc)+'"></label>'+
-    '<button class="btn" data-act="savetimes" data-id="'+esc(sc.id)+'">Save times</button></div>'+
-    '<span class="muted small">Each day can have its own times. They are a starting point for planning, never a rule. Leave time is optional.</span>'}
+/* ---------- school tabs ----------
+   S.scTab: which tab is showing. S.scDraft: the open school's unsaved edits (days, times, gap, agencyId, name, alias, address). */
+var SCTABS=[['schedule','Schedule'],['billing','Billing'],['holidays','Holidays'],['location','Location']];
+function scDraftFrom(sc){var t={};(sc.days||[]).forEach(function(d){t[d]=schoolTimes(sc,d)});
+  return{id:sc.id,days:(sc.days||[]).slice().sort(),times:t,gap:String(schoolGap(sc)),agencyId:sc.agencyId||'',name:sc.name||'',alias:sc.alias||'',address:sc.address||''}}
+function scDirty(sc,d,tab){var o=scDraftFrom(sc);
+  if(tab==='schedule')return JSON.stringify([o.days,o.gap,o.days.map(function(x){return o.times[x]})])!==JSON.stringify([d.days,d.gap,d.days.map(function(x){return d.times[x]||{arrive:'',leave:''}})]);
+  if(tab==='billing')return o.agencyId!==d.agencyId;
+  if(tab==='location')return o.name!==d.name||o.alias!==d.alias||o.address!==d.address;
+  return false}
+function saveBar(label,act,id,note){return '<div class="savebar"><button class="btn primary" data-act="'+act+'" data-id="'+esc(id)+'">'+esc(label)+'</button>'+(note?'<span class="muted small">'+note+'</span>':'')+'</div>'}
+function schoolTabs(sc){
+  if(!S.scDraft||S.scDraft.id!==sc.id)S.scDraft=scDraftFrom(sc);
+  var d=S.scDraft,tab=S.scTab||'schedule',h='<div class="tabs" role="tablist">'+SCTABS.map(function(t){var on=t[0]===tab;
+    return '<button role="tab" data-act="sctab" data-v="'+t[0]+'" aria-selected="'+on+'" class="'+(on?'on':'')+'">'+t[1]+(scDirty(sc,d,t[0])?'<span class="dot" title="Unsaved changes"></span>':'')+'</button>'}).join('')+'</div><div class="tabbody">';
+  if(tab==='schedule'){
+    h+='<h3>Days you are here</h3><div class="row">'+DAYS.map(function(dn,di){var on=d.days.indexOf(di)>=0;
+        return '<button class="chip '+(on?'on':'')+'" data-act="scdayd" data-i="'+di+'" aria-pressed="'+on+'">'+dn+'</button>'}).join('')+'</div>';
+    h+=d.days.length?'<div class="daytimes">'+d.days.map(function(x){var t=d.times[x]||{arrive:'',leave:''};
+        return '<span class="dn">'+DAYS[x]+'</span><label>Usually arrive<input type="time" data-scf="arrive" data-day="'+x+'" value="'+esc(t.arrive)+'"></label><label>Usually leave<input type="time" data-scf="leave" data-day="'+x+'" value="'+esc(t.leave)+'"></label>'}).join('')+'</div>':
+      '<span class="muted small">Pick the days you are here to set your usual times.</span>';
+    h+='<label style="flex:none;max-width:220px">Minutes between students<input type="number" inputmode="numeric" data-scf="gap" value="'+esc(d.gap)+'"></label>'+
+      saveBar('Save schedule','savesched',sc.id,'Each day can have its own times. They are a starting point for planning, never a rule. Leave time is optional.')}
+  else if(tab==='billing'){var a=agency(d.agencyId);
+    h+='<label style="flex:none">Agency that pays for this school<select data-scf="agencyId">'+agencyOptions(d.agencyId)+'</select></label>'+
+      '<span class="muted small">'+(!a?'Pick the agency that pays for this school.':esc(a.name)+(PAY.onSite(a)?' pays for time on site'+(agencyRound(a)?', with each visit rounded up to the '+esc(roundName(agencyRound(a))):', not rounded')+'.':agencyRound(a)?' pays per session, each rounded up to the '+esc(roundName(agencyRound(a)))+'.':' pays per session, with no rounding.')+' Rates, travel, mileage and rounding are set on the agency, under Agencies.')+'</span>'+
+      saveBar('Save billing','savebilling',sc.id,'')}
+  else if(tab==='holidays'){
+    h+='<h3>Days off</h3>'+((sc.closed||[]).length?sc.closed.map(function(c,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(md(c.from)+(c.to&&c.to!==c.from?' to '+md(c.to):'')+(c.label?', '+c.label:''))+'</span><button class="chip" data-act="rmclosed" data-id="'+esc(sc.id)+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No days off entered. Holidays and breaks show on the session list as school closed.</span>')+
+      '<div class="row"><label>From<input type="date" id="c-from"></label><label>To (optional)<input type="date" id="c-to"></label></div>'+
+      '<label style="flex:none">What it is<input id="c-label" placeholder="e.g. Fall break"></label>'+saveBar('Add days off','addclosed',sc.id,'')+
+      '<h3 style="margin-top:8px">Reports due</h3>'+((sc.reports||[]).length?sc.reports.map(function(r,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(mdy(r.date)+(r.label?', '+r.label:''))+'</span><button class="chip" data-act="rmreport" data-id="'+esc(sc.id)+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No due dates entered. They appear under Coming up three weeks ahead.</span>')+
+      '<div class="row"><label>Due date<input type="date" id="r-date"></label><label>What is due<input id="r-label" placeholder="e.g. Q1 progress reports"></label></div>'+saveBar('Add due date','addreport',sc.id,'')}
+  else{
+    h+='<div class="row"><label>School name<input id="sc-name" data-scf="name" value="'+esc(d.name)+'"></label><label>Short name<input id="sc-alias" data-scf="alias" value="'+esc(d.alias)+'"></label></div>'+
+      '<label style="flex:none">Address<span class="geo"><input id="sc-addr" data-geo="1" data-scf="address" autocomplete="off" value="'+esc(d.address)+'" placeholder="Start typing the address"></span></label>'+
+      saveBar('Save location','savelocation',sc.id,'Pick the address from the suggestions so drive distances can be worked out.')}
+  return h+'</div>'}
 function schoolsView(){
   var h='<div class="stack"><span class="eyebrow">Schools</span><h1>Calendars and report dates</h1></div>';
   if(!S.loaded)return h+'<div class="list"><div class="empty">Loading schools…</div></div>';
   h+=S.schools.length?'<div class="list">'+S.schools.map(function(sc){
     var open=S.schoolEdit===sc.id,n=activeStudents().filter(function(s){return s.schoolId===sc.id}).length;
-    var o='<button class="item" data-act="editschool" data-id="'+esc(sc.id)+'" aria-expanded="'+open+'"><span class="nm">'+esc(sc.name)+(sc.alias&&sc.alias!==sc.name?' <span class="sub">('+esc(sc.alias)+')</span>':'')+
-      '<br><span class="sub">'+esc([agency(sc.agencyId)?agency(sc.agencyId).name:'No agency set',sc.address].filter(Boolean).join(' · '))+'</span></span><span class="pill">'+n+' student'+(n===1?'':'s')+'</span></button>';
-    if(open){o+='<div class="stack edit">'+
-      '<div class="row"><label>School name<input id="sc-name" value="'+esc(sc.name)+'"></label><label>Short name<input id="sc-alias" value="'+esc(sc.alias||'')+'"></label></div>'+
-      '<label>Address<span class="geo"><input id="sc-addr" data-geo="1" autocomplete="off" value="'+esc(sc.address||'')+'" placeholder="Start typing the address"></span></label>'+
-      '<label>Agency that pays for this school<select id="sc-agency">'+agencyOptions(sc.agencyId)+'</select></label>'+
-      '<button class="btn primary" data-act="saveschool" data-id="'+esc(sc.id)+'">Save details</button>'+
-      '<h2 style="margin-top:8px">Days you are here</h2><div class="row">'+DAYS.map(function(dn,di){var on=(sc.days||[]).indexOf(di)>=0;
-        return '<button class="chip '+(on?'on':'')+'" data-act="scday" data-id="'+esc(sc.id)+'" data-i="'+di+'" aria-pressed="'+on+'">'+dn+'</button>'}).join('')+'</div>'+
-      schoolTimesEditor(sc)+schoolBillingLine(sc)+
-      '<h2 style="margin-top:8px">Days off</h2>'+
-      ((sc.closed||[]).length?sc.closed.map(function(c,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(md(c.from)+(c.to&&c.to!==c.from?' to '+md(c.to):'')+(c.label?', '+c.label:''))+'</span><button class="chip" data-act="rmclosed" data-id="'+esc(sc.id)+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No days off entered. Holidays and breaks show on the session list as school closed.</span>')+
-      '<div class="row"><label>From<input type="date" id="c-from"></label><label>To (optional)<input type="date" id="c-to"></label></div>'+
-      '<label>What it is<input id="c-label" placeholder="e.g. Fall break"></label>'+
-      '<button class="btn" data-act="addclosed" data-id="'+esc(sc.id)+'">Add days off</button>'+
-      '<h2 style="margin-top:8px">Reports due</h2>'+
-      ((sc.reports||[]).length?sc.reports.map(function(r,i){return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(mdy(r.date)+(r.label?', '+r.label:''))+'</span><button class="chip" data-act="rmreport" data-id="'+esc(sc.id)+'" data-i="'+i+'">Remove</button></div>'}).join(''):'<span class="muted small">No due dates entered. They appear under Coming up three weeks ahead.</span>')+
-      '<div class="row"><label>Due date<input type="date" id="r-date"></label><label>What is due<input id="r-label" placeholder="e.g. Q1 progress reports"></label></div>'+
-      '<button class="btn" data-act="addreport" data-id="'+esc(sc.id)+'">Add due date</button></div>'}
+    var o='<button class="item" data-act="editschool" data-id="'+esc(sc.id)+'" aria-expanded="'+open+'"'+(open?' style="background:var(--accent-soft)"':'')+'><span class="nm">'+esc(sc.name)+(sc.alias&&sc.alias!==sc.name?' <span class="sub">('+esc(sc.alias)+')</span>':'')+
+      '<br><span class="sub">'+esc([agency(sc.agencyId)?agency(sc.agencyId).name:'No agency set',(sc.days||[]).length?(sc.days||[]).slice().sort().map(function(x){return DAYS[x]}).join(', '):'no days set'].join(' · '))+'</span></span><span class="pill">'+n+' student'+(n===1?'':'s')+'</span><span class="chev" aria-hidden="true">'+(open?'▾':'▸')+'</span></button>';
+    if(open)o+='<div class="stack edit">'+schoolTabs(sc)+'</div>';
     return o}).join('')+'</div>':'<div class="list"><div class="empty">No schools yet. Add the first one below.</div></div>';
-  h+=placesPanel();
-  h+='<div class="panel stack"><h2>Add a school</h2><div class="row"><label>School name<input id="n-name"></label><label>Short name<input id="n-alias" placeholder="optional"></label></div>'+
-    '<label>Address<span class="geo"><input id="n-addr" data-geo="1" autocomplete="off" placeholder="Start typing the address"></span></label><label>Agency<select id="n-agency">'+agencyOptions('')+'</select></label><button class="btn primary" data-act="addschool">Add school</button></div>';
+  h+=S.scAdding?'<div class="panel stack"><div class="row spread"><h2>Add a school</h2><button class="btn ghost" data-act="scadd">Cancel</button></div><div class="row"><label>School name<input id="n-name"></label><label>Short name<input id="n-alias" placeholder="optional"></label></div>'+
+    '<label>Address<span class="geo"><input id="n-addr" data-geo="1" autocomplete="off" placeholder="Start typing the address"></span></label><label>Agency<select id="n-agency">'+agencyOptions('')+'</select></label>'+saveBar('Add school','addschool','','')+'</div>':
+    '<button class="btn" data-act="scadd">+ Add a school</button>';
+  h+=S.placesOpen?placesPanel():placesSummary();
   return h;
 }
 
@@ -1442,10 +1467,14 @@ function routeRun(){
     .catch(function(){ROUTE.failed[k]=Date.now()})
     .then(function(){delete ROUTE.busy[k];ROUTE.running=false;if(S.view==='schools')softRender();setTimeout(routeRun,250)})}
 
+/* Collapsed view of Home and drive distances: how many drives are set, and a button to open the list. */
+function placesSummary(){var pairs=neededPairs(),miss=pairs.filter(function(p){var l=legOf(p[0],p[1]);return !(l&&num(l.miles))||legSource(l)==='test'}).length;
+  return '<div class="panel stack" id="places"><div class="row spread"><h2>Home and drive distances</h2><button class="btn" data-act="placestoggle">Show</button></div>'+
+    '<span class="muted small">'+pairs.length+' drive'+(pairs.length===1?'':'s')+(miss?' · <span class="warn">'+miss+' still need a distance</span>':' · all set')+'</span></div>'}
 function placesPanel(){
   var home=S.settings.home||{},pairs=neededPairs();
   var noLL=['home'].concat(S.schools.map(function(sc){return sc.id})).concat(S.agencies.filter(officeStart).map(officeId)).filter(function(id){return !placeLL(id)});
-  var h='<div class="panel stack" id="places" style="scroll-margin-top:72px"><h2>Home and drive distances</h2><span class="muted small">Worked out automatically from the addresses you picked from the suggestions. Every day\'s miles and travel time come from these. If an agency uses a different number for a drive, type it in; your number is kept.</span>'+
+  var h='<div class="panel stack" id="places" style="scroll-margin-top:72px"><div class="row spread"><h2>Home and drive distances</h2><button class="btn" data-act="placestoggle">Hide</button></div><span class="muted small">Worked out automatically from the addresses you picked from the suggestions. Every day\'s miles and travel time come from these. If an agency uses a different number for a drive, type it in; your number is kept.</span>'+
     '<div class="row spread"><span class="small" style="min-width:0;flex:1"><b>Home:</b> '+(home.address?esc(home.address):'<span class="warn">not entered yet</span>')+'</span><button class="btn" data-act="go" data-v="profile">'+(home.address?'Change':'Add')+' in My profile</button></div>';
   if(noLL.length)h+='<div class="banner" style="border-color:var(--line);color:var(--ink)">To calculate drives for '+esc(noLL.map(placeName).join(', '))+', open '+(noLL.length===1?'it':'each')+' and pick the address from the suggestions, then save.</div>';
   pairs.forEach(function(p){var k=legKey(p[0],p[1]),l=legOf(p[0],p[1]),src=legSource(l),ready=placeLL(p[0])&&placeLL(p[1]);
@@ -1454,7 +1483,7 @@ function placesPanel(){
       (p[2]?'<span class="muted small">Used for paid miles when you drive from home to '+esc(placeName(p[1]))+'. Only the miles are needed.</span>':'')+
       '<div class="row end"><label>Miles<input type="number" inputmode="decimal" step="0.1" id="lm-'+k+'" value="'+(l&&num(l.miles)?l.miles:'')+'"></label>'+
       (p[2]?'':'<label>Drive minutes<input type="number" inputmode="numeric" id="lt-'+k+'" value="'+(l&&num(l.min)?l.min:'')+'"></label>')+
-      '<button class="btn" data-act="saveleg" data-k="'+k+'">Save</button></div>'+
+      '<button class="btn primary" data-act="saveleg" data-k="'+k+'">Save</button></div>'+
       (src==='manual'&&ready?'<button type="button" class="linkbtn" data-act="autoleg" data-k="'+k+'">Use the calculated distance instead</button>':'')+'</div>'});
   return h+'</div>';
 }
@@ -1477,6 +1506,7 @@ document.addEventListener('click',function(e){
   else if(a==='go'){var v=b.dataset.v;S.menu=false;S.open=null;S.fromStu=null;
     if(v==='today')S.date=today();else if(v==='plan'){S.date=nextWorkDay(today());S.wz={step:1,i:0}}
     if(v==='agencies'){S.agEdit=null;S.agDraft=null;S.agAdding=false}
+    if(v==='schools'){S.schoolEdit=null;S.scDraft=null;S.scAdding=false;S.placesOpen=b.dataset.scroll==='places'}
     S.view=v;S.iepEd=null;S.scrollTo=b.dataset.scroll||null;window.scrollTo(0,0)}
   else if(a==='signout'){if(window.DAPE_SIGNOUT)window.DAPE_SIGNOUT();return}
   else if(a==='opensess'){S.menu=false;S.fromStu=b.dataset.id;S.fromDate=S.date;S.view='today';S.date=b.dataset.date;openEntry(b.dataset.id);window.scrollTo(0,0)}
@@ -1591,7 +1621,21 @@ document.addEventListener('click',function(e){
   else if(a==='code'){s=student(b.dataset.id);if(!s)return;var cs=(s.codes||'').split('/').filter(Boolean),ci=cs.indexOf(b.dataset.v);
     if(ci<0)cs.push(b.dataset.v);else cs.splice(ci,1);saveDoc('students',s,{codes:cs.sort().join('/')},'Codes saved');return}
   else if(a==='edit'){S.editId=S.editId===b.dataset.id?null:b.dataset.id}
-  else if(a==='editschool'){S.schoolEdit=S.schoolEdit===b.dataset.id?null:b.dataset.id}
+  else if(a==='editschool'){S.schoolEdit=S.schoolEdit===b.dataset.id?null:b.dataset.id;S.scTab='schedule';S.scDraft=S.schoolEdit?scDraftFrom(school(S.schoolEdit)):null;S.scAdding=false;
+    if(S.schoolEdit)S.scrollToEl='[data-act=editschool][data-id="'+S.schoolEdit+'"]'}
+  else if(a==='sctab'){S.scTab=b.dataset.v}
+  else if(a==='scadd'){S.scAdding=!S.scAdding;if(S.scAdding){S.schoolEdit=null;S.scDraft=null}}
+  else if(a==='placestoggle'){S.placesOpen=!S.placesOpen}
+  else if(a==='scdayd'){var dd0=S.scDraft;if(!dd0)return;var di0=dd0.days.indexOf(i);if(di0<0)dd0.days.push(i);else dd0.days.splice(di0,1);dd0.days.sort()}
+  else if(a==='savesched'){sc=school(b.dataset.id);var ds=S.scDraft;if(!sc||!ds)return;var tt={},bad='';
+    ds.days.forEach(function(x){var t=ds.times[x]||{};if(t.leave&&t.arrive&&t.leave<=t.arrive)bad=DAYS[x];if(t.arrive||t.leave)tt[x]={arrive:t.arrive||'',leave:t.leave||''}});
+    if(bad){toast('On '+bad+', leave time is before arrival');return}
+    var gp=ds.gap!==''&&isFinite(+ds.gap)&&+ds.gap>=0?+ds.gap:5;
+    saveDoc('schools',sc,{days:ds.days.slice(),times:tt,gap:gp},'Schedule saved');return}
+  else if(a==='savebilling'){sc=school(b.dataset.id);if(!sc||!S.scDraft)return;var na=S.scDraft.agencyId;saveDoc('schools',sc,{agencyId:na},'Billing saved');return}
+  else if(a==='savelocation'){sc=school(b.dataset.id);var dl=S.scDraft;if(!sc||!dl)return;if(!dl.name.trim()){toast('The school name is required');return}
+    var sa=dl.address.trim(),sg=geoFor('sc-addr',sa,sc);dl.name=dl.name.trim();dl.alias=dl.alias.trim();dl.address=sa;
+    saveDoc('schools',sc,{name:dl.name.trim(),alias:dl.alias.trim(),address:sa,lat:sg.lat,lon:sg.lon},'Location saved');return}
   else if(a==='addstudent'){var n=val('s-name');if(!n){toast('Enter initials or a nickname first');return}
     var nid='s_'+rid();
     write(function(){return S.db.doc('students/'+nid).set({name:n,schoolId:val('s-school'),goals:[],slots:[],order:S.students.length})}).then(function(){S.editId=nid;S.stFilter='active';toast('Student added. Add the schedule and IEP below.');render()},function(){});return}
@@ -1634,7 +1678,7 @@ document.addEventListener('click',function(e){
   else if(a==='rmgoal'){s=student(b.dataset.id);if(s)saveDoc('students',s,{goals:s.goals.filter(function(x){return x.id!==g})},'Goal removed');return}
   else if(a==='addschool'){var nn=val('n-name');if(!nn){toast('Enter the school name first');return}
     var na=val('n-addr'),ng0=geoFor('n-addr',na,null);
-    write(function(){return S.db.doc('schools/sc_'+rid()).set({name:nn,alias:val('n-alias'),address:na,lat:ng0.lat,lon:ng0.lon,agencyId:val('n-agency'),closed:[],reports:[]})}).then(function(){delete GEO.picked['n-addr'];toast('School added');render()},function(){});return}
+    write(function(){return S.db.doc('schools/sc_'+rid()).set({name:nn,alias:val('n-alias'),address:na,lat:ng0.lat,lon:ng0.lon,agencyId:val('n-agency'),closed:[],reports:[]})}).then(function(){delete GEO.picked['n-addr'];S.scAdding=false;toast('School added');render()},function(){});return}
   else if(a==='saveschool'){sc=school(b.dataset.id);if(!sc)return;if(!val('sc-name')){toast('The school name is required');return}
     var sa=val('sc-addr'),sg=geoFor('sc-addr',sa,sc);
     saveDoc('schools',sc,{name:val('sc-name'),alias:val('sc-alias'),address:sa,lat:sg.lat,lon:sg.lon,agencyId:val('sc-agency')},'Details saved');return}
@@ -1669,6 +1713,9 @@ document.addEventListener('input',function(e){var t=e.target;if(!t.dataset||!(t.
   var ex=document.getElementById(t.dataset.agw+'-ex');if(ex)ex.innerHTML=agExample(dd)});
 document.addEventListener('change',function(e){var t=e.target;if(t.dataset&&t.dataset.luarr!=null){var dd=dayDoc(S.date),ar=Object.assign({},dd.arrive||{});if(t.value)ar[t.dataset.luarr]=t.value;else delete ar[t.dataset.luarr];saveDay(S.date,{arrive:ar},'Arrival changed for today')}});
 document.addEventListener('change',function(e){if(e.target.id==='sl-when'){var r=document.getElementById('sl-pinrow');if(r)r.hidden=e.target.value!=='pin'}});
+document.addEventListener('input',function(e){var t=e.target,d=S.scDraft;if(!d||!t.dataset||!t.dataset.scf)return;var f=t.dataset.scf;
+  if(f==='arrive'||f==='leave'){var x=+t.dataset.day;d.times[x]=Object.assign({arrive:'',leave:''},d.times[x]);d.times[x][f]=t.value}else d[f]=t.value});
+document.addEventListener('change',function(e){var t=e.target;if(t.dataset&&t.dataset.scf==='agencyId'&&S.scDraft){S.scDraft.agencyId=t.value;render()}});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&S.menu){S.menu=false;render()}});
 setInterval(function(){if(!S.loaded||S.date!==today())return;
   if(S.open){var el=document.getElementById('elapsed');if(el&&S.draft&&S.draft.start)el.textContent=Math.max(0,minsBetween(S.draft.start,nowHM()))+' min';return}
