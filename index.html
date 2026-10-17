@@ -70,6 +70,13 @@ textarea{min-height:76px;resize:vertical}
 /* Keep the page at screen size on phones. 16px fields stop iPhones zooming in when a field is tapped;
    touch-action stops double-tap zoom; the date and time rules stop iPhone fields spilling out of their column. */
 input,select,textarea{font-size:16px;max-width:100%}
+.tf{display:flex;align-items:center;gap:4px}
+.tf select{width:auto;flex:1 1 0;min-width:0;padding:10px 6px}
+.tf .tf-p{flex:0 0 auto}
+label:has(.tf){flex:1 1 230px}
+.dt-day{display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--line);padding-top:8px}
+.dt-day:first-child{border-top:0;padding-top:0}
+.tf-c{font-weight:700;color:var(--muted)}
 input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;display:block;text-align:left}
 input::-webkit-date-and-time-value{text-align:left}
 html,body{max-width:100%;overflow-x:hidden}
@@ -493,6 +500,22 @@ function dayStops(date,keepSkipped){
     legs.push(st.leg);prev=st.id});
   return {stops:stops,legs:legs,rows:rows,grp:grp};
 }
+/* A time picker that looks and works the same in every browser (Safari on a Mac has no clock for time boxes):
+   hour, minutes in 5-minute steps (plus the exact minute already saved) and AM/PM. A hidden input carries the
+   'HH:MM' value with the id and data attributes the rest of the app reads, and gets input and change events. */
+function timeField(attrs,value){value=value||'';var h24=value?+value.split(':')[0]:null,mm=value?value.split(':')[1]:'',pm=h24!=null&&h24>=12,h12=h24==null?'':String((h24+11)%12+1);
+  var mins=[];for(var m=0;m<60;m+=5)mins.push((m<10?'0':'')+m);if(mm&&mins.indexOf(mm)<0){mins.push(mm);mins.sort()}
+  return '<span class="tf"><input type="hidden" '+attrs+' value="'+esc(value)+'">'+
+    '<select class="tf-h" aria-label="Hour"><option value="">--</option>'+[12,1,2,3,4,5,6,7,8,9,10,11].map(function(x){return '<option'+(String(x)===h12?' selected':'')+'>'+x+'</option>'}).join('')+'</select>'+
+    '<span class="tf-c">:</span><select class="tf-m" aria-label="Minutes"><option value="">--</option>'+mins.map(function(x){return '<option'+(x===mm?' selected':'')+'>'+x+'</option>'}).join('')+'</select>'+
+    '<select class="tf-p" aria-label="AM or PM">'+(value?'':'<option value="" selected>--</option>')+'<option'+(value&&!pm?' selected':'')+'>AM</option><option'+(pm?' selected':'')+'>PM</option></select></span>'}
+document.addEventListener('change',function(e){var sel=e.target,w=sel.closest&&sel.closest('.tf');if(!w||sel.tagName!=='SELECT')return;
+  var hEl=w.querySelector('.tf-h'),mEl=w.querySelector('.tf-m'),pEl=w.querySelector('.tf-p'),hid=w.querySelector('input'),v='';
+  if(hEl.value){if(!mEl.value)mEl.value='00';
+    if(!pEl.value){var hh=+hEl.value;pEl.value=(hh>=7&&hh<=11)?'AM':'PM'}
+    var h=+hEl.value%12+(pEl.value==='PM'?12:0);v=(h<10?'0':'')+h+':'+mEl.value}
+  else{mEl.value='';var bl=pEl.querySelector('option[value=""]');if(!bl){bl=document.createElement('option');bl.value='';bl.textContent='--';pEl.insertBefore(bl,pEl.firstChild)}pEl.value=''}
+  if(hid.value===v)return;hid.value=v;hid.dispatchEvent(new Event('input',{bubbles:true}));hid.dispatchEvent(new Event('change',{bubbles:true}))});
 function nowHM(){var d=new Date();return p2(d.getHours())+':'+p2(d.getMinutes())}
 function minsBetween(a,b){return PLAN.toMin(b)-PLAN.toMin(a)}
 function addMin(t,m){return PLAN.toTime(PLAN.toMin(t)+m)}
@@ -562,7 +585,7 @@ function nowPanel(P){
   return h+'</div>'}
 function siteLine(st){if(!st.id)return '';var t=siteTimes(S.date,st.id),a=agency(st.sc.agencyId),ons=PAY.onSite(a);
   if(!t.tapL&&S.date===today()&&st.rows.some(function(o){return !settled(o,S.date)||inSession(sess(o.s.id,S.date))}))t.leave='';
-  if(S.siteEdit===st.id)return '<div class="row end"><label>Arrived<input type="time" id="site-arr" value="'+esc(t.arrive)+'"></label><label>Left<input type="time" id="site-lv" value="'+esc(t.leave)+'"></label>'+
+  if(S.siteEdit===st.id)return '<div class="row end"><label>Arrived'+timeField('id="site-arr"',t.arrive)+'</label><label>Left'+timeField('id="site-lv"',t.leave)+'</label>'+
     '<button class="btn primary" data-act="sitesave" data-sc="'+esc(st.id)+'">Save</button><button class="btn" data-act="siteedit" data-sc="">Cancel</button></div>';
   if(!t.arrive&&!t.leave&&!ons)return '';
   return '<div class="row spread sitetimes"><span>'+(t.arrive||t.leave?'Arrived '+esc(t.arrive?fmtTime(t.arrive):'?')+(t.tapA||!t.arrive?'':' (first session)')+' · left '+esc(t.leave?fmtTime(t.leave):'not yet')+(t.tapL||!t.leave?'':' (last session)'):'No arrive and leave times yet')+
@@ -649,7 +672,7 @@ function indirectBlock(P){var list=S.indirect.filter(function(x){return x.date==
     '<span class="seg" role="group" style="align-self:flex-start">'+['meeting','indirect'].map(function(k){return '<button type="button" class="'+((f.kind||'meeting')===k?'on':'')+'" data-act="indkind" data-v="'+k+'" aria-pressed="'+((f.kind||'meeting')===k)+'">'+IKIND[k]+'</button>'}).join('')+'</span>'+
     '<div class="row"><label>School<select id="ind-school">'+S.schools.map(function(sc){return '<option value="'+esc(sc.id)+'"'+(sc.id===scSel?' selected':'')+'>'+esc(sc.alias||sc.name)+'</option>'}).join('')+'</select></label>'+
     '<label>Student (optional)<select id="ind-student"><option value="">Whole school, no student</option>'+activeStudents().map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+' ('+esc(schoolLabel(s))+')</option>'}).join('')+'</select></label></div>'+
-    '<div class="row"><label>Started at<input type="time" id="ind-start" value="'+esc(S.date===today()?nowHM():'')+'"></label><label>Minutes<input type="number" inputmode="numeric" id="ind-min"></label></div>'+
+    '<div class="row"><label>Started at'+timeField('id="ind-start"',S.date===today()?nowHM():'')+'</label><label>Minutes<input type="number" inputmode="numeric" id="ind-min"></label></div>'+
     '<label>What it was<input id="ind-note" placeholder="IEP meeting, phone call, talking with a para. No real names."></label>'+
     '<div class="row"><button class="btn primary" style="flex:1" data-act="addind">Save</button><button class="btn" data-act="indform">Cancel</button></div>'+
     '<span class="muted small">Billed to the school\'s agency. For an agency that pays for time on site, the minutes outside your time at the school are paid on top. Picking a student also counts the minutes as that student\'s indirect time.</span></div>'}
@@ -747,7 +770,7 @@ function lineupStop(st,d){
   var name=st.sc?(st.sc.alias||st.sc.name):'No school set',fits={},bad={};
   L.fits.forEach(function(f){fits[f.beforeId]=f});
   L.issues.forEach(function(x){if(x.type==='pin')bad[x.id]=x});
-  var h='<div class="stop stack" style="gap:8px"><div class="row spread"><h2>'+esc(name)+'</h2>'+(sid?'<label class="row" style="flex:0 0 auto;gap:6px;align-items:center;font-weight:500">Arrive<input type="time" style="width:130px" data-luarr="'+esc(sid)+'" value="'+esc(st.arrive||'')+'"></label>':'')+'</div>';
+  var h='<div class="stop stack" style="gap:8px"><div class="row spread"><h2>'+esc(name)+'</h2>'+(sid?'<label class="row" style="flex:0 0 auto;gap:6px;align-items:center;font-weight:500">Arrive'+timeField('style="width:130px" data-luarr="'+esc(sid)+'"',st.arrive||'')+'</label>':'')+'</div>';
   if(st.from&&st.from.how==='saved')h+='<span class="muted small">Your order for this day. <button type="button" class="linkbtn" data-act="lureset" data-sc="'+esc(sid)+'">Start over from last week</button></span>';
   else if(st.from)h+='<span class="muted small">Same order as '+esc(DAYS[dow(st.from.date)])+' '+esc(md(st.from.date))+(st.from.how==='seen'?', the order you actually saw them':'')+'. Change anything.</span>';
   if(!st.arrive&&sid)h+='<span class="muted small">No arrival time for '+esc(DAYS[dow(d)])+' at '+esc(name)+'. Set it here for today, or for every week under Schools.</span>';
@@ -788,7 +811,7 @@ function lineupMore(o,d){var s=o.s,x=sess(s.id,d),dd=dayDoc(d),state=(dd.skip||[
   var h='<div class="lu-more"><span class="seg" role="group" aria-label="'+esc(s.name)+'">'+[['in','Seeing'],['absent','Absent'],['skip','Not today']].map(function(v){
       return '<button class="'+(state===v[0]?'on'+(v[0]==='absent'?' abs':''):'')+'" data-act="wzst" data-id="'+esc(s.id)+'" data-v="'+v[0]+'" aria-pressed="'+(state===v[0])+'">'+v[1]+'</button>'}).join('')+'</span>';
   if(o.pinned)h+='<span class="small">'+(today?'Pinned at '+esc(fmtTime(o.pinT))+' for today only.':'Pinned every '+esc(DAYS[dow(d)])+' at '+esc(fmtTime(regular))+(o.sl.pinReason?': '+esc(o.sl.pinReason):'')+'.')+'</span>';
-  h+='<div class="row end"><label style="flex:0 1 150px">'+(o.pinned?'Change pin for today':'Pin for today only')+'<input type="time" id="lu-pin-'+esc(s.id)+'" value="'+esc(o.pinT||o.est||'')+'"></label>'+
+  h+='<div class="row end"><label style="flex:1 1 220px">'+(o.pinned?'Change pin for today':'Pin for today only')+''+timeField('id="lu-pin-'+esc(s.id)+'"',o.pinT||o.est||'')+'</label>'+
     '<button class="btn" data-act="lupin" data-id="'+esc(s.id)+'">Pin</button>'+(o.pinned&&regular?'<button class="btn" data-act="lupin" data-id="'+esc(s.id)+'" data-v="off">Unpin today</button>':o.pinned?'<button class="btn" data-act="lupin" data-id="'+esc(s.id)+'" data-v="usual">Unpin</button>':'')+'</div>';
   if(today&&regular)h+='<button type="button" class="linkbtn" style="align-self:flex-start" data-act="lupin" data-id="'+esc(s.id)+'" data-v="usual">Back to the usual pin ('+esc(fmtTime(regular))+')</button>';
   if(o.add)h+='<button type="button" class="linkbtn" style="align-self:flex-start" data-act="lurmadd" data-id="'+esc(s.id)+'">Remove from today</button>';
@@ -831,7 +854,7 @@ function timerPanel(s,d){var x=sess(s.id,S.date),isToday=S.date===today();
   if(!d.start){if(!isToday||(x&&x.status==='logged'))return '';
     return '<button class="btn" data-act="starthere">Start session now</button>'}
   var run=!d.end,el=Math.max(0,minsBetween(d.start,nowHM()));
-  return '<div class="panel stack"><div class="row"><label>Started<input type="time" id="e-start" value="'+esc(d.start)+'"></label><label>Ended<input type="time" id="e-end" value="'+esc(d.end)+'"></label></div>'+
+  return '<div class="panel stack"><div class="row"><label>Started'+timeField('id="e-start"',d.start)+'</label><label>Ended'+timeField('id="e-end"',d.end)+'</label></div>'+
     (run&&isToday?'<span class="muted small">In session <b id="elapsed">'+el+' min</b> · planned '+rowMin({s:s,sl:slotOn(s,S.date),add:(dayDoc(S.date).adds||[]).filter(function(a){return a.id===s.id})[0]})+' min</span>'+
       '<button class="btn primary" data-act="endsess">End session</button>':'')+'</div>'}
 function entryView(){
@@ -1175,7 +1198,7 @@ function slotEditor(s){
     '<div class="row"><label>How often<select id="sl-every"><option value="1">Every week</option><option value="2"'+(ed&&cur.every===2?' selected':'')+'>Every 2 weeks</option></select></label>'+
     '<label>First date (for every 2 weeks)<input type="date" id="sl-anchor" value="'+esc(ed&&cur.anchor||S.date)+'"></label></div>'+
     '<label>When<select id="sl-when"><option value="any">Any time: placed when you plan the day</option><option value="pin"'+(pinOn?' selected':'')+'>Pinned time: should not move</option></select></label>'+
-    '<div class="row" id="sl-pinrow"'+(pinOn?'':' hidden')+'><label style="flex:0 1 140px">Pinned at<input type="time" id="sl-time" value="'+esc(cur.pinTime||'')+'"></label>'+
+    '<div class="row" id="sl-pinrow"'+(pinOn?'':' hidden')+'><label style="flex:1 1 220px">Pinned at'+timeField('id="sl-time"',cur.pinTime||'')+'</label>'+
       '<label>Why (optional)<input id="sl-reason" value="'+esc(cur.pinReason||'')+'" placeholder="e.g. class leaves for lunch at 10:05"></label></div>'+
     '<div class="row"><button class="btn primary" style="flex:1" data-act="addslot" data-id="'+esc(s.id)+'">'+(ed?'Save changes':'Add day')+'</button>'+(ed?'<button class="btn" data-act="cancelslot">Cancel</button>':'')+'</div>'+
     '<span class="muted small">Most students are "Any time". Pin only the ones whose time really can\'t move.</span></div>';
@@ -1232,8 +1255,8 @@ function schoolTabs(sc){
   if(tab==='schedule'){
     h+='<h3>Days you are here</h3><div class="row">'+DAYS.map(function(dn,di){var on=d.days.indexOf(di)>=0;
         return '<button class="chip '+(on?'on':'')+'" data-act="scdayd" data-i="'+di+'" aria-pressed="'+on+'">'+dn+'</button>'}).join('')+'</div>';
-    h+=d.days.length?'<div class="daytimes">'+d.days.map(function(x){var t=d.times[x]||{arrive:'',leave:''};
-        return '<span class="dn">'+DAYS[x]+'</span><label>Usually arrive<input type="time" data-scf="arrive" data-day="'+x+'" value="'+esc(t.arrive)+'"></label><label>Usually leave<input type="time" data-scf="leave" data-day="'+x+'" value="'+esc(t.leave)+'"></label>'}).join('')+'</div>':
+    h+=d.days.length?'<div class="stack" style="gap:10px">'+d.days.map(function(x){var t=d.times[x]||{arrive:'',leave:''};
+        return '<div class="dt-day"><strong>'+DAYS[x]+'</strong><div class="row"><label>Usually arrive'+timeField('data-scf="arrive" data-day="'+x+'"',t.arrive)+'</label><label>Usually leave'+timeField('data-scf="leave" data-day="'+x+'"',t.leave)+'</label></div></div>'}).join('')+'</div>':
       '<span class="muted small">Pick the days you are here to set your usual times.</span>';
     h+='<label style="flex:none;max-width:220px">Minutes between students<input type="number" inputmode="numeric" data-scf="gap" value="'+esc(d.gap)+'"></label>'+
       saveBar('Save schedule','savesched',sc.id,'Each day can have its own times. They are a starting point for planning, never a rule. Leave time is optional.')}
