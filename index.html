@@ -175,6 +175,18 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .lu-foot{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;border-top:1px solid var(--line);font-size:14px;background:var(--bg)}
 .lu-out{opacity:.75}
 .est{font:500 12px var(--body);color:var(--muted)}
+.wk-sect{display:flex;flex-direction:column;gap:6px}
+.wk-h{font:700 13px var(--body);letter-spacing:.06em;text-transform:uppercase}
+.wk-h.m{color:var(--accent)} .wk-h.a{color:var(--bad)} .wk-h.p{color:#2f5f9e}
+.chip.wk-m{background:var(--accent-soft);border-color:transparent;color:var(--ink)}
+.chip.wk-a{background:var(--bad-soft);border-color:transparent;color:var(--bad-ink)}
+.chip.wk-p{background:#e3ecf8;border-color:transparent;color:#1f3f6b}
+:root[data-theme="dark"] .chip.wk-p{background:#1d2a3d;color:#b9cdf0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chip.wk-p{background:#1d2a3d;color:#b9cdf0}}
+.chip .x{margin-left:6px;opacity:.6}
+.wk-card{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;font-size:14px}
+.wk-card b{white-space:nowrap}
+.suggest{border:1px dashed var(--accent);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--accent-soft)}
 .example{background:var(--accent-soft);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
 .example .t{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
 .ex{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px;font-variant-numeric:tabular-nums}
@@ -744,7 +756,7 @@ function saveSession(kind,after){var d=S.draft,id=S.open,date=S.date;
   var vals={};Object.keys(d.values).forEach(function(k){if(num(d.values[k]))vals[k]=d.values[k]});
   var doc={studentId:id,date:date,absent:d.absent,values:d.absent?{}:vals,variants:d.absent?{}:d.variants,note:d.note.trim(),updated:new Date().toISOString()};
   var s=student(id),est=estFor(id,date);if(est)doc.time=est;if(d.start)doc.start=d.start;if(d.end)doc.end=d.end;
-  doc.min=d.absent?0:(num(d.min)?d.min:0);doc.indirect=num(d.indirect)?d.indirect:0;doc.acts=d.absent?[]:d.acts;doc.outof=d.absent?{}:d.outof;doc.help=d.absent?{}:d.help;
+  doc.min=d.absent?0:(num(d.min)?d.min:0);doc.indirect=num(d.indirect)?d.indirect:0;doc.acts=d.absent?[]:d.acts;doc.used=d.absent?[]:(d.used||[]);doc.outof=d.absent?{}:d.outof;doc.help=d.absent?{}:d.help;
   var x0=sess(id,date);doc.status=(kind==='save'||(x0&&x0.status!=='planned'))?'logged':'planned';
   S.saving=true;render();
   write(function(){return S.db.doc('sessions/'+id+'_'+date).set(doc)}).then(function(){S.saving=false;toast(doc.status==='planned'?'Plan saved':'Saved');after();render()},function(){S.saving=false;render()});
@@ -776,7 +788,7 @@ function entryView(){
   var est=estFor(s.id,S.date),where=[schoolLabel(s),est?'about '+fmtTime(est):'',(s.direct||s.indirect)?'IEP '+(s.direct||0)+' direct / '+(s.indirect||0)+' indirect':'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · ');
   var h='<div class="row spread"><button class="btn ghost" data-act="back">‹ '+(S.view==='plan'?'Back to plan':S.fromStu?'Back to '+s.name:'Back to the day')+'</button><span class="muted small">'+esc(md(S.date))+'</span></div>'+
     '<div><h1>'+esc(s.name)+'</h1>'+(where?'<span class="muted">'+esc(where)+'</span>':'')+'</div>'+
-    timerPanel(s,d)+'<h2>Lesson plan</h2>'+minutesPanel(s,d)+'<button class="btn" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
+    worksCard(s)+timerPanel(s,d)+'<h2>Lesson plan</h2>'+minutesPanel(s,d)+'<button class="btn" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
     '<button class="btn '+(d.absent?'on':'')+'" data-act="absent" aria-pressed="'+!!d.absent+'">'+(d.absent?'Marked absent':'Mark absent')+'</button>';
   if(!d.absent){
     h+='<div class="panel">';
@@ -798,6 +810,7 @@ function entryView(){
     });
     h+='</div>';
   }
+  if(!d.absent)h+=usedPanel(s,d);
   h+='<label>Notes<textarea id="note" placeholder="Other activities, behavior, anything worth remembering. Use initials or nicknames, never a real name.">'+esc(d.note)+'</textarea></label>'+
     '<div class="row"><button class="btn primary" style="flex:1" data-act="save"'+(S.saving?' disabled':'')+'>Save results</button>'+
     (sess(s.id,S.date)?'<button class="btn danger" data-act="del">'+(S.confirmDel?'Tap again to delete':'Delete')+'</button>':'')+'</div>';
@@ -831,6 +844,7 @@ function progressView(){
         (st.metN!=null?'<div><div class="stat">'+st.metN+'/'+pts.length+'</div><span class="muted small">sessions at target</span></div>':'')+'</div>'+chart(g,pts)}
     h+='</div>';
   });
+  h+=worksReportPanel(s,hs);
   h+='<div class="panel stack"><div class="row spread"><h2>Summary for SpedForms</h2><button class="btn" data-act="copy">Copy</button></div><pre class="sum" id="sum">'+esc(summary(s,hs))+'</pre></div>';
   return h;
 }
@@ -877,6 +891,7 @@ function summary(s,hs){
       (st.metN!=null?'; '+(g.dir==='max'?'at or under ':'met target of ')+g.target+' '+g.unit+' in '+st.metN+' of '+pts.length:'')+
       '. Most recent: '+l.values[g.id]+' '+g.unit+(l.outof&&num(l.outof[g.id])?' out of '+l.outof[g.id]:'')+(vr?' ('+vr+')':'')+(l.help&&l.help[g.id]?', '+l.help[g.id].toLowerCase():'')+' on '+md(l.date)+'.','');
   });
+  if(s.reportWorks&&s.reportWorks.state==='added'&&s.reportWorks.text)out.push('What works: '+s.reportWorks.text,'');
   var notes=hs.filter(function(x){return x.note}).slice(-5);
   if(notes.length){out.push('','Recent notes:');notes.forEach(function(x){out.push(md(x.date)+': '+x.note)})}
   return out.join('\n');
@@ -1042,6 +1057,57 @@ function sessionsBody(s){
 function schoolOptions(sel){return '<option value="">No school set</option>'+S.schools.map(function(sc){
   return '<option value="'+esc(sc.id)+'"'+(sc.id===sel?' selected':'')+'>'+esc(sc.alias||sc.name)+'</option>'}).join('')}
 /* Schedule: the days a student is seen. Each day is 'Any time' (placed when she plans the day) or pinned to a time that should not move. */
+/* ---------- what works ----------
+   student.works = {m:[motivators], a:[things to avoid], p:[things that help], note}. Kept practical and behavioral.
+   session.used = [what she used that day]. student.reportWorks = {state:'added'|'out', text} for the progress report. */
+var WK=[['m','Motivators','★'],['a','Avoid','⊘'],['p','Helps','✓']];
+function works(s){var w=s&&s.works||{};return{m:w.m||[],a:w.a||[],p:w.p||[],note:w.note||''}}
+function worksEditor(s){var w=works(s),f=S.wkAdd&&S.wkAdd.sid===s.id?S.wkAdd:null;
+  var h='<h2 style="margin-top:8px">What works</h2><div class="panel stack">';
+  WK.forEach(function(c){
+    h+='<div class="wk-sect"><span class="wk-h '+c[0]+'">'+c[2]+' '+c[1]+'</span><div class="row">'+
+      w[c[0]].map(function(v,i){return '<button class="chip wk-'+c[0]+'" data-act="wkrm" data-id="'+esc(s.id)+'" data-k="'+c[0]+'" data-i="'+i+'" aria-label="Remove '+esc(v)+'">'+esc(v)+'<span class="x">×</span></button>'}).join('')+
+      '<button class="chip" data-act="wkform" data-id="'+esc(s.id)+'" data-k="'+c[0]+'">+ Add</button></div></div>'});
+  if(f){var k=f.k,mine=w[k].map(function(v){return v.toLowerCase()}),others={};
+    S.students.forEach(function(o){if(o.id===s.id)return;works(o)[k].forEach(function(v){if(mine.indexOf(v.toLowerCase())<0)others[v.toLowerCase()]=others[v.toLowerCase()]||v})});
+    var ol=Object.keys(others).sort().map(function(x){return others[x]});
+    h+='<div class="panel stack" style="padding:12px"><strong>Add to what works</strong><span class="seg" role="group" style="align-self:flex-start">'+WK.map(function(c){
+        return '<button class="'+(k===c[0]?'on':'')+'" data-act="wkform" data-id="'+esc(s.id)+'" data-k="'+c[0]+'" aria-pressed="'+(k===c[0])+'">'+c[1].replace('Motivators','Motivator')+'</button>'}).join('')+'</span>'+
+      '<div class="row end"><label>New one<input id="wk-new" placeholder="'+(k==='m'?'e.g. Scooter time':k==='a'?'e.g. Loud whistle':'e.g. Visual timer')+'"></label><button class="btn primary" data-act="wkadd" data-id="'+esc(s.id)+'" data-k="'+k+'">Add</button></div>'+
+      (ol.length?'<span class="muted small">Or tap one you already use with other students</span><div class="row">'+ol.map(function(v){return '<button class="chip" data-act="wkadd" data-id="'+esc(s.id)+'" data-k="'+k+'" data-v="'+esc(v)+'">'+esc(v)+'</button>'}).join('')+'</div>':'')+
+      '<button type="button" class="linkbtn" style="align-self:flex-start" data-act="wkform" data-id="">Done</button></div>'}
+  h+='<label>Notes on what works<textarea id="wk-note" placeholder="e.g. Scooter only as a reward at the end, not as a warm-up">'+esc(w.note)+'</textarea></label>'+
+    '<button class="btn" data-act="wknote" data-id="'+esc(s.id)+'">Save note</button>'+
+    '<span class="muted small">Keep it practical and behavioral. Medical and family details stay in the school\'s records.</span></div>';
+  return h}
+/* The short "what works" card at the top of a session. */
+function worksCard(s){var w=works(s);if(!w.m.length&&!w.a.length&&!w.p.length&&!w.note)return '';
+  return '<div class="panel wk-card">'+(w.m.length?'<b class="wk-h m" style="text-transform:none;letter-spacing:0;font-size:14px">★ Works:</b><span>'+esc(w.m.join(', '))+'</span>':'')+
+    (w.a.length?'<b class="wk-h a" style="text-transform:none;letter-spacing:0;font-size:14px">⊘ Avoid:</b><span>'+esc(w.a.join(', '))+'</span>':'')+
+    (w.p.length?'<b class="wk-h p" style="text-transform:none;letter-spacing:0;font-size:14px">✓ Helps:</b><span>'+esc(w.p.join(', '))+'</span>':'')+
+    (w.note?'<span></span><span class="muted small">'+esc(w.note)+'</span>':'')+'</div>'}
+/* "What did you use today?" in a session: the student's motivators and helps, plus anything else used. */
+function usedPanel(s,d){var w=works(s),opts=w.m.concat(w.p);(d.used||[]).forEach(function(v){if(opts.indexOf(v)<0)opts.push(v)});
+  return '<div class="panel stack"><strong>What did you use today?</strong>'+
+    (opts.length?'<div class="row">'+opts.map(function(v){var on=(d.used||[]).indexOf(v)>=0;return '<button class="chip'+(on?' on':'')+'" data-act="used" data-v="'+esc(v)+'" aria-pressed="'+on+'">'+esc(v)+(on?' ✓':'')+'</button>'}).join('')+'</div>':'<span class="muted small">Add motivators and helps under the student\'s What works, or type one here.</span>')+
+    '<div class="row end"><label>Other<input id="used-new" placeholder="Something else that worked today"></label><button class="btn" data-act="usedadd">Add</button></div>'+
+    '<span class="muted small">Optional. One tap each, kept with this session.</span></div>'}
+/* A report line built only from what she logged in the period: things used in at least 2 sessions, most used first, up to 3. */
+function worksSuggestion(s,hs){var seen=hs.filter(function(x){return !x.absent}),n=seen.length,c={},name={};
+  seen.forEach(function(x){(x.used||[]).forEach(function(v){var k=v.toLowerCase();c[k]=(c[k]||0)+1;name[k]=name[k]||v})});
+  var top=Object.keys(c).filter(function(k){return c[k]>=2}).sort(function(a,b){return c[b]-c[a]||a.localeCompare(b)}).slice(0,3);
+  if(!top.length)return '';
+  var parts=top.map(function(k){return name[k].toLowerCase()+' (used in '+c[k]+' of '+n+' sessions)'});
+  return s.name+' responds well to '+(parts.length>1?parts.slice(0,-1).join(', ')+' and '+parts[parts.length-1]:parts[0])+'.'}
+function worksReportPanel(s,hs){var sug=worksSuggestion(s,hs),rw=s.reportWorks||{};
+  if(S.wkEdit===s.id)return '<div class="suggest"><strong>What works, for the report</strong><textarea id="wk-rep">'+esc(rw.state==='added'&&rw.text?rw.text:sug)+'</textarea>'+
+    '<div class="row"><button class="btn primary" data-act="wkrep" data-id="'+esc(s.id)+'" data-v="save">Add to report</button><button class="btn" data-act="wkrep" data-id="'+esc(s.id)+'" data-v="cancel">Cancel</button></div></div>';
+  if(rw.state==='added'&&rw.text)return '<div class="suggest"><strong>What works (in the report)</strong><span>'+esc(rw.text)+'</span><div class="row"><button class="chip" data-act="wkrep" data-id="'+esc(s.id)+'" data-v="edit">Edit</button><button class="chip" data-act="wkrep" data-id="'+esc(s.id)+'" data-v="out">Take out</button></div></div>';
+  if(!sug)return '';
+  if(rw.state==='out')return '<button type="button" class="linkbtn" style="align-self:flex-start" data-act="wkrep" data-id="'+esc(s.id)+'" data-v="show">Show the suggested what-works line</button>';
+  return '<div class="suggest"><strong>Suggested from your session notes</strong><span>'+esc(sug)+'</span><div class="row"><button class="btn primary" data-act="wkrep" data-id="'+esc(s.id)+'" data-v="add">Add to report</button>'+
+    '<button class="chip" data-act="wkrep" data-id="'+esc(s.id)+'" data-v="edit">Edit</button><button class="chip" data-act="wkrep" data-id="'+esc(s.id)+'" data-v="out">Leave out</button></div>'+
+    '<span class="muted small">Built only from what you tapped under "What did you use today?". It goes in only if you add it.</span></div>'}
 function slotEditor(s){
   var ed=S.slotEdit&&S.slotEdit.sid===s.id?S.slotEdit:null,cur=ed?s.slots[ed.i]||{}:{},pinOn=ed?!!cur.pin:false;
   var sc=school(s.schoolId),ds=sc&&sc.days&&sc.days.length?sc.days:[0,1,2,3,4,5,6];
@@ -1084,7 +1150,7 @@ function studentsView(){
         '<div class="row"><button class="btn primary" style="flex:1" data-act="savestudent" data-id="'+esc(s.id)+'">Save details</button><button class="btn" data-act="progfor" data-id="'+esc(s.id)+'">Progress report</button></div>'+
         iepCard(s)+
         '<h2 style="margin-top:8px">Schedule</h2>'+
-        slotEditor(s)+
+        slotEditor(s)+worksEditor(s)+
         '<h2 style="margin-top:8px">Sessions</h2>'+sessionsBody(s)+'</div>'}
     return o}).join('')+'</div>':'<div class="list"><div class="empty">'+(S.students.length?'No students in this group.':'No students yet. Add the first one below.')+'</div></div>';
   h+='<div class="panel stack"><h2>Add a student</h2><div class="row"><label>Initials or nickname<input id="s-name" placeholder="Never the real name"></label>'+
@@ -1343,7 +1409,7 @@ function placesPanel(){
 
 /* ---------- actions ---------- */
 function openEntry(id){var x=sess(id,S.date);S.open=id;S.confirmDel=false;
-  S.draft={start:(x&&x.start)||'',end:(x&&x.end)||'',absent:!!(x&&x.absent),values:Object.assign({},x&&x.values),variants:Object.assign({},x&&x.variants),note:(x&&x.note)||'',acts:((x&&x.acts)||[]).slice(),outof:Object.assign({},x&&x.outof),help:Object.assign({},x&&x.help)};
+  S.draft={start:(x&&x.start)||'',end:(x&&x.end)||'',absent:!!(x&&x.absent),values:Object.assign({},x&&x.values),variants:Object.assign({},x&&x.variants),note:(x&&x.note)||'',acts:((x&&x.acts)||[]).slice(),used:((x&&x.used)||[]).slice(),outof:Object.assign({},x&&x.outof),help:Object.assign({},x&&x.help)};
   var s=student(id);
   if(x){S.draft.min=x.min;S.draft.indirect=x.indirect}
   else if(s){var sl0=slotOn(s,S.date),ad0=(dayDoc(S.date).adds||[]).filter(function(a){return a.id===id})[0],h0=history(id);S.draft.min=sl0?sl0.min:ad0&&num(ad0.min)?ad0.min:s.direct;S.draft.indirect=s.indirect;if(h0.length)S.draft.acts=(h0[h0.length-1].acts||[]).slice()}
@@ -1440,6 +1506,20 @@ document.addEventListener('click',function(e){
     saveDoc('schools',sc,{times:tt,gap:gp},'Times saved');return}
   else if(a==='scday'){sc=school(b.dataset.id);if(!sc)return;var sd=(sc.days||[]).slice(),si=sd.indexOf(i);if(si<0)sd.push(i);else sd.splice(si,1);
     saveDoc('schools',sc,{days:sd.sort()},'Days saved');return}
+  else if(a==='wkform'){S.wkAdd=b.dataset.id?{sid:b.dataset.id,k:b.dataset.k}:null}
+  else if(a==='wkadd'){s=student(b.dataset.id);if(!s)return;var wv=(b.dataset.v||val('wk-new')).trim(),wk=b.dataset.k,ww=works(s);if(!wv){toast('Type one first');return}
+    if(ww[wk].some(function(x){return x.toLowerCase()===wv.toLowerCase()})){toast('Already on the list');return}
+    ww[wk]=ww[wk].concat([wv]);saveDoc('students',s,{works:ww},'Added '+wv);return}
+  else if(a==='wkrm'){s=student(b.dataset.id);if(!s)return;var wr=works(s),rk=b.dataset.k,rv=wr[rk][i];wr[rk]=wr[rk].filter(function(_,q){return q!==i});saveDoc('students',s,{works:wr},'Removed '+rv);return}
+  else if(a==='wknote'){s=student(b.dataset.id);if(!s)return;var wn=works(s);wn.note=val('wk-note');saveDoc('students',s,{works:wn},'Note saved');return}
+  else if(a==='used'){var uv=b.dataset.v;d.used=d.used||[];var ui=d.used.indexOf(uv);if(ui<0)d.used.push(uv);else d.used.splice(ui,1)}
+  else if(a==='usedadd'){var un=val('used-new');if(!un){toast('Type it first');return}d.used=d.used||[];if(d.used.indexOf(un)<0)d.used.push(un)}
+  else if(a==='wkrep'){s=student(b.dataset.id);if(!s)return;var rv2=b.dataset.v,hs2=history(s.id).filter(inPeriod);
+    if(rv2==='edit'){S.wkEdit=s.id}else if(rv2==='cancel'){S.wkEdit=null}
+    else if(rv2==='add'){saveDoc('students',s,{reportWorks:{state:'added',text:worksSuggestion(s,hs2)}},'Added to the report');return}
+    else if(rv2==='save'){var tx=val('wk-rep');S.wkEdit=null;saveDoc('students',s,{reportWorks:tx?{state:'added',text:tx}:{state:'out',text:''}},tx?'Added to the report':'Left out');return}
+    else if(rv2==='out'){saveDoc('students',s,{reportWorks:{state:'out',text:''}},'Left out of the report');return}
+    else if(rv2==='show'){saveDoc('students',s,{reportWorks:{}},'Suggestion is back');return}}
   else if(a==='act'){var av=b.dataset.v,ai=d.acts.indexOf(av);if(ai<0)d.acts.push(av);else d.acts.splice(ai,1)}
   else if(a==='addact'){var an=val('act-new');if(!an){toast('Type the activity name first');return}
     var ex=S.activities.filter(function(x){return String(x.name).toLowerCase()===an.toLowerCase()})[0];
