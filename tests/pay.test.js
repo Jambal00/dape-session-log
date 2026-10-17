@@ -94,4 +94,29 @@ check('Exact minutes, not rounded hours (the 80-minute case that used to pay $82
   assert.strictEqual(day('2026-10-19',{N:80},[]).byAgency.N.pay.students,82.67);
 });
 
+check('On-site agency: paid from arrive to leave instead of session minutes; travel uses its own settings',function(){
+  var OS={id:'S',name:'Prairie on site',rate:58,paysTravel:true,travelOwn:true,travelRate:40,reimburseMiles:false,taxMiles:true,payClock:'onsite'};
+  // Arrived 10:55, left 12:27: 92 min on site. Sessions only added up to 75 min.
+  // time 92/60 x 58 = 88.9333 -> $88.93; travel 19/60 x 40 = 12.6667 -> $12.67; miles not paid; total $101.60
+  var r=P.dayPay({date:'2026-10-26',agencies:{S:OS},studentMin:{S:75},onSiteMin:{S:92},legs:[{from:'A',to:'B',agencyId:'S',miles:12.4,min:19}]}).byAgency.S;
+  assert.strictEqual(r.clock,'onsite');assert.strictEqual(r.sessionMin,75);assert.strictEqual(r.studentMin,92);
+  assert.strictEqual(r.pay.students,88.93);assert.strictEqual(r.pay.travel,12.67);assert.strictEqual(r.pay.mileage,0);assert.strictEqual(r.pay.total,101.6);
+  assert.strictEqual(r.taxMiles,12.4);
+});
+
+check('On-site and per-session agencies on the same day are each paid their own way',function(){
+  var OS={id:'S',rate:58,paysTravel:false,reimburseMiles:false,payClock:'onsite'};
+  // N per session: 82 min x 62 = 84.7333 -> $84.73. S on site: 120 min x 58 = $116.00, travel not paid.
+  var R=P.dayPay({date:'2026-10-26',agencies:{N:N,S:OS},studentMin:{N:82,S:70},onSiteMin:{S:120},legs:[]});
+  assert.strictEqual(R.byAgency.N.pay.students,84.73);assert.strictEqual(R.byAgency.N.clock,'session');
+  assert.strictEqual(R.byAgency.S.pay.students,116);assert.strictEqual(R.totals.studentMin,202);assert.strictEqual(R.totals.pay,200.73);
+});
+
+check('On-site agency with no arrive and leave times falls back to session minutes and says so',function(){
+  var OS={id:'S',rate:58,paysTravel:false,reimburseMiles:false,payClock:'onsite'};
+  // 45/60 x 58 = $43.50
+  var r=P.dayPay({date:'2026-10-26',agencies:{S:OS},studentMin:{S:45},legs:[]}).byAgency.S;
+  assert.strictEqual(r.pay.students,43.5);assert.deepStrictEqual(r.missing,['arrive and leave times (paid on session minutes)']);
+});
+
 console.log('\nAll pay checks passed ('+n+')');

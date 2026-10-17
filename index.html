@@ -22,17 +22,18 @@ body{margin:0}
   --bg:#f3f5f2; --surface:#ffffff; --ink:#17231d; --muted:#5d6b63; --line:#d5dbd6;
   --accent:#1f6b4a; --accent-ink:#ffffff; --accent-soft:#dcebe2;
   --good:#1f6b4a; --warn:#a85d00; --bad:#a3322a;
+  --pin:#c27c0e; --pin-soft:#fbefdc; --pin-ink:#7a4a00; --pin-row:#fffaf1; --bad-soft:#fdecea; --bad-ink:#8a1c12;
   --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   --bg:#111815; --surface:#1a231f; --ink:#e8efea; --muted:#9aa9a0; --line:#2f3b35;
   --accent:#58c08f; --accent-ink:#0c1511; --accent-soft:#1f3329;
-  --good:#58c08f; --warn:#e0a44a; --bad:#ef8279; color-scheme:dark } }
+  --good:#58c08f; --warn:#e0a44a; --bad:#ef8279; --pin:#e0a44a; --pin-soft:#3a2c14; --pin-ink:#f2c77a; --pin-row:#231e14; --bad-soft:#3a1d1a; --bad-ink:#f3a49c; color-scheme:dark } }
 :root[data-theme="dark"]{
   --bg:#111815; --surface:#1a231f; --ink:#e8efea; --muted:#9aa9a0; --line:#2f3b35;
   --accent:#58c08f; --accent-ink:#0c1511; --accent-soft:#1f3329;
-  --good:#58c08f; --warn:#e0a44a; --bad:#ef8279; color-scheme:dark }
+  --good:#58c08f; --warn:#e0a44a; --bad:#ef8279; --pin:#e0a44a; --pin-soft:#3a2c14; --pin-ink:#f2c77a; --pin-row:#231e14; --bad-soft:#3a1d1a; --bad-ink:#f3a49c; color-scheme:dark }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:16px/1.4 var(--body)}
 .wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:16px 48px;display:flex;flex-direction:column;gap:16px}
@@ -140,15 +141,15 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .geo-list .credit{display:block;padding:6px 12px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);text-align:right}
 .geo-list .credit a{color:var(--muted)}
 .geo-note{padding:10px 12px;font-size:13px;color:var(--muted)}
-.pinned-row{border-left:4px solid #c27c0e}
-.pin-tag{display:inline-flex;align-items:center;gap:3px;font:600 12px var(--body);color:#8a5200;background:#fbefdc;border-radius:99px;padding:2px 8px;white-space:nowrap}
+.pinned-row{border-left:4px solid var(--pin)}
+.pin-tag{display:inline-flex;align-items:center;gap:3px;font:600 12px var(--body);color:var(--pin-ink);background:var(--pin-soft);border-radius:99px;padding:2px 8px;white-space:nowrap}
 .daytimes{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px 10px;align-items:end}
 .daytimes .dn{font-weight:650;padding-bottom:12px}
 .daytimes label{flex:none}
 .lu{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
 .lu-row{display:flex;align-items:center;gap:8px;padding:8px 10px 8px 6px;border-top:1px solid var(--line)}
 .lu-row:first-child{border-top:0}
-.lu-row.pinned-row{background:#fffaf1}
+.lu-row.pinned-row{background:var(--pin-row)}
 .lu-move{display:flex;flex-direction:column;gap:2px}
 .lu-move button{border:1px solid var(--line);background:var(--surface);border-radius:6px;width:34px;height:26px;cursor:pointer;color:var(--muted);font-size:12px;line-height:1}
 .lu-move button:disabled{opacity:.3;cursor:default}
@@ -159,7 +160,17 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .lu-more .seg{align-self:flex-start}
 .lu-more{padding:10px 12px 12px 48px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:10px;background:var(--bg)}
 .lu-note{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;border-top:1px solid var(--line);font-size:14px;background:var(--accent-soft)}
-.lu-note.bad{background:#fdecea;color:#8a1c12}
+.lu-note.bad{background:var(--bad-soft);color:var(--bad-ink)}
+.lu-note.pin{background:var(--pin-soft);color:var(--pin-ink)}
+.nextcard{background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.nextcard .eyebrow{color:inherit;opacity:.8}
+.nextcard h2{color:inherit;font-size:28px;margin:0}
+.nextcard .btn{background:var(--surface);color:var(--ink);border-color:transparent}
+.nextcard .btn.alt{background:transparent;color:inherit;border:1px solid currentColor}
+.nowlist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.nowlist>div{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-top:1px solid var(--line)}
+.nowlist>div:first-child{border-top:0}
+.sitetimes{font-size:14px;color:var(--muted)}
 .lu-note .btn{min-height:34px;padding:4px 10px;font-size:13px}
 .lu-foot{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;border-top:1px solid var(--line);font-size:14px;background:var(--bg)}
 .lu-out{opacity:.75}
@@ -455,6 +466,80 @@ function dayStops(date,keepSkipped){
     legs.push(st.leg);prev=st.id});
   return {stops:stops,legs:legs,rows:rows,grp:grp};
 }
+function nowHM(){var d=new Date();return p2(d.getHours())+':'+p2(d.getMinutes())}
+function minsBetween(a,b){return PLAN.toMin(b)-PLAN.toMin(a)}
+function addMin(t,m){return PLAN.toTime(PLAN.toMin(t)+m)}
+/* Arrive and leave times at a school on a day: her taps, or else the first session start and last session end there. */
+function siteTimes(date,scId){var at=(dayDoc(date).at||{})[scId]||{};
+  var xs=S.sessions.filter(function(x){var s=student(x.studentId);return x.date===date&&!x.absent&&s&&(s.schoolId||'')===scId});
+  var st=xs.map(function(x){return x.start}).filter(Boolean).sort(),en=xs.map(function(x){return x.end}).filter(Boolean).sort();
+  return {arrive:at.arrive||st[0]||'',leave:at.leave||en[en.length-1]||'',tapA:!!at.arrive,tapL:!!at.leave}}
+/* Minutes on site by agency, for agencies that pay for time on site. */
+function onSiteByAgency(date,P){var out={};
+  P.stops.forEach(function(st){if(!st.id)return;var a=agency(st.sc.agencyId);if(!PAY.onSite(a))return;var t=siteTimes(date,st.id);
+    if(t.arrive&&t.leave&&t.leave>t.arrive)out[a.id]=(out[a.id]||0)+minsBetween(t.arrive,t.leave)});
+  return out}
+function inSession(x){return !!(x&&x.start&&!x.end&&x.status!=='logged'&&!x.absent)}
+function settled(o,date){var x=sess(o.s.id,date);return !!(x&&(x.absent||x.start||x.status==='logged'))||(dayDoc(date).skip||[]).indexOf(o.s.id)>=0}
+/* ---------- running the day: Who's next ---------- */
+function nowPanel(P){
+  var d=S.date,t=nowHM(),dd=dayDoc(d),at=dd.at||{},stops=P.stops.filter(function(st){return st.id}),k=-1,i;
+  if(!stops.length)return '';
+  for(i=0;i<stops.length;i++){var a=at[stops[i].id]||{},any=stops[i].rows.some(function(o){var x=sess(o.s.id,d);return x&&x.start});if(a.arrive||a.leave||any)k=i}
+  var cur=k>=0?stops[k]:stops[0],left=k>=0&&!!(at[cur.id]||{}).leave,arrived=k>=0;
+  if(left){if(k===stops.length-1){var lt=at[cur.id].leave;return '<div class="panel stack"><span class="eyebrow">Today</span><h2>Done for the day</h2><span class="muted small">Left '+esc(cur.sc.alias||cur.sc.name)+' at '+esc(fmtTime(lt))+'. The day total is below.</span></div>'}
+    cur=stops[k+1];arrived=false}
+  var name=cur.sc.alias||cur.sc.name,next=stops[stops.indexOf(cur)+1],h='<div class="stack" style="gap:10px">';
+  if(!arrived){
+    var who=cur.rows.filter(function(o){return cur.items.some(function(it){return it.id===o.s.id})}).map(function(o){return (o.pinned?PIN:'')+o.s.name});
+    h+='<div class="nextcard"><span class="eyebrow">'+(k<0?'First stop':'Next stop')+(cur.arrive?' · arrive about '+esc(fmtTime(cur.arrive)):'')+'</span><h2>'+esc(name)+'</h2>'+
+      (who.length?'<span>'+esc(who.join(', '))+'</span>':'')+
+      '<button class="btn" data-act="arrive" data-sc="'+esc(cur.id)+'">I\'m at '+esc(name)+'</button></div>'+
+      '<span class="muted small">One tap marks your arrival. If you skip it, your first session\'s start time is used instead.</span>';
+    return h+'</div>'}
+  /* here: in session, remaining students with live times, reminders */
+  var order=cur.items.map(function(it){return it.id}),byId={};cur.rows.forEach(function(o){byId[o.s.id]=o});
+  var running=cur.rows.filter(function(o){return inSession(sess(o.s.id,d))})[0];
+  var rem=cur.items.filter(function(it){var o=byId[it.id];return o&&!settled(o,d)});
+  var from=t;if(running){var rx=sess(running.s.id,d),pe=addMin(rx.start,rowMin(running));if(pe>from)from=pe}
+  var live=PLAN.lineUp({arrive:from,gap:cur.gap,items:rem}),lv={};live.rows.forEach(function(r){lv[r.id]=r});
+  var tA=at[cur.id]||{};
+  h+='<div class="row spread"><span class="eyebrow">At '+esc(name)+'</span><span class="muted small">'+(tA.arrive?'Arrived '+esc(fmtTime(tA.arrive)):'')+'</span></div>';
+  /* pin reminders: a pinned student coming up within 15 minutes who is not first in line */
+  rem.forEach(function(it,j){if(!it.pin||j===0&&!running)return;var m=minsBetween(t,it.pin);if(m>15)return;var o=byId[it.id];
+    h+='<div class="lu-note pin" style="border-radius:12px">'+PIN+' '+esc(o.s.name)+' at '+esc(fmtTime(it.pin))+(m>0?', in '+m+' min':m===0?', now':', '+(-m)+' min ago')+'.'+
+      (o.sl&&o.sl.pinReason?' '+esc(o.sl.pinReason)+'.':'')+(j>0?'<button class="btn" data-act="runnext" data-sc="'+esc(cur.id)+'" data-id="'+esc(it.id)+'" data-before="'+esc(rem[0].id)+'">Start '+esc(o.s.name)+' next</button>':'')+'</div>'});
+  /* running behind: compare the first remaining student's live time with the plan */
+  if(rem.length&&lv[rem[0].id]){var o0=byId[rem[0].id],plan0=o0.pinned?o0.pinT:o0.est,beh=plan0?minsBetween(plan0,lv[rem[0].id].start):0;
+    if(beh>=10){var msg='Running about '+beh+' min behind.',why=false;
+      if(next&&live.done){var leg=next.leg,arr=addMin(live.done,(leg&&num(leg.min)?leg.min:0)),late=next.arrive?minsBetween(next.arrive,arr):0;
+        if(late>0){var pins=next.rows.filter(function(o){return o.pinned}).map(function(o){return o.s.name+' at '+fmtTime(o.pinT)});
+          why=true;msg+=' '+(next.sc.alias||next.sc.name)+': arrive about '+fmtTime(arr)+' instead of '+fmtTime(next.arrive)+'. '+(pins.length?'Pinned there: '+pins.join(', ')+'.':'Nothing is pinned there.')}}
+      else if(cur.leave&&live.done>cur.leave){why=true;msg+=' Done about '+fmtTime(live.done)+', past your usual '+fmtTime(cur.leave)+'.'}
+      if(why)h+='<div class="lu-note bad" style="border-radius:12px">'+esc(msg)+'</div>'}}
+  if(running){var rx2=sess(running.s.id,d);
+    h+='<div class="nextcard"><span class="eyebrow">In session since '+esc(fmtTime(rx2.start))+'</span><h2>'+esc(running.s.name)+'</h2><span>'+Math.max(0,minsBetween(rx2.start,t))+' of '+rowMin(running)+' min</span>'+
+      '<button class="btn" data-act="open" data-id="'+esc(running.s.id)+'">Open '+esc(running.s.name)+'</button></div>'}
+  else if(rem.length){var o1=byId[rem[0].id],x1=sess(o1.s.id,d),r1=lv[rem[0].id],acts=(x1&&x1.acts&&x1.acts.length?x1.acts:[]).join(', ');
+    h+='<div class="nextcard"><span class="eyebrow">Up next'+(r1&&r1.start?' · '+(o1.pinned?'pinned ':'about ')+esc(fmtTime(o1.pinned?o1.pinT:r1.start)):'')+'</span><h2>'+(o1.pinned?PIN+' ':'')+esc(o1.s.name)+'</h2>'+
+      '<span>'+rowMin(o1)+' min'+(acts?' · '+esc(acts):'')+'</span><div class="row">'+
+      '<button class="btn" style="flex:1" data-act="startsess" data-id="'+esc(o1.s.id)+'">Start session</button>'+
+      (rem.length>1?'<button class="btn alt" data-act="later" data-sc="'+esc(cur.id)+'" data-id="'+esc(o1.s.id)+'">Not ready, later</button>':'')+'</div></div>'}
+  else h+='<div class="panel stack"><strong>Everyone at '+esc(name)+' is done.</strong></div>';
+  if(!running&&rem.length&&rem[0].pin){var wait=minsBetween(t,rem[0].pin);if(wait>cur.gap)h+='<span class="muted small">'+wait+' min until '+esc(byId[rem[0].id].s.name)+'\'s pinned time. A good time for indirect work.</span>'}
+  var rest=rem.slice(running?0:1);
+  if(rest.length)h+='<span class="eyebrow">Still to see here</span><div class="nowlist">'+rest.map(function(it){var o=byId[it.id],r=lv[it.id];
+      return '<div><span>'+(o.pinned?PIN+' ':'')+esc(o.s.name)+' <span class="muted small">'+rowMin(o)+' min</span></span><span>'+(r&&r.start?esc(fmtTime(o.pinned?o.pinT:r.start))+' <span class="muted small">'+(o.pinned?'pinned':'about')+'</span>':'')+'</span></div>'}).join('')+'</div>';
+  if(live.issues.some(function(x){return x.type==='pin'}))h+='<span class="muted small">At this pace someone runs into a pin. Use "Start next" on the reminder, or Plan my Day to move students.</span>';
+  h+='<button class="btn'+(rem.length||running?'':' primary')+'" data-act="leave" data-sc="'+esc(cur.id)+'">'+(next?'Leave for '+esc(next.sc.alias||next.sc.name):'Leave '+esc(name))+'</button>';
+  return h+'</div>'}
+function siteLine(st){if(!st.id)return '';var t=siteTimes(S.date,st.id),a=agency(st.sc.agencyId),ons=PAY.onSite(a);
+  if(!t.tapL&&S.date===today()&&st.rows.some(function(o){return !settled(o,S.date)||inSession(sess(o.s.id,S.date))}))t.leave='';
+  if(S.siteEdit===st.id)return '<div class="row end"><label>Arrived<input type="time" id="site-arr" value="'+esc(t.arrive)+'"></label><label>Left<input type="time" id="site-lv" value="'+esc(t.leave)+'"></label>'+
+    '<button class="btn primary" data-act="sitesave" data-sc="'+esc(st.id)+'">Save</button><button class="btn" data-act="siteedit" data-sc="">Cancel</button></div>';
+  if(!t.arrive&&!t.leave&&!ons)return '';
+  return '<div class="row spread sitetimes"><span>'+(t.arrive||t.leave?'Arrived '+esc(t.arrive?fmtTime(t.arrive):'?')+(t.tapA||!t.arrive?'':' (first session)')+' · left '+esc(t.leave?fmtTime(t.leave):'not yet')+(t.tapL||!t.leave?'':' (last session)'):'No arrive and leave times yet')+
+    (ons?' · paid for time on site':'')+'</span><button type="button" class="linkbtn" data-act="siteedit" data-sc="'+esc(st.id)+'">'+(t.arrive||t.leave?'Edit':'Add')+'</button></div>'}
 function estFor(sid,date){var r=dayStops(date).rows.filter(function(o){return o.s.id===sid})[0];return r?r.est:''}
 function rowTime(o){var t=o.pinned?o.pinT:o.est;return t?fmtTime(t):''}
 function legRow(l){var ag=agency(l.agencyId);
@@ -474,18 +559,19 @@ function todayView(){
     (S.loaded?'<span class="muted small">'+(rows.length?done+' of '+rows.length+' sessions logged'+(nSc?' · '+nSc+' school'+(nSc===1?'':'s'):''):'Nothing scheduled '+dayWord(S.date))+'</span>':'')+'</div>';
   if(!S.students.length)return h+emptyRoster();
   if(!rows.length)return h;
+  if(S.date===today()&&S.loaded)h+=nowPanel(P);
   function rowHtml(o){
     var s=o.s,x=sess(s.id,S.date),sc=school(s.schoolId),cl=sc&&closedOn(sc,S.date);
     var sub=[o.sl?o.sl.min+' direct'+(s.indirect?' / '+s.indirect+' indirect':''):o.add?rowMin(o)+' min, added for today':'added for this day',o.sl&&o.sl.time&&grp[(s.schoolId||'')+'|'+o.sl.time]>1?'group':'',cl?'school closed'+(cl.label?' ('+cl.label+')':''):''].filter(Boolean).join(' · ');
-    var pinned=o.pinned,tm=rowTime(o);
-    return '<button class="item'+(pinned?' pinned-row':'')+'" data-act="open" data-id="'+esc(s.id)+'"><span class="time">'+esc(tm)+(pinned?'<br><span class="pin-tag">'+PIN+' pinned</span>':tm?'<br><span class="est">about</span>':'')+'</span>'+
+    var pinned=o.pinned,tm=x&&x.start?fmtTime(x.start):rowTime(o),tag=x&&x.start?(x.end?'<br><span class="est">to '+esc(fmtTime(x.end))+'</span>':inSession(x)?'<br><span class="est">in session</span>':''):pinned?'<br><span class="pin-tag">'+PIN+' pinned</span>':tm?'<br><span class="est">about</span>':'';
+    return '<button class="item'+(pinned?' pinned-row':'')+'" data-act="open" data-id="'+esc(s.id)+'"><span class="time">'+esc(tm)+tag+'</span>'+
       '<span class="nm">'+esc(s.name)+(sub?'<br><span class="sub">'+esc(sub)+'</span>':'')+'</span>'+statusPill(x)+'</button>'}
   P.stops.forEach(function(st){
     if(st.leg)h+=legRow(st.leg);
     var ag=st.sc&&agency(st.sc.agencyId);
     var stT={arrive:st.arrive||''};
     h+='<div class="stop"><div class="row spread"><h2>'+esc(st.sc?(st.sc.alias||st.sc.name):'No school set')+'</h2><span class="muted small">'+esc([stT.arrive?'Arrive '+fmtTime(stT.arrive):'',ag?ag.name:''].filter(Boolean).join(' · '))+'</span></div>'+
-      '<div class="list">'+st.rows.map(rowHtml).join('')+'</div></div>';
+      siteLine(st)+'<div class="list">'+st.rows.map(rowHtml).join('')+'</div></div>';
   });
   return h+dayPanel(P);
 }
@@ -504,14 +590,14 @@ function dayTotals(date,P){var out={};
   return out}
 function dayPanel(P){
   var m=dayMinutes(S.date),ags={};S.agencies.forEach(function(a){ags[a.id]=a});
-  var R=PAY.dayPay({date:S.date,agencies:ags,studentMin:dayByAgency(S.date),legs:P.legs}),T=R.totals,ks=Object.keys(R.byAgency);
+  var R=PAY.dayPay({date:S.date,agencies:ags,studentMin:dayByAgency(S.date),onSiteMin:onSiteByAgency(S.date,P),legs:P.legs}),T=R.totals,ks=Object.keys(R.byAgency);
   var missing=P.legs.some(function(l){return l.miles==null}),test=P.legs.some(function(l){return l.test});
   var h='<div class="panel stack"><span class="eyebrow">Day total</span>'+
     '<div class="row" style="gap:22px"><div><div class="stat">'+hrs(m.d+m.i+T.travelMin)+'</div><span class="muted small">total hours<br>'+hrs(m.d+m.i)+' students + '+hrs(T.travelMin)+' travel</span></div>'+
     '<div><div class="stat">'+r1(T.miles)+'</div><span class="muted small">miles driven<br>'+P.legs.length+' drive'+(P.legs.length===1?'':'s')+' from home</span></div>'+
     (r1(T.taxMiles)!==r1(T.miles)?'<div><div class="stat">'+r1(T.taxMiles)+'</div><span class="muted small">miles<br>for taxes</span></div>':'')+'</div>';
   if(ks.length)h+='<div class="split">'+ks.map(function(k){var a=agency(k),x=R.byAgency[k],paid=a&&(x.rates.base!=null||x.rates.travel!=null||x.rates.mile!=null);
-      var bits=[hrs(x.studentMin+x.travelMin)+' hrs',r1(x.miles)+' mi'];
+      var bits=[hrs(x.studentMin+x.travelMin)+' hrs'+(x.clock==='onsite'?' ('+hrs(x.studentMin)+' on site)':''),r1(x.miles)+' mi'];
       if(a&&reimburses(a)&&r1(x.paidMiles)!==r1(x.miles))bits.push(r1(x.paidMiles)+' mi paid'+(x.officeUsed?' (from office)':''));
       if(a&&reimburses(a)&&x.rates.mile!=null&&x.paidMiles)bits.push(money(x.rates.mile)+'/mi');
       var note=(x.unpaid.length?' ('+x.unpaid.join(' and ')+' not paid)':'')+(x.missing.length?' · missing '+x.missing.filter(function(v,i,s){return s.indexOf(v)===i}).join(', '):'');
@@ -657,7 +743,7 @@ function saveDay(date,patch,msg){var o=Object.assign({},dayDoc(date),patch);dele
 function saveSession(kind,after){var d=S.draft,id=S.open,date=S.date;
   var vals={};Object.keys(d.values).forEach(function(k){if(num(d.values[k]))vals[k]=d.values[k]});
   var doc={studentId:id,date:date,absent:d.absent,values:d.absent?{}:vals,variants:d.absent?{}:d.variants,note:d.note.trim(),updated:new Date().toISOString()};
-  var s=student(id),est=estFor(id,date);if(est)doc.time=est;
+  var s=student(id),est=estFor(id,date);if(est)doc.time=est;if(d.start)doc.start=d.start;if(d.end)doc.end=d.end;
   doc.min=d.absent?0:(num(d.min)?d.min:0);doc.indirect=num(d.indirect)?d.indirect:0;doc.acts=d.absent?[]:d.acts;doc.outof=d.absent?{}:d.outof;doc.help=d.absent?{}:d.help;
   var x0=sess(id,date);doc.status=(kind==='save'||(x0&&x0.status!=='planned'))?'logged':'planned';
   S.saving=true;render();
@@ -676,12 +762,21 @@ function minutesPanel(s,d){
     '<div class="row end"><label>New activity<input id="act-new" placeholder="Invented one? Add it here"></label><button class="btn" data-act="addact">Add</button></div></div>';
 }
 
+/* Session start and end. Times come from the taps and can be corrected; direct minutes follow them. */
+function timerPanel(s,d){var x=sess(s.id,S.date),isToday=S.date===today();
+  if(d.absent)return '';
+  if(!d.start){if(!isToday||(x&&x.status==='logged'))return '';
+    return '<button class="btn" data-act="starthere">Start session now</button>'}
+  var run=!d.end,el=Math.max(0,minsBetween(d.start,nowHM()));
+  return '<div class="panel stack"><div class="row"><label>Started<input type="time" id="e-start" value="'+esc(d.start)+'"></label><label>Ended<input type="time" id="e-end" value="'+esc(d.end)+'"></label></div>'+
+    (run&&isToday?'<span class="muted small">In session <b id="elapsed">'+el+' min</b> · planned '+rowMin({s:s,sl:slotOn(s,S.date),add:(dayDoc(S.date).adds||[]).filter(function(a){return a.id===s.id})[0]})+' min</span>'+
+      '<button class="btn primary" data-act="endsess">End session</button>':'')+'</div>'}
 function entryView(){
   var s=student(S.open),d=S.draft; if(!s){S.open=null;return todayView()}
   var est=estFor(s.id,S.date),where=[schoolLabel(s),est?'about '+fmtTime(est):'',(s.direct||s.indirect)?'IEP '+(s.direct||0)+' direct / '+(s.indirect||0)+' indirect':'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · ');
   var h='<div class="row spread"><button class="btn ghost" data-act="back">‹ '+(S.view==='plan'?'Back to plan':S.fromStu?'Back to '+s.name:'Back to the day')+'</button><span class="muted small">'+esc(md(S.date))+'</span></div>'+
     '<div><h1>'+esc(s.name)+'</h1>'+(where?'<span class="muted">'+esc(where)+'</span>':'')+'</div>'+
-    '<h2>Lesson plan</h2>'+minutesPanel(s,d)+'<button class="btn" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
+    timerPanel(s,d)+'<h2>Lesson plan</h2>'+minutesPanel(s,d)+'<button class="btn" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
     '<button class="btn '+(d.absent?'on':'')+'" data-act="absent" aria-pressed="'+!!d.absent+'">'+(d.absent?'Marked absent':'Mark absent')+'</button>';
   if(!d.absent){
     h+='<div class="panel">';
@@ -1043,7 +1138,7 @@ function agencyOptions(sel){return '<option value="">No agency set</option>'+S.a
 function agDraftFrom(a){a=a||{};var rs=PAY.mileRates(a).map(function(r){return{from:r.from,rate:String(r.rate)}});if(!rs.length)rs=[{from:'',rate:''}];
   return{name:a.name||'',rate:num(a.rate)?String(a.rate):'',paysTravel:a.id?paysTravel(a):true,travelOwn:!!(a.travelOwn&&num(a.travelRate)),
   travelRate:num(a.travelRate)?String(a.travelRate):'',reimburseMiles:a.id?reimburses(a):true,mileRates:rs,office:a.mileFrom==='office',officeAddress:a.officeAddress||'',officeLat:typeof a.officeLat==='number'?a.officeLat:null,officeLon:typeof a.officeLon==='number'?a.officeLon:null,
-  taxMiles:a.taxMiles!==false,note:a.note||''}}
+  taxMiles:a.taxMiles!==false,onsite:a.payClock==='onsite',note:a.note||''}}
 /* The draft's rate in effect today, for the example day. */
 function draftRateToday(d){var t=today(),best=null;d.mileRates.forEach(function(r){var v=r.rate!==''&&isFinite(+r.rate)?+r.rate:null;if(v!=null&&(r.from||'')<=t&&(!best||(r.from||'')>=best.from))best={from:r.from||'',rate:v}});return best}
 function rateRows(w,d){
@@ -1061,17 +1156,19 @@ function agExample(d){
   function n(v){return v!==''&&isFinite(+v)?+v:null}
   var r=n(d.rate),tr=d.paysTravel?(d.travelOwn?n(d.travelRate):r):null,rt=draftRateToday(d),mr=d.reimburseMiles&&rt?rt.rate:null,rows=[],pay=0;
   function line(t,v,muted){rows.push('<span'+(muted?' class="z"':'')+'>'+esc(t)+'</span><span'+(muted?' class="z"':'')+'>'+v+'</span>')}
-  if(r!=null){pay+=3*r;line('Students 3 hrs × '+money(r),money(3*r))}else line('Students: enter the base rate','–',1);
+  if(r!=null){pay+=3*r;line((d.onsite?'On site':'Students')+' 3 hrs × '+money(r),money(3*r))}else line((d.onsite?'On site':'Students')+': enter the base rate','–',1);
   if(!d.paysTravel)line('Travel not paid',money(0),1);else if(tr!=null){pay+=0.75*tr;line('Travel 0.75 hrs × '+money(tr),money(0.75*tr))}else line('Travel: enter the travel rate','–',1);
   if(!d.reimburseMiles)line('Mileage not reimbursed',money(0),1);else if(mr!=null){pay+=30*mr;line('Mileage 30 mi × '+money(mr)+(d.mileRates.length>1?' (today\'s rate)':''),money(30*mr))}else line('Mileage: enter the rate per mile','–',1);
-  return '<span class="t">Example day</span><span class="small">3 hrs with students, 45 min of driving, 30 miles</span>'+
+  return '<span class="t">Example day</span><span class="small">'+(d.onsite?'3 hrs on site':'3 hrs with students')+', 45 min of driving, 30 miles</span>'+
     '<div class="ex">'+rows.join('')+'<span class="tot">Pay</span><span class="tot">'+money(pay)+'</span><span class="z">Miles tracked for taxes</span><span class="z">'+(d.taxMiles?30:0)+'</span></div>'+
     (d.reimburseMiles&&d.office?'<span class="small">On a real day, the drive from home to this agency\'s first school is paid on the office distance instead of the miles driven.</span>':'')}
 function agencyForm(w,d,id){
   var h='<label>Agency name<input id="'+w+'-name" data-agw="'+w+'" data-agf="name" value="'+esc(d.name)+'" placeholder="e.g. Designs for Learning"></label>'+
     '<label>Agency address<span class="geo"><input id="'+w+'-officeAddress" data-geo="1" data-agw="'+w+'" data-agf="officeAddress" value="'+esc(d.officeAddress)+'" placeholder="Start typing the address" autocomplete="off"></span></label>';
   h+='<div class="paysheet"><div class="sect">What they pay you for</div>'+
-    '<div class="pl"><b>Time with students</b>'+agMoney(w,'rate',d,'/hr','Base rate per hour')+'<small>Your base rate, for direct and indirect minutes.</small></div>'+
+    '<div class="pl"><b>Your time</b>'+agMoney(w,'rate',d,'/hr','Base rate per hour')+'<small>Your base rate.</small><div class="sub" style="flex-direction:column;align-items:flex-start;gap:6px"><span class="small" style="font-weight:600">They pay for</span>'+
+      '<span class="seg" role="group" aria-label="They pay for">'+[[false,'Each session'],[true,'Time on site']].map(function(o){return '<button type="button" class="'+(d.onsite===o[0]?'on':'')+'" data-act="agq" data-w="'+w+'" data-f="onsite" data-v="'+(o[0]?1:0)+'" aria-pressed="'+(d.onsite===o[0])+'">'+o[1]+'</button>'}).join('')+'</span>'+
+      '<span class="small muted">'+(d.onsite?'From when you arrive at their school to when you leave. You still log each student\'s minutes for their records.':'The direct and indirect minutes you log for each student.')+'</span></div></div>'+
     '<div class="pl"><b>Travel time</b>'+agSwitch(w,'paysTravel',d.paysTravel,'Paid for travel time')+
       (d.paysTravel?'<small>Driving to and between schools.</small><div class="sub"><span class="seg" role="group" aria-label="Travel pay rate">'+
         [[false,'Base Rate'],[true,'Travel Rate']].map(function(o){return '<button type="button" class="'+(d.travelOwn===o[0]?'on':'')+'" data-act="agq" data-w="'+w+'" data-f="travelOwn" data-v="'+(o[0]?1:0)+'" aria-pressed="'+(d.travelOwn===o[0])+'">'+o[1]+'</button>'}).join('')+'</span>'+
@@ -1091,7 +1188,7 @@ function agencyForm(w,d,id){
   h+=w==='edit'?'<button class="btn primary" data-act="saveag" data-id="'+esc(id)+'">Save agency</button>':'<button class="btn primary" data-act="addag">Add agency</button>';
   return h}
 function agSummary(a){
-  return [num(a.rate)?money(a.rate)+'/hr':'no hourly rate',
+  return [num(a.rate)?money(a.rate)+'/hr'+(PAY.onSite(a)?' for time on site':''):'no hourly rate',
     !paysTravel(a)?'travel time not paid':a.travelOwn&&num(a.travelRate)?'travel '+money(a.travelRate)+'/hr':'travel at base rate',
     !reimburses(a)?'mileage not reimbursed':(function(){var rt=PAY.mileRateOn(a,today()),k=PAY.mileRates(a).length;return (rt?money(rt.rate)+'/mile'+(k>1?' now ('+k+' rates)':''):'no mileage rate for today')+(officeStart(a)?' from the office':'')})(),
     a.taxMiles===false?'miles not tracked for taxes':'miles tracked for taxes']}
@@ -1112,7 +1209,7 @@ function agFields(d){
   var cur=PAY.mileRateOn({mileRates:rates},today());
   return{name:d.name.trim(),rate:n(d.rate),paysTravel:d.paysTravel,travelOwn:!!(d.paysTravel&&d.travelOwn),travelRate:d.paysTravel&&d.travelOwn?n(d.travelRate):null,
     reimburseMiles:d.reimburseMiles,mileRates:d.reimburseMiles?rates:[],mileRate:d.reimburseMiles&&cur?cur.rate:null,
-    mileFrom:d.reimburseMiles&&d.office?'office':'home',officeAddress:d.officeAddress.trim(),officeLat:d.officeLat==null?null:d.officeLat,officeLon:d.officeLon==null?null:d.officeLon,taxMiles:d.taxMiles,note:d.note.trim()}}
+    mileFrom:d.reimburseMiles&&d.office?'office':'home',payClock:d.onsite?'onsite':'session',officeAddress:d.officeAddress.trim(),officeLat:d.officeLat==null?null:d.officeLat,officeLon:d.officeLon==null?null:d.officeLon,taxMiles:d.taxMiles,note:d.note.trim()}}
 function agenciesView(){
   var h='<div class="stack"><span class="eyebrow">Agencies</span><h1>Who pays, and how much</h1>'+
     '<span class="muted small">Each school belongs to one agency. Hours and miles are split by agency. A drive is billed to the agency of the school you are driving to, and the drive from home to the first school counts.</span></div>';
@@ -1246,7 +1343,7 @@ function placesPanel(){
 
 /* ---------- actions ---------- */
 function openEntry(id){var x=sess(id,S.date);S.open=id;S.confirmDel=false;
-  S.draft={absent:!!(x&&x.absent),values:Object.assign({},x&&x.values),variants:Object.assign({},x&&x.variants),note:(x&&x.note)||'',acts:((x&&x.acts)||[]).slice(),outof:Object.assign({},x&&x.outof),help:Object.assign({},x&&x.help)};
+  S.draft={start:(x&&x.start)||'',end:(x&&x.end)||'',absent:!!(x&&x.absent),values:Object.assign({},x&&x.values),variants:Object.assign({},x&&x.variants),note:(x&&x.note)||'',acts:((x&&x.acts)||[]).slice(),outof:Object.assign({},x&&x.outof),help:Object.assign({},x&&x.help)};
   var s=student(id);
   if(x){S.draft.min=x.min;S.draft.indirect=x.indirect}
   else if(s){var sl0=slotOn(s,S.date),ad0=(dayDoc(S.date).adds||[]).filter(function(a){return a.id===id})[0],h0=history(id);S.draft.min=sl0?sl0.min:ad0&&num(ad0.min)?ad0.min:s.direct;S.draft.indirect=s.indirect;if(h0.length)S.draft.acts=(h0[h0.length-1].acts||[]).slice()}
@@ -1290,6 +1387,17 @@ document.addEventListener('click',function(e){
   else if(a==='wzjump'){S.wz.i=i;S.open=null}
   else if(a==='wzsave'){var nList=wzStudents(S.date).length;saveSession('saveplan',function(){S.open=null;if(S.wz.i<nList-1)S.wz.i++;else S.wz.step=5;window.scrollTo(0,0)});return}
   else if(a==='wzdone'){S.view='today';S.open=null;window.scrollTo(0,0)}
+  else if(a==='arrive'||a==='leave'){var dda=dayDoc(S.date),att=Object.assign({},dda.at||{}),sca=b.dataset.sc,tt0=Object.assign({},att[sca]||{});tt0[a]=nowHM();att[sca]=tt0;
+    saveDay(S.date,{at:att},(a==='arrive'?'Arrived ':'Left ')+fmtTime(tt0[a]));return}
+  else if(a==='siteedit'){S.siteEdit=b.dataset.sc||null}
+  else if(a==='sitesave'){var sar=val('site-arr'),slv=val('site-lv');if(sar&&slv&&slv<=sar){toast('Leave time is before arrival');return}
+    var dds=dayDoc(S.date),ats=Object.assign({},dds.at||{});ats[b.dataset.sc]={arrive:sar,leave:slv};S.siteEdit=null;saveDay(S.date,{at:ats},'Times saved');return}
+  else if(a==='startsess'){openEntry(b.dataset.id);S.draft.start=nowHM();delete S.draft.end;S.draft.end='';saveSession('saveplan',function(){toast('Started '+fmtTime(S.draft.start))});return}
+  else if(a==='starthere'){S.draft.start=nowHM();S.draft.end='';saveSession('saveplan',function(){});return}
+  else if(a==='endsess'){var en=nowHM();S.draft.end=en;var dm=minsBetween(S.draft.start,en);if(dm>0)S.draft.min=dm;saveSession('save',function(){toast('Session ended and saved')});return}
+  else if(a==='later'){var stl=luStop(b.dataset.sc);if(!stl)return;var ol=stl.items.map(function(it){return it.id}),rl=ol.filter(function(id){var o=stl.rows.filter(function(q){return q.s.id===id})[0];return o&&!settled(o,S.date)}),kl=rl.indexOf(b.dataset.id);
+    if(kl<0||kl>=rl.length-1)return;var nx=rl[kl+1];luSaveOrder(b.dataset.sc,PLAN.moveAfter(ol,b.dataset.id,nx)).then(function(){toast(student(b.dataset.id).name+' moved after '+student(nx).name)});return}
+  else if(a==='runnext'){var stn=luStop(b.dataset.sc);if(!stn)return;luSaveOrder(b.dataset.sc,PLAN.moveBefore(stn.items.map(function(it){return it.id}),b.dataset.id,b.dataset.before));return}
   else if(a==='luopen'){S.wz.x=S.wz.x===b.dataset.id?null:b.dataset.id}
   else if(a==='lumove'){var stm=luStop(b.dataset.sc);if(!stm)return;var om=stm.items.map(function(it){return it.id}),km=om.indexOf(b.dataset.id),nm=km+(+b.dataset.n);
     if(km<0||nm<0||nm>=om.length)return;om.splice(km,1);om.splice(nm,0,b.dataset.id);luSaveOrder(b.dataset.sc,om);return}
@@ -1402,6 +1510,8 @@ document.addEventListener('click',function(e){
 });
 document.addEventListener('input',function(e){var t=e.target;
   if(t.id==='note'&&S.draft)S.draft.note=t.value;
+  else if((t.id==='e-start'||t.id==='e-end')&&S.draft){S.draft[t.id==='e-start'?'start':'end']=t.value;
+    if(S.draft.start&&S.draft.end){var dm=minsBetween(S.draft.start,S.draft.end);if(dm>0){S.draft.min=dm;var em=document.getElementById('e-min');if(em)em.value=dm}}}
   else if((t.id==='e-min'||t.id==='e-ind')&&S.draft){var k=t.id==='e-min'?'min':'indirect';if(t.value===''||!isFinite(+t.value))delete S.draft[k];else S.draft[k]=+t.value}
   else if(t.dataset.x&&S.draft){if(t.value===''||!isFinite(+t.value))delete S.draft[t.dataset.x][t.dataset.g];else S.draft[t.dataset.x][t.dataset.g]=+t.value}
   else if(t.dataset.g&&S.draft){if(t.value===''||!isFinite(+t.value))delete S.draft.values[t.dataset.g];else S.draft.values[t.dataset.g]=+t.value}});
@@ -1420,6 +1530,9 @@ document.addEventListener('input',function(e){var t=e.target;if(!t.dataset||!(t.
 document.addEventListener('change',function(e){var t=e.target;if(t.dataset&&t.dataset.luarr!=null){var dd=dayDoc(S.date),ar=Object.assign({},dd.arrive||{});if(t.value)ar[t.dataset.luarr]=t.value;else delete ar[t.dataset.luarr];saveDay(S.date,{arrive:ar},'Arrival changed for today')}});
 document.addEventListener('change',function(e){if(e.target.id==='sl-when'){var r=document.getElementById('sl-pinrow');if(r)r.hidden=e.target.value!=='pin'}});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&S.menu){S.menu=false;render()}});
+setInterval(function(){if(!S.loaded||S.date!==today())return;
+  if(S.open){var el=document.getElementById('elapsed');if(el&&S.draft&&S.draft.start)el.textContent=Math.max(0,minsBetween(S.draft.start,nowHM()))+' min';return}
+  if(S.view==='today')softRender()},30000);
 menuEl.addEventListener('click',function(e){if(e.target===menuEl){S.menu=false;render()}});
 window.DAPE_START=start;
 })();

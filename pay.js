@@ -6,7 +6,12 @@
    - "Mileage starts from the agency office": when a drive from home goes to that agency's school, the paid miles are the office-to-school
      distance instead of the miles driven. Travel time stays the actual drive time. Drives between schools always use actual miles.
    - Tax miles for an agency are the miles it pays on (so the office figure on those drives), when the agency's miles are tracked for taxes.
-   - Money is worked out from exact minutes and miles and rounded to the cent once per line. */
+   - Money is worked out from exact minutes and miles and rounded to the cent once per line.
+   Added 2026-10-17:
+   - An agency pays for her time either per session (the minutes with each student, direct and indirect) or on site
+     (from when she arrives at its schools to when she leaves). On-site time replaces session minutes for that agency only.
+     Travel and mileage use the agency's own travel settings either way.
+   - When an on-site agency has no arrive and leave times for the day, it is paid on session minutes and the times are reported missing. */
 (function(root){
   function num(v){return typeof v==='number'&&isFinite(v)}
   function cents(x){return Math.round((x+(x>=0?1:-1)*1e-9)*100)/100}
@@ -16,6 +21,7 @@
   function reimburses(a){return !!a&&a.reimburseMiles!==false}
   function tracksTax(a){return !a||a.taxMiles!==false}
   function officeStart(a){return reimburses(a)&&a.mileFrom==='office'}
+  function onSite(a){return !!a&&a.payClock==='onsite'}
 
   /* Mileage rates as a list sorted by start date. An empty start date means "from the beginning".
      Agencies saved before dated rates existed have a single mileRate. */
@@ -35,14 +41,21 @@
   }
 
   /* One day's pay, split by agency.
-     input: {date, agencies: {id: agency}, studentMin: {agencyId: minutes}, legs: [{from, to, agencyId, miles, min, officeMiles}]}
+     input: {date, agencies: {id: agency}, studentMin: {agencyId: minutes}, onSiteMin: {agencyId: minutes from arrive to leave},
+             legs: [{from, to, agencyId, miles, min, officeMiles}]}
+     For an on-site agency, studentMin in the result is the paid time on site and sessionMin keeps the session minutes.
      Returns {byAgency: {id: {...}}, totals: {...}}. */
   function dayPay(input){
     var out={},date=input.date;
     function b(k){return out[k]||(out[k]={studentMin:0,travelMin:0,miles:0,paidMiles:0,taxMiles:0,
       pay:{students:0,travel:0,mileage:0,total:0},rates:{base:null,travel:null,mile:null,mileFrom:''},
-      missing:[],unpaid:[],officeUsed:false})}
+      missing:[],unpaid:[],officeUsed:false,clock:'session',sessionMin:0})}
     Object.keys(input.studentMin||{}).forEach(function(k){if(num(input.studentMin[k]))b(k).studentMin+=input.studentMin[k]});
+    var os=input.onSiteMin||{};
+    Object.keys(input.agencies||{}).forEach(function(k){var a=input.agencies[k];if(!onSite(a))return;
+      if(!(k in out)&&!num(os[k]))return;
+      var x=b(k);x.clock='onsite';x.sessionMin=x.studentMin;
+      if(num(os[k]))x.studentMin=os[k];else if(x.sessionMin)x.missing.push('arrive and leave times (paid on session minutes)')});
     (input.legs||[]).forEach(function(l){
       var k=l.agencyId||'',x=b(k),a=input.agencies[k];
       if(num(l.min))x.travelMin+=l.min;
@@ -71,7 +84,7 @@
     return{byAgency:out,totals:T};
   }
 
-  var api={cents:cents,paysTravel:paysTravel,travelRate:travelRate,reimburses:reimburses,tracksTax:tracksTax,officeStart:officeStart,
+  var api={cents:cents,paysTravel:paysTravel,travelRate:travelRate,reimburses:reimburses,tracksTax:tracksTax,officeStart:officeStart,onSite:onSite,
     mileRates:mileRates,mileRateOn:mileRateOn,paidMiles:paidMiles,dayPay:dayPay};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DAPE_PAY=api;
 })(this);
