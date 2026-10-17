@@ -95,7 +95,7 @@ check('Exact minutes, not rounded hours (the 80-minute case that used to pay $82
 });
 
 check('On-site agency: paid from arrive to leave instead of session minutes; travel uses its own settings',function(){
-  var OS={id:'S',name:'Prairie on site',rate:58,paysTravel:true,travelOwn:true,travelRate:40,reimburseMiles:false,taxMiles:true,payClock:'onsite'};
+  var OS={id:'S',name:'Prairie on site',rate:58,paysTravel:true,travelOwn:true,travelRate:40,reimburseMiles:false,taxMiles:true,payClock:'onsite',roundTo:0}; // no rounding, so the on-site figures below are as logged
   // Arrived 10:55, left 12:27: 92 min on site. Sessions only added up to 75 min.
   // time 92/60 x 58 = 88.9333 -> $88.93; travel 19/60 x 40 = 12.6667 -> $12.67; miles not paid; total $101.60
   var r=P.dayPay({date:'2026-10-26',agencies:{S:OS},studentMin:{S:75},onSiteMin:{S:92},legs:[{from:'A',to:'B',agencyId:'S',miles:12.4,min:19}]}).byAgency.S;
@@ -105,7 +105,7 @@ check('On-site agency: paid from arrive to leave instead of session minutes; tra
 });
 
 check('On-site and per-session agencies on the same day are each paid their own way',function(){
-  var OS={id:'S',rate:58,paysTravel:false,reimburseMiles:false,payClock:'onsite'};
+  var OS={id:'S',rate:58,paysTravel:false,reimburseMiles:false,payClock:'onsite',roundTo:0}; // no rounding, so the on-site figures below are as logged
   // N per session: 82 min x 62 = 84.7333 -> $84.73. S on site: 120 min x 58 = $116.00, travel not paid.
   var R=P.dayPay({date:'2026-10-26',agencies:{N:N,S:OS},studentMin:{N:82,S:70},onSiteMin:{S:120},legs:[]});
   assert.strictEqual(R.byAgency.N.pay.students,84.73);assert.strictEqual(R.byAgency.N.clock,'session');
@@ -113,14 +113,14 @@ check('On-site and per-session agencies on the same day are each paid their own 
 });
 
 check('On-site agency with no arrive and leave times falls back to session minutes and says so',function(){
-  var OS={id:'S',rate:58,paysTravel:false,reimburseMiles:false,payClock:'onsite'};
+  var OS={id:'S',rate:58,paysTravel:false,reimburseMiles:false,payClock:'onsite',roundTo:0}; // no rounding, so the on-site figures below are as logged
   // 45/60 x 58 = $43.50
   var r=P.dayPay({date:'2026-10-26',agencies:{S:OS},studentMin:{S:45},legs:[]}).byAgency.S;
   assert.strictEqual(r.pay.students,43.5);assert.deepStrictEqual(r.missing,['arrive and leave times (paid on session minutes)']);
 });
 
 check('On-site agency: indirect time and meetings outside time on site are paid on top',function(){
-  var OS={id:'S',rate:58,paysTravel:false,reimburseMiles:false,payClock:'onsite'};
+  var OS={id:'S',rate:58,paysTravel:false,reimburseMiles:false,payClock:'onsite',roundTo:0}; // no rounding, so the on-site figures below are as logged
   // 92 min on site + 30 min meeting after leaving = 122 min. 122/60 x 58 = 117.9333 -> $117.93
   var r=P.dayPay({date:'2026-10-26',agencies:{S:OS},studentMin:{S:75},onSiteMin:{S:92},addMin:{S:30},legs:[]}).byAgency.S;
   assert.strictEqual(r.studentMin,122);assert.strictEqual(r.addMin,30);assert.strictEqual(r.pay.students,117.93);
@@ -140,7 +140,7 @@ check('Rounding is per session, not per day, and on-site agencies are not rounde
   var r=P.dayPay({date:'2026-10-26',agencies:{N:N},sessionMin:{N:[20,20,20]},legs:[]}).byAgency.N;
   assert.strictEqual(r.studentMin,90);assert.strictEqual(r.pay.students,93); // 90/60 x 62 = $93.00
   // On site: sessions are kept as logged (75), time on site (92) is what's paid. 92/60 x 58 = 88.9333 -> $88.93
-  var OS={id:'S',rate:58,paysTravel:false,reimburseMiles:false,payClock:'onsite'};
+  var OS={id:'S',rate:58,paysTravel:false,reimburseMiles:false,payClock:'onsite',roundTo:0}; // no rounding, so the on-site figures below are as logged
   var s=P.dayPay({date:'2026-10-26',agencies:{S:OS},sessionMin:{S:[20,25,30]},onSiteMin:{S:92},legs:[]}).byAgency.S;
   assert.strictEqual(s.sessionMin,75);assert.strictEqual(s.studentMin,92);assert.strictEqual(s.pay.students,88.93);
 });
@@ -154,6 +154,20 @@ check('Rounding step set per agency: none, tenth hour, quarter hour, half hour, 
   // 50/60 x 62 = 51.6667 -> $51.67
   var r=P.dayPay({date:'2026-10-26',agencies:{N:N},sessionMin:{N:[{min:20,round:15},{min:20,round:0}]},legs:[]}).byAgency.N;
   assert.strictEqual(r.studentMin,50);assert.strictEqual(r.roundedUp,10);assert.strictEqual(r.pay.students,51.67);
+});
+
+check('On-site agency: the day\'s total time on site rounds up, not each session (Pete\'s example: 1:00 to 2:17 bills 1.5 hours)',function(){
+  // 77 min on site at the quarter hour -> 90 min. 90/60 x 58 = $87.00. Sessions (20 + 25 + 30) are not rounded.
+  var OSQ={id:'S',rate:58,paysTravel:false,reimburseMiles:false,payClock:'onsite',roundTo:15};
+  var r=P.dayPay({date:'2026-10-26',agencies:{S:OSQ},sessionMin:{S:[20,25,30]},onSiteMin:{S:77},legs:[]}).byAgency.S;
+  assert.strictEqual(r.studentMin,90);assert.strictEqual(r.onSiteLogged,77);assert.strictEqual(r.roundedUp,13);assert.strictEqual(r.pay.students,87);
+  // Same day with half-hour rounding: 77 -> 90 too; with 6-min steps: 77 -> 78 (78/60 x 58 = $75.40); with none: 77 ($74.43).
+  OSQ.roundTo=6;assert.strictEqual(P.dayPay({date:'2026-10-26',agencies:{S:OSQ},onSiteMin:{S:77},legs:[]}).byAgency.S.pay.students,75.4);
+  OSQ.roundTo=0;assert.strictEqual(P.dayPay({date:'2026-10-26',agencies:{S:OSQ},onSiteMin:{S:77},legs:[]}).byAgency.S.pay.students,74.43);
+  // No setting at all means the quarter hour. A meeting after leaving (30 min) is added as logged: 90 + 30 = 120 -> $116.00.
+  var OSD={id:'S',rate:58,paysTravel:false,reimburseMiles:false,payClock:'onsite'};
+  var m=P.dayPay({date:'2026-10-26',agencies:{S:OSD},onSiteMin:{S:77},addMin:{S:30},legs:[]}).byAgency.S;
+  assert.strictEqual(m.studentMin,120);assert.strictEqual(m.pay.students,116);
 });
 
 console.log('\nAll pay checks passed ('+n+')');
