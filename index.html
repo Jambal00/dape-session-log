@@ -594,6 +594,14 @@ function hrs(m){return Math.round(m/60*100)/100}
 /* An indirect time or meeting entry belongs to its school (or its student's school), and is billed to that school's agency. */
 function entrySchoolId(x){var s=x.studentId&&student(x.studentId);return x.schoolId||(s&&s.schoolId)||''}
 function entryAgency(x){var sc=school(entrySchoolId(x));return sc&&sc.agencyId?agency(sc.agencyId):null}
+/* Each logged session's combined direct and indirect minutes, by agency: pay.js rounds these up per session. */
+function sessionsByAgency(date){var out={};
+  S.sessions.forEach(function(x){if(x.date!==date||x.status==='planned')return;var m=(!x.absent&&num(x.min)?x.min:0)+(num(x.indirect)?x.indirect:0);if(!m)return;
+    var s=student(x.studentId),a=s&&agencyOfStudent(s),k=a?a.id:'';(out[k]=out[k]||[]).push(m)});
+  return out}
+/* Separately logged indirect time and meetings, by agency (on-site agencies are handled by indirectOutside). */
+function entriesByAgency(date){var out={};
+  S.indirect.forEach(function(x){if(x.date!==date||!num(x.min))return;var a=entryAgency(x);if(PAY.onSite(a))return;var k=a?a.id:'';out[k]=(out[k]||0)+x.min});return out}
 function dayByAgency(date){var out={};
   function add(sid,m){var s=student(sid),a=s&&agencyOfStudent(s),k=a?a.id:'';out[k]=(out[k]||0)+m}
   S.sessions.forEach(function(x){if(x.date===date&&x.status!=='planned'){var m=(!x.absent&&num(x.min)?x.min:0)+(num(x.indirect)?x.indirect:0);if(m)add(x.studentId,m)}});
@@ -632,7 +640,7 @@ function indirectBlock(P){var list=S.indirect.filter(function(x){return x.date==
     '<span class="muted small">Billed to the school\'s agency. For an agency that pays for time on site, the minutes outside your time at the school are paid on top. Picking a student also counts the minutes as that student\'s indirect time.</span></div>'}
 function dayPanel(P){
   var m=dayMinutes(S.date),ags={};S.agencies.forEach(function(a){ags[a.id]=a});
-  var R=PAY.dayPay({date:S.date,agencies:ags,studentMin:dayByAgency(S.date),onSiteMin:onSiteByAgency(S.date,P),addMin:indirectOutside(S.date),legs:P.legs}),T=R.totals,ks=Object.keys(R.byAgency);
+  var R=PAY.dayPay({date:S.date,agencies:ags,sessionMin:sessionsByAgency(S.date),studentMin:entriesByAgency(S.date),onSiteMin:onSiteByAgency(S.date,P),addMin:indirectOutside(S.date),legs:P.legs}),T=R.totals,ks=Object.keys(R.byAgency);
   var missing=P.legs.some(function(l){return l.miles==null}),test=P.legs.some(function(l){return l.test});
   var h='<div class="panel stack"><span class="eyebrow">Day total</span>'+
     '<div class="row" style="gap:22px"><div><div class="stat">'+hrs(m.d+m.i+T.travelMin)+'</div><span class="muted small">total hours<br>'+hrs(m.d+m.i)+(S.indirect.some(function(x){return x.date===S.date})?' students and meetings + ':' students + ')+hrs(T.travelMin)+' travel</span></div>'+
@@ -640,6 +648,7 @@ function dayPanel(P){
     (r1(T.taxMiles)!==r1(T.miles)?'<div><div class="stat">'+r1(T.taxMiles)+'</div><span class="muted small">miles<br>for taxes</span></div>':'')+'</div>';
   if(ks.length)h+='<div class="split">'+ks.map(function(k){var a=agency(k),x=R.byAgency[k],paid=a&&(x.rates.base!=null||x.rates.travel!=null||x.rates.mile!=null);
       var bits=[hrs(x.studentMin+x.travelMin)+' hrs'+(x.clock==='onsite'?' ('+hrs(x.studentMin-(x.addMin||0))+' on site'+(x.addMin?', '+hrs(x.addMin)+' outside':'')+')':''),r1(x.miles)+' mi'];
+      if(x.clock!=='onsite'&&x.roundedUp)bits.push('sessions rounded up to the quarter hour (+'+x.roundedUp+' min)');
       if(a&&reimburses(a)&&r1(x.paidMiles)!==r1(x.miles))bits.push(r1(x.paidMiles)+' mi paid'+(x.officeUsed?' (from office)':''));
       if(a&&reimburses(a)&&x.rates.mile!=null&&x.paidMiles)bits.push(money(x.rates.mile)+'/mi');
       var note=(x.unpaid.length?' ('+x.unpaid.join(' and ')+' not paid)':'')+(x.missing.length?' · missing '+x.missing.filter(function(v,i,s){return s.indexOf(v)===i}).join(', '):'');
@@ -787,9 +796,13 @@ function saveSession(kind,after){var d=S.draft,id=S.open,date=S.date;
 function extraInputs(g,d){var h='';
   if(g.kind==='ratio')h+='<div class="row"><label style="flex:0 1 200px">Out of how many tries<input type="number" inputmode="numeric" id="of-'+esc(g.id)+'" data-g="'+esc(g.id)+'" data-x="outof" value="'+(num(d.outof[g.id])?d.outof[g.id]:'')+'"></label></div>';
   return h+'<div class="row">'+HELP.map(function(v){return '<button class="chip '+(d.help[g.id]===v?'on':'')+'" data-act="help" data-g="'+esc(g.id)+'" data-v="'+v+'">'+v+'</button>'}).join('')+'</div>'}
+/* For per-session agencies: what this session bills after rounding up to the quarter hour. */
+function billedNote(s,d){var a=agencyOfStudent(s);if(!a||PAY.onSite(a))return '';var m=(d.absent?0:(num(d.min)?d.min:0))+(num(d.indirect)?d.indirect:0);if(!m)return '<span class="muted small" id="billed"></span>';
+  var q=PAY.quarterUp(m);return '<span class="muted small" id="billed">'+(q===m?'Bills '+m+' min.':m+' min logged, bills '+q+' min (rounded up to the quarter hour).')+'</span>'}
+function refreshBilled(){var bn=document.getElementById('billed'),bs=student(S.open);if(bn&&bs&&S.draft){var tmp=document.createElement('div');tmp.innerHTML=billedNote(bs,S.draft);bn.textContent=tmp.textContent}}
 function minutesPanel(s,d){
   var h='<div class="panel stack"><div class="row"><label>Direct minutes<input type="number" inputmode="numeric" id="e-min" value="'+(num(d.min)?d.min:'')+'"'+(d.absent?' disabled':'')+'></label>'+
-    '<label>Indirect minutes<input type="number" inputmode="numeric" id="e-ind" value="'+(num(d.indirect)?d.indirect:'')+'"></label></div></div>';
+    '<label>Indirect minutes<input type="number" inputmode="numeric" id="e-ind" value="'+(num(d.indirect)?d.indirect:'')+'"></label></div>'+billedNote(s,d)+'</div>';
   if(d.absent)return h;
   var names=S.activities.map(function(a){return String(a.name)});d.acts.forEach(function(n){if(names.indexOf(n)<0)names.push(n)});
   return h+'<div class="panel stack"><strong>Activities</strong>'+
@@ -1617,8 +1630,9 @@ document.addEventListener('click',function(e){
 document.addEventListener('input',function(e){var t=e.target;
   if(t.id==='note'&&S.draft)S.draft.note=t.value;
   else if((t.id==='e-start'||t.id==='e-end')&&S.draft){S.draft[t.id==='e-start'?'start':'end']=t.value;
-    if(S.draft.start&&S.draft.end){var dm=minsBetween(S.draft.start,S.draft.end);if(dm>0){S.draft.min=dm;var em=document.getElementById('e-min');if(em)em.value=dm}}}
-  else if((t.id==='e-min'||t.id==='e-ind')&&S.draft){var k=t.id==='e-min'?'min':'indirect';if(t.value===''||!isFinite(+t.value))delete S.draft[k];else S.draft[k]=+t.value}
+    if(S.draft.start&&S.draft.end){var dm=minsBetween(S.draft.start,S.draft.end);if(dm>0){S.draft.min=dm;var em=document.getElementById('e-min');if(em)em.value=dm;refreshBilled()}}}
+  else if((t.id==='e-min'||t.id==='e-ind')&&S.draft){var k=t.id==='e-min'?'min':'indirect';if(t.value===''||!isFinite(+t.value))delete S.draft[k];else S.draft[k]=+t.value;
+    refreshBilled()}
   else if(t.dataset.x&&S.draft){if(t.value===''||!isFinite(+t.value))delete S.draft[t.dataset.x][t.dataset.g];else S.draft[t.dataset.x][t.dataset.g]=+t.value}
   else if(t.dataset.g&&S.draft){if(t.value===''||!isFinite(+t.value))delete S.draft.values[t.dataset.g];else S.draft.values[t.dataset.g]=+t.value}});
 document.addEventListener('change',function(e){var t=e.target;

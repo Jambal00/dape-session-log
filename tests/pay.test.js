@@ -126,4 +126,23 @@ check('On-site agency: indirect time and meetings outside time on site are paid 
   assert.strictEqual(r.studentMin,122);assert.strictEqual(r.addMin,30);assert.strictEqual(r.pay.students,117.93);
 });
 
+check('Per-session agency: each session rounds up to the next quarter hour (Pete\'s example: 15 direct + 10 indirect bills 30)',function(){
+  assert.strictEqual(P.quarterUp(25),30);assert.strictEqual(P.quarterUp(30),30);assert.strictEqual(P.quarterUp(31),45);
+  assert.strictEqual(P.quarterUp(1),15);assert.strictEqual(P.quarterUp(0),0);assert.strictEqual(P.quarterUp(60),60);
+  // Northstar (N, $62/hr): J.R. 15+5=20 -> 30, T.K. 30+10=40 -> 45, B.L. 30+10=40 -> 45. Billed 120 min, logged 100.
+  // 120/60 x 62 = $124.00 (unrounded would be 100/60 x 62 = $103.33)
+  var r=P.dayPay({date:'2026-10-26',agencies:{N:N},sessionMin:{N:[20,40,40]},legs:[]}).byAgency.N;
+  assert.strictEqual(r.studentMin,120);assert.strictEqual(r.loggedMin,100);assert.strictEqual(r.roundedUp,20);assert.strictEqual(r.pay.students,124);
+});
+
+check('Rounding is per session, not per day, and on-site agencies are not rounded',function(){
+  // Three 20-minute sessions bill 30 + 30 + 30 = 90. Rounding the day's total (60) instead would have billed 60.
+  var r=P.dayPay({date:'2026-10-26',agencies:{N:N},sessionMin:{N:[20,20,20]},legs:[]}).byAgency.N;
+  assert.strictEqual(r.studentMin,90);assert.strictEqual(r.pay.students,93); // 90/60 x 62 = $93.00
+  // On site: sessions are kept as logged (75), time on site (92) is what's paid. 92/60 x 58 = 88.9333 -> $88.93
+  var OS={id:'S',rate:58,paysTravel:false,reimburseMiles:false,payClock:'onsite'};
+  var s=P.dayPay({date:'2026-10-26',agencies:{S:OS},sessionMin:{S:[20,25,30]},onSiteMin:{S:92},legs:[]}).byAgency.S;
+  assert.strictEqual(s.sessionMin,75);assert.strictEqual(s.studentMin,92);assert.strictEqual(s.pay.students,88.93);
+});
+
 console.log('\nAll pay checks passed ('+n+')');
