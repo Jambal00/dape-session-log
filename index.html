@@ -570,7 +570,7 @@ function todayView(){
     (S.date!==today()?'<button class="btn" data-act="todaybtn">Today</button>':'')+'</div>'+
     (S.loaded?'<span class="muted small">'+(rows.length?done+' of '+rows.length+' sessions logged'+(nSc?' · '+nSc+' school'+(nSc===1?'':'s'):''):'Nothing scheduled '+dayWord(S.date))+'</span>':'')+'</div>';
   if(!S.students.length)return h+emptyRoster();
-  if(!rows.length)return h;
+  if(!rows.length)return h+(S.indirect.some(function(x){return x.date===S.date})?dayPanel(P):'<div class="stack">'+indirectBlock(P)+'</div>');
   if(S.date===today()&&S.loaded)h+=nowPanel(P);
   function rowHtml(o){
     var s=o.s,x=sess(s.id,S.date),sc=school(s.schoolId),cl=sc&&closedOn(sc,S.date);
@@ -583,7 +583,7 @@ function todayView(){
     var ag=st.sc&&agency(st.sc.agencyId);
     var stT={arrive:st.arrive||''};
     h+='<div class="stop"><div class="row spread"><h2>'+esc(st.sc?(st.sc.alias||st.sc.name):'No school set')+'</h2><span class="muted small">'+esc([stT.arrive?'Arrive '+fmtTime(stT.arrive):'',ag?ag.name:''].filter(Boolean).join(' · '))+'</span></div>'+
-      siteLine(st)+'<div class="list">'+st.rows.map(rowHtml).join('')+'</div></div>';
+      siteLine(st)+'<div class="list">'+st.rows.map(rowHtml).join('')+'</div>'+(st.id?'<button type="button" class="linkbtn" style="align-self:flex-start;margin-top:6px" data-act="indform" data-sc="'+esc(st.id)+'">+ Meeting or indirect time at '+esc(st.sc.alias||st.sc.name)+'</button>':'')+'</div>';
   });
   return h+dayPanel(P);
 }
@@ -591,25 +591,55 @@ function dayMinutes(date){var d=0,i=0;
   S.sessions.forEach(function(x){if(x.date===date&&x.status!=='planned'){if(!x.absent&&num(x.min))d+=x.min;if(num(x.indirect))i+=x.indirect}});
   S.indirect.forEach(function(x){if(x.date===date&&num(x.min))i+=x.min});return{d:d,i:i}}
 function hrs(m){return Math.round(m/60*100)/100}
+/* An indirect time or meeting entry belongs to its school (or its student's school), and is billed to that school's agency. */
+function entrySchoolId(x){var s=x.studentId&&student(x.studentId);return x.schoolId||(s&&s.schoolId)||''}
+function entryAgency(x){var sc=school(entrySchoolId(x));return sc&&sc.agencyId?agency(sc.agencyId):null}
 function dayByAgency(date){var out={};
   function add(sid,m){var s=student(sid),a=s&&agencyOfStudent(s),k=a?a.id:'';out[k]=(out[k]||0)+m}
   S.sessions.forEach(function(x){if(x.date===date&&x.status!=='planned'){var m=(!x.absent&&num(x.min)?x.min:0)+(num(x.indirect)?x.indirect:0);if(m)add(x.studentId,m)}});
-  S.indirect.forEach(function(x){if(x.date===date&&num(x.min))add(x.studentId,x.min)});return out}
+  S.indirect.forEach(function(x){if(x.date!==date||!num(x.min))return;var a=entryAgency(x);if(PAY.onSite(a))return;var k=a?a.id:'';out[k]=(out[k]||0)+x.min});return out}
+/* For agencies paid for time on site: indirect time and meetings outside her arrive-to-leave time, paid on top. */
+function indirectOutside(date){var out={};
+  S.indirect.forEach(function(x){if(x.date!==date||!num(x.min))return;var a=entryAgency(x);if(!PAY.onSite(a))return;
+    var t=siteTimes(date,entrySchoolId(x)),m=PLAN.outsideMin(x.start,x.min,t.arrive,t.leave);if(m>0)out[a.id]=(out[a.id]||0)+m});
+  return out}
+var IKIND={meeting:'Meeting',indirect:'Indirect work'};
+function entryText(x){var st=x.studentId&&student(x.studentId),sc=school(entrySchoolId(x));
+  return [(IKIND[x.kind]||'Indirect work')+(x.start?' at '+fmtTime(x.start):''),sc?(sc.alias||sc.name):'',x.studentId?(st?st.name:'Removed student'):'',x.min+' min',x.note||''].filter(Boolean).join(' · ')}
 function dayTotals(date,P){var out={};
   function b(k){return out[k]||(out[k]={stu:0,trav:0,miles:0,tax:0})}
   var by=dayByAgency(date);Object.keys(by).forEach(function(k){b(k).stu+=by[k]});
   P.legs.forEach(function(l){var x=b(l.agencyId);if(num(l.min))x.trav+=l.min;if(num(l.miles)){x.miles+=l.miles;if(taxMiles(agency(l.agencyId)))x.tax+=l.miles}});
   return out}
+/* Meetings and indirect time for the day: the list, and the form to add one at any school, with or without a student. */
+function indirectBlock(P){var list=S.indirect.filter(function(x){return x.date===S.date}),h='';
+  if(list.length)h+='<strong style="margin-top:6px">Meetings and indirect time</strong>'+list.map(function(x){var a=entryAgency(x),t=PAY.onSite(a)?siteTimes(S.date,entrySchoolId(x)):null,
+      out=t?PLAN.outsideMin(x.start,x.min,t.arrive,t.leave):null;
+    return '<div class="row spread"><span style="min-width:0;flex:1">'+esc(entryText(x))+
+      (t?'<br><span class="muted small">'+(out===x.min?(x.start&&t.arrive?'Outside your time on site: paid on top':'Paid on top of time on site'+(x.start?'':' (no time given)')):out?out+' min outside your time on site, paid on top':'Inside your time on site, already paid')+'</span>':'')+
+      '</span><button class="chip" data-act="rmind" data-id="'+esc(x.id)+'">Remove</button></div>'}).join('');
+  var f=S.indForm;
+  if(!f)return h+'<button class="btn" data-act="indform">Add a meeting or indirect time</button>';
+  var stopIds=(P&&P.stops||[]).filter(function(st){return st.id}).map(function(st){return st.id});
+  var scSel=f.sc||stopIds[0]||(S.schools[0]&&S.schools[0].id)||'';
+  return h+'<div class="panel stack" style="padding:12px"><strong>Add a meeting or indirect time</strong>'+
+    '<span class="seg" role="group" style="align-self:flex-start">'+['meeting','indirect'].map(function(k){return '<button type="button" class="'+((f.kind||'meeting')===k?'on':'')+'" data-act="indkind" data-v="'+k+'" aria-pressed="'+((f.kind||'meeting')===k)+'">'+IKIND[k]+'</button>'}).join('')+'</span>'+
+    '<div class="row"><label>School<select id="ind-school">'+S.schools.map(function(sc){return '<option value="'+esc(sc.id)+'"'+(sc.id===scSel?' selected':'')+'>'+esc(sc.alias||sc.name)+'</option>'}).join('')+'</select></label>'+
+    '<label>Student (optional)<select id="ind-student"><option value="">Whole school, no student</option>'+activeStudents().map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+' ('+esc(schoolLabel(s))+')</option>'}).join('')+'</select></label></div>'+
+    '<div class="row"><label>Started at<input type="time" id="ind-start" value="'+esc(S.date===today()?nowHM():'')+'"></label><label>Minutes<input type="number" inputmode="numeric" id="ind-min"></label></div>'+
+    '<label>What it was<input id="ind-note" placeholder="IEP meeting, phone call, talking with a para. No real names."></label>'+
+    '<div class="row"><button class="btn primary" style="flex:1" data-act="addind">Save</button><button class="btn" data-act="indform">Cancel</button></div>'+
+    '<span class="muted small">Billed to the school\'s agency. For an agency that pays for time on site, the minutes outside your time at the school are paid on top. Picking a student also counts the minutes as that student\'s indirect time.</span></div>'}
 function dayPanel(P){
   var m=dayMinutes(S.date),ags={};S.agencies.forEach(function(a){ags[a.id]=a});
-  var R=PAY.dayPay({date:S.date,agencies:ags,studentMin:dayByAgency(S.date),onSiteMin:onSiteByAgency(S.date,P),legs:P.legs}),T=R.totals,ks=Object.keys(R.byAgency);
+  var R=PAY.dayPay({date:S.date,agencies:ags,studentMin:dayByAgency(S.date),onSiteMin:onSiteByAgency(S.date,P),addMin:indirectOutside(S.date),legs:P.legs}),T=R.totals,ks=Object.keys(R.byAgency);
   var missing=P.legs.some(function(l){return l.miles==null}),test=P.legs.some(function(l){return l.test});
   var h='<div class="panel stack"><span class="eyebrow">Day total</span>'+
-    '<div class="row" style="gap:22px"><div><div class="stat">'+hrs(m.d+m.i+T.travelMin)+'</div><span class="muted small">total hours<br>'+hrs(m.d+m.i)+' students + '+hrs(T.travelMin)+' travel</span></div>'+
+    '<div class="row" style="gap:22px"><div><div class="stat">'+hrs(m.d+m.i+T.travelMin)+'</div><span class="muted small">total hours<br>'+hrs(m.d+m.i)+(S.indirect.some(function(x){return x.date===S.date})?' students and meetings + ':' students + ')+hrs(T.travelMin)+' travel</span></div>'+
     '<div><div class="stat">'+r1(T.miles)+'</div><span class="muted small">miles driven<br>'+P.legs.length+' drive'+(P.legs.length===1?'':'s')+' from home</span></div>'+
     (r1(T.taxMiles)!==r1(T.miles)?'<div><div class="stat">'+r1(T.taxMiles)+'</div><span class="muted small">miles<br>for taxes</span></div>':'')+'</div>';
   if(ks.length)h+='<div class="split">'+ks.map(function(k){var a=agency(k),x=R.byAgency[k],paid=a&&(x.rates.base!=null||x.rates.travel!=null||x.rates.mile!=null);
-      var bits=[hrs(x.studentMin+x.travelMin)+' hrs'+(x.clock==='onsite'?' ('+hrs(x.studentMin)+' on site)':''),r1(x.miles)+' mi'];
+      var bits=[hrs(x.studentMin+x.travelMin)+' hrs'+(x.clock==='onsite'?' ('+hrs(x.studentMin-(x.addMin||0))+' on site'+(x.addMin?', '+hrs(x.addMin)+' outside':'')+')':''),r1(x.miles)+' mi'];
       if(a&&reimburses(a)&&r1(x.paidMiles)!==r1(x.miles))bits.push(r1(x.paidMiles)+' mi paid'+(x.officeUsed?' (from office)':''));
       if(a&&reimburses(a)&&x.rates.mile!=null&&x.paidMiles)bits.push(money(x.rates.mile)+'/mi');
       var note=(x.unpaid.length?' ('+x.unpaid.join(' and ')+' not paid)':'')+(x.missing.length?' · missing '+x.missing.filter(function(v,i,s){return s.indexOf(v)===i}).join(', '):'');
@@ -618,14 +648,7 @@ function dayPanel(P){
   else if(test)h+='<span class="muted small">Miles use test distances for now.</span>';
   if(r1(T.taxMiles)!==r1(T.miles))h+='<span class="muted small">Miles for taxes count the miles each agency pays on, and leave out agencies where you chose not to track miles.</span>';
   h+='<span class="muted small">Student hours count logged sessions only. The drive home after the last school is not counted.</span>';
-  S.indirect.filter(function(x){return x.date===S.date}).forEach(function(x){var st=student(x.studentId);
-    h+='<div class="row spread"><span style="min-width:0;flex:1">'+esc((st?st.name:'Removed student')+', '+x.min+' indirect min'+(x.note?', '+x.note:''))+'</span><button class="chip" data-act="rmind" data-id="'+esc(x.id)+'">Remove</button></div>'});
-  if(S.indForm)h+='<div class="row"><label>Student<select id="ind-student"><option value="">Pick a student</option>'+activeStudents().map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'}).join('')+'</select></label>'+
-    '<label>Indirect minutes<input type="number" inputmode="numeric" id="ind-min"></label></div>'+
-    '<label>What it was<input id="ind-note" placeholder="Phone call, meeting, talking with a para. No real names."></label>'+
-    '<div class="row"><button class="btn primary" style="flex:1" data-act="addind">Save indirect time</button><button class="btn" data-act="indform">Cancel</button></div>';
-  else h+='<button class="btn" data-act="indform">Add indirect time outside a session</button>';
-  return h+'</div>';
+  return h+indirectBlock(P)+'</div>';
 }
 
 /* ---------- Plan my Day wizard ---------- */
@@ -1525,9 +1548,12 @@ document.addEventListener('click',function(e){
     var ex=S.activities.filter(function(x){return String(x.name).toLowerCase()===an.toLowerCase()})[0];
     if(ex)an=String(ex.name);else write(function(){return S.db.doc('activities/a_'+rid()).set({name:an})}).catch(function(){});
     if(d.acts.indexOf(an)<0)d.acts.push(an)}
-  else if(a==='indform'){S.indForm=!S.indForm}
-  else if(a==='addind'){var im=+val('ind-min'),is=val('ind-student');if(!is){toast('Pick a student');return} if(!(im>0)){toast('Enter the minutes');return}
-    write(function(){return S.db.doc('indirect/i_'+rid()).set({studentId:is,date:S.date,min:im,note:val('ind-note')})}).then(function(){S.indForm=false;toast('Indirect time added');render()},function(){});return}
+  else if(a==='indform'){S.indForm=S.indForm&&!b.dataset.sc?null:{sc:b.dataset.sc||'',kind:'meeting'};if(S.indForm&&b.dataset.sc)S.scrollTo='ind-school'}
+  else if(a==='indkind'){if(S.indForm){S.indForm.sc=val('ind-school');S.indForm.kind=b.dataset.v}}
+  else if(a==='addind'){var im=+val('ind-min'),is=val('ind-student'),isc=val('ind-school'),ist=student(is);if(ist&&ist.schoolId)isc=ist.schoolId;
+    if(!isc){toast('Pick a school');return} if(!(im>0)){toast('Enter the minutes');return}
+    var idoc={kind:(S.indForm&&S.indForm.kind)||'meeting',schoolId:isc,date:S.date,min:im,note:val('ind-note')};if(is)idoc.studentId=is;if(val('ind-start'))idoc.start=val('ind-start');
+    write(function(){return S.db.doc('indirect/i_'+rid()).set(idoc)}).then(function(){S.indForm=null;toast((idoc.kind==='meeting'?'Meeting':'Indirect time')+' added');render()},function(){});return}
   else if(a==='rmind'){var iid=b.dataset.id;write(function(){return S.db.doc('indirect/'+iid).delete()}).then(function(){toast('Removed');render()},function(){});return}
   else if(a==='code'){s=student(b.dataset.id);if(!s)return;var cs=(s.codes||'').split('/').filter(Boolean),ci=cs.indexOf(b.dataset.v);
     if(ci<0)cs.push(b.dataset.v);else cs.splice(ci,1);saveDoc('students',s,{codes:cs.sort().join('/')},'Codes saved');return}

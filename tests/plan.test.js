@@ -85,4 +85,17 @@ check('Starting order: last time\'s order first, newcomers after by usual time; 
   assert.deepStrictEqual(P.moveAfter(['A','B','C'],'A','C'),['B','C','A']);
 });
 
+check('Indirect time at an on-site school: only the minutes outside arrive-to-leave are extra',function(){
+  // on site 10:55-12:27. A 30-min meeting at 12:15 runs 12:15-12:45: 12 min inside, 18 outside.
+  assert.strictEqual(P.outsideMin('12:15',30,'10:55','12:27'),18);
+  // fully inside: 11:00-11:20 -> 0 extra. Fully outside (after school, 15:00): all 45.
+  assert.strictEqual(P.outsideMin('11:00',20,'10:55','12:27'),0);
+  assert.strictEqual(P.outsideMin('15:00',45,'10:55','12:27'),45);
+  // starts before arrival: 10:40-11:10, 15 min before 10:55 -> 15 extra.
+  assert.strictEqual(P.outsideMin('10:40',30,'10:55','12:27'),15);
+  // no start time, or no time on site that day: all of it counts.
+  assert.strictEqual(P.outsideMin('',25,'10:55','12:27'),25);
+  assert.strictEqual(P.outsideMin('11:00',25,'',''),25);
+});
+
 console.log('\nAll plan checks passed ('+n+')');

@@ -11,7 +11,8 @@
    - An agency pays for her time either per session (the minutes with each student, direct and indirect) or on site
      (from when she arrives at its schools to when she leaves). On-site time replaces session minutes for that agency only.
      Travel and mileage use the agency's own travel settings either way.
-   - When an on-site agency has no arrive and leave times for the day, it is paid on session minutes and the times are reported missing. */
+   - When an on-site agency has no arrive and leave times for the day, it is paid on session minutes and the times are reported missing.
+   - Indirect time and meetings outside her time on site are billable on top (Pete, 2026-10-17): passed in as addMin per agency. */
 (function(root){
   function num(v){return typeof v==='number'&&isFinite(v)}
   function cents(x){return Math.round((x+(x>=0?1:-1)*1e-9)*100)/100}
@@ -43,7 +44,8 @@
   /* One day's pay, split by agency.
      input: {date, agencies: {id: agency}, studentMin: {agencyId: minutes}, onSiteMin: {agencyId: minutes from arrive to leave},
              legs: [{from, to, agencyId, miles, min, officeMiles}]}
-     For an on-site agency, studentMin in the result is the paid time on site and sessionMin keeps the session minutes.
+     addMin: {agencyId: minutes} paid on top, for indirect time and meetings outside time on site.
+     For an on-site agency, studentMin in the result is the paid time on site (plus addMin) and sessionMin keeps the session minutes.
      Returns {byAgency: {id: {...}}, totals: {...}}. */
   function dayPay(input){
     var out={},date=input.date;
@@ -56,6 +58,8 @@
       if(!(k in out)&&!num(os[k]))return;
       var x=b(k);x.clock='onsite';x.sessionMin=x.studentMin;
       if(num(os[k]))x.studentMin=os[k];else if(x.sessionMin)x.missing.push('arrive and leave times (paid on session minutes)')});
+    var am=input.addMin||{};
+    Object.keys(am).forEach(function(k){if(num(am[k])&&am[k]>0){var x=b(k);x.studentMin+=am[k];x.addMin=(x.addMin||0)+am[k]}});
     (input.legs||[]).forEach(function(l){
       var k=l.agencyId||'',x=b(k),a=input.agencies[k];
       if(num(l.min))x.travelMin+=l.min;

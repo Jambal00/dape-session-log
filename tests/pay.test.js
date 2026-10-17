@@ -119,4 +119,11 @@ check('On-site agency with no arrive and leave times falls back to session minut
   assert.strictEqual(r.pay.students,43.5);assert.deepStrictEqual(r.missing,['arrive and leave times (paid on session minutes)']);
 });
 
+check('On-site agency: indirect time and meetings outside time on site are paid on top',function(){
+  var OS={id:'S',rate:58,paysTravel:false,reimburseMiles:false,payClock:'onsite'};
+  // 92 min on site + 30 min meeting after leaving = 122 min. 122/60 x 58 = 117.9333 -> $117.93
+  var r=P.dayPay({date:'2026-10-26',agencies:{S:OS},studentMin:{S:75},onSiteMin:{S:92},addMin:{S:30},legs:[]}).byAgency.S;
+  assert.strictEqual(r.studentMin,122);assert.strictEqual(r.addMin,30);assert.strictEqual(r.pay.students,117.93);
+});
+
 console.log('\nAll pay checks passed ('+n+')');

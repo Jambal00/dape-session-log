@@ -70,6 +70,13 @@
       if(ia!=null)return -1;if(ib!=null)return 1;
       return t(a.it)-t(b.it)||a.i-b.i}).map(function(x){return x.it})}
 
-  var API={toMin:toMin,toTime:toTime,lineUp:lineUp,moveBefore:moveBefore,moveAfter:moveAfter,fixFor:fixFor,startOrder:startOrder};
+  /* Minutes of an entry (start, min) that fall outside her time on site (arrive to leave). Used for indirect time and meetings
+     at a school whose agency pays for time on site: minutes inside are already paid, minutes outside are billable.
+     With no start time, or no arrive and leave times, all of it counts as outside. */
+  function outsideMin(start,min,arrive,leave){var s=toMin(start),a=toMin(arrive),l=toMin(leave);min=+min||0;
+    if(s==null||a==null||l==null||l<=a)return min;
+    var over=Math.max(0,Math.min(s+min,l)-Math.max(s,a));return min-over}
+
+  var API={outsideMin:outsideMin,toMin:toMin,toTime:toTime,lineUp:lineUp,moveBefore:moveBefore,moveAfter:moveAfter,fixFor:fixFor,startOrder:startOrder};
   if(typeof module!=='undefined'&&module.exports)module.exports=API;else root.DAPE_PLAN=API;
 })(this);
