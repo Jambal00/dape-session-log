@@ -1623,17 +1623,17 @@ document.addEventListener('click',function(e){
   else if(a==='edit'){S.editId=S.editId===b.dataset.id?null:b.dataset.id}
   else if(a==='editschool'){S.schoolEdit=S.schoolEdit===b.dataset.id?null:b.dataset.id;S.scTab='schedule';S.scDraft=S.schoolEdit?scDraftFrom(school(S.schoolEdit)):null;S.scAdding=false;
     if(S.schoolEdit)S.scrollToEl='[data-act=editschool][data-id="'+S.schoolEdit+'"]'}
-  else if(a==='sctab'){S.scTab=b.dataset.v}
+  else if(a==='sctab'){scSweep();S.scTab=b.dataset.v}
   else if(a==='scadd'){S.scAdding=!S.scAdding;if(S.scAdding){S.schoolEdit=null;S.scDraft=null}}
   else if(a==='placestoggle'){S.placesOpen=!S.placesOpen}
-  else if(a==='scdayd'){var dd0=S.scDraft;if(!dd0)return;var di0=dd0.days.indexOf(i);if(di0<0)dd0.days.push(i);else dd0.days.splice(di0,1);dd0.days.sort()}
-  else if(a==='savesched'){sc=school(b.dataset.id);var ds=S.scDraft;if(!sc||!ds)return;var tt={},bad='';
+  else if(a==='scdayd'){scSweep();var dd0=S.scDraft;if(!dd0)return;var di0=dd0.days.indexOf(i);if(di0<0)dd0.days.push(i);else dd0.days.splice(di0,1);dd0.days.sort()}
+  else if(a==='savesched'){scSweep();sc=school(b.dataset.id);var ds=S.scDraft;if(!sc||!ds)return;var tt={},bad='';
     ds.days.forEach(function(x){var t=ds.times[x]||{};if(t.leave&&t.arrive&&t.leave<=t.arrive)bad=DAYS[x];if(t.arrive||t.leave)tt[x]={arrive:t.arrive||'',leave:t.leave||''}});
     if(bad){toast('On '+bad+', leave time is before arrival');return}
     var gp=ds.gap!==''&&isFinite(+ds.gap)&&+ds.gap>=0?+ds.gap:5;
     saveDoc('schools',sc,{days:ds.days.slice(),times:tt,gap:gp},'Schedule saved');return}
-  else if(a==='savebilling'){sc=school(b.dataset.id);if(!sc||!S.scDraft)return;var na=S.scDraft.agencyId;saveDoc('schools',sc,{agencyId:na},'Billing saved');return}
-  else if(a==='savelocation'){sc=school(b.dataset.id);var dl=S.scDraft;if(!sc||!dl)return;if(!dl.name.trim()){toast('The school name is required');return}
+  else if(a==='savebilling'){scSweep();sc=school(b.dataset.id);if(!sc||!S.scDraft)return;var na=S.scDraft.agencyId;saveDoc('schools',sc,{agencyId:na},'Billing saved');return}
+  else if(a==='savelocation'){scSweep();sc=school(b.dataset.id);var dl=S.scDraft;if(!sc||!dl)return;if(!dl.name.trim()){toast('The school name is required');return}
     var sa=dl.address.trim(),sg=geoFor('sc-addr',sa,sc);dl.name=dl.name.trim();dl.alias=dl.alias.trim();dl.address=sa;
     saveDoc('schools',sc,{name:dl.name.trim(),alias:dl.alias.trim(),address:sa,lat:sg.lat,lon:sg.lon},'Location saved');return}
   else if(a==='addstudent'){var n=val('s-name');if(!n){toast('Enter initials or a nickname first');return}
@@ -1713,8 +1713,15 @@ document.addEventListener('input',function(e){var t=e.target;if(!t.dataset||!(t.
   var ex=document.getElementById(t.dataset.agw+'-ex');if(ex)ex.innerHTML=agExample(dd)});
 document.addEventListener('change',function(e){var t=e.target;if(t.dataset&&t.dataset.luarr!=null){var dd=dayDoc(S.date),ar=Object.assign({},dd.arrive||{});if(t.value)ar[t.dataset.luarr]=t.value;else delete ar[t.dataset.luarr];saveDay(S.date,{arrive:ar},'Arrival changed for today')}});
 document.addEventListener('change',function(e){if(e.target.id==='sl-when'){var r=document.getElementById('sl-pinrow');if(r)r.hidden=e.target.value!=='pin'}});
-document.addEventListener('input',function(e){var t=e.target,d=S.scDraft;if(!d||!t.dataset||!t.dataset.scf)return;var f=t.dataset.scf;
-  if(f==='arrive'||f==='leave'){var x=+t.dataset.day;d.times[x]=Object.assign({arrive:'',leave:''},d.times[x]);d.times[x][f]=t.value}else d[f]=t.value});
+/* Copy one school field into the open school's draft. Also run over every field just before a save or a tab switch,
+   because some phone pickers (iPhone time and date wheels) don't send typing events. */
+function scCapture(t){var d=S.scDraft;if(!d||!t.dataset||!t.dataset.scf)return;var f=t.dataset.scf;
+  if(f==='arrive'||f==='leave'){var x=+t.dataset.day;d.times[x]=Object.assign({arrive:'',leave:''},d.times[x]);d.times[x][f]=t.value}else d[f]=t.value}
+function scSweep(){document.querySelectorAll('[data-scf]').forEach(scCapture)}
+document.addEventListener('input',function(e){scCapture(e.target)});
+/* iPhone time and date pickers report a new value with a change event only: pass it on as input, so every screen that
+   listens for typing (session start and end, agency rate dates, IEP dates, school times) sees it. */
+document.addEventListener('change',function(e){var t=e.target;if(t.tagName==='INPUT'&&/^(time|date|datetime-local|month)$/.test(t.type)&&!t.dataset.noinput)t.dispatchEvent(new Event('input',{bubbles:true}))},true);
 document.addEventListener('change',function(e){var t=e.target;if(t.dataset&&t.dataset.scf==='agencyId'&&S.scDraft){S.scDraft.agencyId=t.value;render()}});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&S.menu){S.menu=false;render()}});
 setInterval(function(){if(!S.loaded||S.date!==today())return;
