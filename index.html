@@ -204,6 +204,9 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .tabbody h3{margin:4px 0 0;font:650 15px var(--body)}
 .savebar{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:12px;margin-top:4px}
 .savebar .btn{width:100%}
+.paste{border-style:dashed;border-color:var(--accent)}
+.paste .found{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:2px;font-size:14px}
+.namewarn{display:flex;flex-direction:column;gap:8px;border-color:var(--warn)}
 .example{background:var(--accent-soft);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
 .example .t{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
 .ex{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px;font-variant-numeric:tabular-nums}
@@ -266,6 +269,7 @@ pre.sum{white-space:pre-wrap;word-break:break-word;font:14px/1.45 var(--body);ma
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="pay.js"></script>
 <script src="plan.js"></script>
+<script src="iep.js"></script>
 <div class="wrap" id="auth" hidden>
   <div class="stack"><span class="eyebrow">DAPE Session Log</span><h1>Sign in</h1></div>
   <form class="panel stack" id="auth-form">
@@ -1012,7 +1016,7 @@ function iepCard(s){
     '<span class="muted small">Edit fixes this IEP. Update starts a new one after a meeting and keeps the old one in history.</span></div>';
   return h}
 function blankObj(aid,n){return {id:'g_'+rid(),existing:false,annualId:aid,num:String(n),text:'',label:'',unit:'',target:'',dir:'min',kind:'count',variants:'',baseline:'',mastery:''}}
-function iepStart(sid,mode){var s=student(sid);if(!s)return;var ip=s.iep||{};
+function iepStart(sid,mode){var s=student(sid);if(!s)return;S.iepPaste=null;var ip=s.iep||{};
   var annual=((ip.annual&&ip.annual.length)?ip.annual:[{id:'a_'+rid()}]).map(function(a){return {id:a.id,num:a.num||'',text:a.text||''}});
   var objs=liveGoals(s).map(function(g,k){var inA=annual.some(function(a){return a.id===g.annualId});
     return {id:g.id,existing:true,annualId:inA?g.annualId:annual[0].id,num:g.num||String(k+1),text:g.text||'',label:g.label||'',unit:g.unit||'',
@@ -1052,6 +1056,7 @@ function iepView(){
       fld('Sessions per week','perWeek','text','e.g. 1, 2, or every other week')+'</div>'+
       '<span class="muted small">Days are set in the student\'s Schedule. '+(s.slots.length?'Now: '+esc(s.slots.map(slotText).join('; ')):'No time slots yet.')+'</span>';
   }else if(st===4){
+    h+=iepPastePanel(s);
     h+='<span class="muted">Copy the Measurable Annual Goal. Write the initials where the IEP has the name.</span>';
     d.annual.forEach(function(a,k){
       h+='<div class="panel stack">'+fld('Goal number','annual.'+k+'.num','text','e.g. 4',' style="flex:0 0 auto;max-width:140px"')+
@@ -1083,6 +1088,37 @@ function iepView(){
     (st<6?'<button class="btn primary" style="flex:1" data-act="iepnext">Next: '+esc(IEPSTEPS[st])+'</button>':
       '<button class="btn primary" style="flex:1" data-act="iepsave"'+(S.saving?' disabled':'')+'>'+(up?'Save new IEP':'Save IEP')+'</button>')+'</div>';
   return h}
+/* ---------- Paste from IEP ----------
+   She pastes a whole goal page; iep.js splits it into the goal and its objectives and makes first guesses.
+   Any name it finds must be swapped for the initials (or marked "not a name") before it fills anything in.
+   The pasted text lives only in this screen and is never saved. */
+function iepPastePanel(s){var P=S.iepPaste;
+  var h='<div class="panel stack paste"><div class="row spread"><strong>Paste from the IEP</strong><span class="pill">optional</span></div>';
+  if(!P||!P.parsed){
+    return h+'<span class="muted small">Copy a whole goal page from SpEd Forms (the goal and its objectives) and paste it here. The app fills in the goal and each objective for you to check. Nothing you paste is saved until you finish the last step.</span>'+
+      '<textarea id="iep-paste" rows="6" placeholder="Goal 4&#10;Measurable Annual Goal: …&#10;Short-term Objective 1: …">'+esc(P?P.text:'')+'</textarea>'+
+      '<button class="btn primary" data-act="ieppasteread">Read it</button></div>'}
+  var p=P.parsed,names=p.names.filter(function(n){return (P.ok||[]).indexOf(n.name)<0});
+  h+='<span class="small"><b>Found:</b> '+esc([p.goalNum?'Goal '+p.goalNum:'',p.goalText?'the annual goal':'',p.objectives.length?p.objectives.length+' objective'+(p.objectives.length===1?'':'s'):''].filter(Boolean).join(', ')||'nothing it could split')+'</span>';
+  if(p.objectives.length)h+='<ul class="found">'+p.objectives.map(function(o){return '<li><b>Objective '+esc(o.num)+'</b>'+(o.label?' · '+esc(o.label):'')+(o.unit?' · '+esc(o.unit):'')+(o.target?' · target '+esc(o.target):'')+'</li>'}).join('')+'</ul>';
+  if(names.length)h+=names.map(function(n){return '<div class="banner namewarn"><span><b>"'+esc(n.name)+'"</b> appears '+n.count+' time'+(n.count===1?'':'s')+'. The app only keeps the initials ('+esc(s.name)+').</span>'+
+      '<div class="row"><button class="btn primary" data-act="iepname" data-v="'+esc(n.name)+'">Replace with '+esc(s.name)+'</button><button class="btn" data-act="iepnotname" data-v="'+esc(n.name)+'">Not a name</button></div></div>'}).join('');
+  h+='<div class="row"><button class="btn primary" style="flex:1" data-act="ieppastefill"'+(names.length?' disabled':'')+'>Fill in the goal and objectives</button><button class="btn" data-act="ieppasteclear">Start over</button></div>'+
+    (names.length?'<span class="muted small">Replace the name first, so it never reaches the app.</span>':'<span class="muted small">Filling in replaces empty fields and the wording; anything you already typed stays.</span>');
+  return h+'</div>'}
+function iepPasteFill(){var E=S.iepEd,P=S.iepPaste;if(!E||!P||!P.parsed)return;var d=E.d,p=P.parsed;
+  var a=d.annual.filter(function(x){return p.goalNum&&x.num===p.goalNum})[0]||d.annual.filter(function(x){return !x.num&&!x.text})[0];
+  if(!a){a={id:'a_'+rid(),num:'',text:''};d.annual.push(a)}
+  if(p.goalNum)a.num=p.goalNum;if(p.goalText)a.text=p.goalText;
+  /* drop untouched blank objectives under this goal, then fill or add one per pasted objective */
+  d.objs=d.objs.filter(function(o){return o.annualId!==a.id||o.existing||o.text||o.label});
+  p.objectives.forEach(function(po){var o=d.objs.filter(function(x){return x.annualId===a.id&&x.num===po.num})[0];
+    if(!o){o=blankObj(a.id,po.num);d.objs.push(o)}
+    o.text=po.text;['label','unit','target','variants','mastery'].forEach(function(k){if(!o[k]&&po[k])o[k]=po[k]});
+    if(!o.existing){o.dir=po.dir;o.kind=po.kind}});
+  if(!d.objs.some(function(o){return o.annualId===a.id}))d.objs.push(blankObj(a.id,1));
+  S.iepPaste=null;
+  toast('Filled in '+(a.num?'Goal '+a.num:'the goal')+(p.objectives.length?' and '+p.objectives.length+' objective'+(p.objectives.length===1?'':'s'):'')+'. Check them before you save.')}
 function reviewIep(s,d,up){
   function row(k,v,step){return '<span>'+esc(k)+'</span><span>'+v+' <button class="chip" data-act="iepgo" data-n="'+step+'" style="min-height:28px;padding:2px 10px">Change</button></span>'}
   var h='<span class="muted">Check everything once. Tap Change to fix a section.</span><div class="iep" style="background:var(--surface)"><div class="kv">'+
@@ -1122,7 +1158,7 @@ function iepSave(){
   var o2=Object.assign({},s,patch);delete o2.id;
   S.saving=true;render();
   write(function(){return S.db.doc('students/'+s.id).set(o2)}).then(function(){
-    S.saving=false;S.iepEd=null;S.view='students';S.editId=s.id;toast(up?'New IEP saved':'IEP saved');render();window.scrollTo(0,0)},
+    S.saving=false;S.iepEd=null;S.iepPaste=null;S.view='students';S.editId=s.id;toast(up?'New IEP saved':'IEP saved');render();window.scrollTo(0,0)},
     function(){S.saving=false;render()});
 }
 
@@ -1539,7 +1575,7 @@ document.addEventListener('click',function(e){
     if(v==='today')S.date=today();else if(v==='plan'){S.date=nextWorkDay(today());S.wz={step:1,i:0}}
     if(v==='agencies'){S.agEdit=null;S.agDraft=null;S.agAdding=false}
     if(v==='schools'){S.schoolEdit=null;S.scDraft=null;S.scAdding=false;S.placesOpen=b.dataset.scroll==='places'}
-    S.view=v;S.iepEd=null;S.scrollTo=b.dataset.scroll||null;window.scrollTo(0,0)}
+    S.view=v;S.iepEd=null;S.iepPaste=null;S.scrollTo=b.dataset.scroll||null;window.scrollTo(0,0)}
   else if(a==='signout'){if(window.DAPE_SIGNOUT)window.DAPE_SIGNOUT();return}
   else if(a==='opensess'){S.menu=false;S.fromStu=b.dataset.id;S.fromDate=S.date;S.view='today';S.date=b.dataset.date;openEntry(b.dataset.id);window.scrollTo(0,0)}
   else if(a==='stfilter'){S.stFilter=b.dataset.v;S.editId=null}
@@ -1677,13 +1713,19 @@ document.addEventListener('click',function(e){
     var stn=val('st-status')||'active',std=val('st-sdate');if(stn!=='active'&&!std)std=today();
     saveDoc('students',s,{name:val('st-name'),grade:val('st-grade'),schoolId:val('st-school'),status:stn,statusDate:stn==='active'?'':std},'Details saved');return}
   else if(a==='iepstart'){iepStart(b.dataset.id,b.dataset.mode||'edit');render();return}
-  else if(a==='iepcancel'){var ce=S.iepEd;S.iepEd=null;S.view='students';S.editId=ce?ce.sid:S.editId;window.scrollTo(0,0)}
+  else if(a==='iepcancel'){var ce=S.iepEd;S.iepEd=null;S.iepPaste=null;S.view='students';S.editId=ce?ce.sid:S.editId;window.scrollTo(0,0)}
   else if(a==='iepnext'){var E1=S.iepEd;if(!E1)return;
     if(E1.step===5){var bo=E1.d.objs.filter(function(o){return !String(o.label).trim()})[0];if(bo){toast('Objective '+(bo.num||'')+' needs a short name');return}}
     E1.step=Math.min(6,E1.step+1);window.scrollTo(0,0)}
   else if(a==='iepback'){if(S.iepEd)S.iepEd.step=Math.max(1,S.iepEd.step-1);window.scrollTo(0,0)}
   else if(a==='iepgo'){if(S.iepEd)S.iepEd.step=+b.dataset.n;window.scrollTo(0,0)}
   else if(a==='iepcode'){var dc=S.iepEd.d.codes,ki=dc.indexOf(b.dataset.v);if(ki<0)dc.push(b.dataset.v);else dc.splice(ki,1)}
+  else if(a==='ieppasteread'){var tx=val('iep-paste');if(!tx){toast('Paste the goal page first');return}var stx=student(S.iepEd.sid);
+    S.iepPaste={text:tx,ok:[],parsed:DAPE_IEP.parse(tx,stx?stx.name:'')}}
+  else if(a==='iepname'){var P1=S.iepPaste,st1=student(S.iepEd.sid);if(!P1||!st1)return;P1.text=DAPE_IEP.replaceName(P1.text,b.dataset.v,st1.name);P1.parsed=DAPE_IEP.parse(P1.text,st1.name);toast('Replaced with '+st1.name)}
+  else if(a==='iepnotname'){var P2=S.iepPaste;if(P2){P2.ok=(P2.ok||[]).concat([b.dataset.v])}}
+  else if(a==='ieppasteclear'){S.iepPaste=null}
+  else if(a==='ieppastefill'){iepPasteFill()}
   else if(a==='iepannadd'){S.iepEd.d.annual.push({id:'a_'+rid(),num:'',text:''})}
   else if(a==='iepannrm'){var D2=S.iepEd.d,aid=b.dataset.id;if(D2.objs.some(function(o){return o.annualId===aid})){toast('Move or remove this goal\'s objectives first');return}
     D2.annual=D2.annual.filter(function(x){return x.id!==aid})}
