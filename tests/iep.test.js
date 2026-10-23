@@ -57,4 +57,19 @@ check('No objective headings: everything is the goal, nothing is invented',funct
   assert.strictEqual(p.objectives.length,0);assert.strictEqual(p.goalText,'In 36 weeks the student will improve gross motor skills.');
 });
 
+check('A page copied from SpEd Forms: screen buttons dropped, standards numbers are not objectives, % and dates kept',function(){
+  // Wording follows a real 2026 goal page; the name is made up.
+  var t='Benchmarks or short term objectives\n+ Objective\nObjective 1\nESY\nPick\nMeasure\nDelete\n'+
+    'Given a task strip and visual schedule, Sam will actively participate in physical activities for 3 repetitions before needing a verbal redirection 50% of the time, as measured by the Developmental Adapted Physical Education (DAPE) teacher in bi-monthly data collection, by March 2026 (Minnesota Physical Education Benchmark 1.3.2.1)\n'+
+    'Objective 2\nESY\nPick\nMeasure\nDelete\n'+
+    'Given a task strip and visual schedule, Sam will actively participate in physical activities for 5 repetitions before needing a verbal redirection 50% of the time, as measured by the Developmental Adapted Physical Education (DAPE) teacher in bi-monthly data collection, by November 2026 (Minnesota Physical Education Benchmark 1.3.2.1)';
+  var p=R.parse(t,'A.B.');
+  assert.strictEqual(p.objectives.length,2);assert.strictEqual(p.goalText,'');
+  assert.ok(/^Given a task strip/.test(p.objectives[0].text));assert.ok(/Benchmark 1\.3\.2\.1\)$/.test(p.objectives[0].text));
+  assert.deepStrictEqual(p.objectives.map(function(o){return [o.num,o.label,o.unit,o.target,o.mastery]}),[
+    ['1','Reps before redirection','reps','3','50% of the time, by March 2026'],
+    ['2','Reps before redirection','reps','5','50% of the time, by November 2026']]);
+  assert.deepStrictEqual(p.names,[{name:'Sam',count:2}]);
+});
+
 console.log('\nAll IEP reader checks passed ('+n+')');

@@ -7,11 +7,14 @@
    - Finds names: capitalized words right before "will" or "'s" that aren't the student's initials, so she can swap
      in the initials before anything is kept. */
 (function(root){
-  function clean(t){return String(t||'').replace(/\r/g,'').replace(/[ \t]+/g,' ').replace(/\s*\n\s*/g,'\n').trim()}
+  function clean(t){return String(t||'').replace(/\r/g,'').replace(/[ \t]+/g,' ').replace(/\s*\n\s*/g,'\n').split('\n').filter(function(l){return !JUNK.test(l.trim())}).join('\n').trim()}
   function oneLine(t){return clean(t).replace(/\n+/g,' ').trim()}
-  var MARK=/(?:short[\s-]*term\s+)?(?:objective|benchmark)\s*#?\s*(\d+)\s*[:.)\u2013\u2014-]?\s*/gi;
+  /* "Objective 1", "Short-term Objective 2", "Benchmark 3" - but not a standards number like "Benchmark 1.3.2.1" */
+  var MARK=/(?:short[\s-]*term\s+)?(?:objective|benchmark)\s*#?\s*(\d+)(?![.\d]\d|\d)\s*[:.)\u2013\u2014-]?\s*/gi;
+  /* SpEd Forms screen words that come along when a page is copied: buttons and section headings */
+  var JUNK=/^(?:ESY|Pick|Measure|Delete|\+\s*Objective|Benchmarks? or short[\s-]term objectives|How will progress toward meeting this annual goal be measured\??)$/i;
 
-  var LABELS=[[/push[\s-]?ups?/i,'Push-ups'],[/plank/i,'Plank hold'],[/on[\s-]task/i,'On-task time'],[/dribbl/i,'Dribbling'],
+  var LABELS=[[/before needing (?:a |any )?(?:verbal |physical )?(?:redirect|prompt|cue)/i,'Reps before redirection'],[/push[\s-]?ups?/i,'Push-ups'],[/plank/i,'Plank hold'],[/on[\s-]task/i,'On-task time'],[/dribbl/i,'Dribbling'],
     [/throw/i,'Throws'],[/catch/i,'Catching'],[/kick/i,'Kicking'],[/balanc/i,'Balance'],[/jump/i,'Jumping'],[/(sit|curl)[\s-]?ups?/i,'Sit-ups'],
     [/\b(lap|run|running)\b/i,'Running'],[/skip/i,'Skipping'],[/hop/i,'Hopping'],[/strik|\bhit/i,'Striking']];
   var UNITS=[[/\b(repetitions?|reps?)\b/i,'reps'],[/\b(seconds?|secs?)\b/i,'sec'],[/\b(minutes?|mins?)\b/i,'min'],[/\b(laps?)\b/i,'laps'],
@@ -32,8 +35,10 @@
       if(/\b(no more than|at most|fewer than|less than)\s+\d+\s*(repetitions|reps|seconds|minutes)/i.test(t))o.dir='max'}
     var lv=LEVELS.filter(function(w){return new RegExp('\\b'+w+'\\b','i').test(t)});
     if(lv.length>=2||(lv.length&&/progression/i.test(t)))o.variants=lv.map(function(w){return w[0].toUpperCase()+w.slice(1)}).join(', ');
-    var ms=/\b((?:on|in)\s+\d+\s+(?:out of|of)\s+\d+\s+[^.;,]*)/i.exec(t)||/\b(within\s+\d+\s+(?:weeks?|months?|days?))/i.exec(t);
-    if(ms)o.mastery=ms[1].replace(/\s+$/,'');
+    /* mastery: how often (in 3 of 4 sessions, 50% of the time), and by when (within 8 weeks, by March 2026) */
+    var how=/\b((?:on|in)\s+\d+\s+(?:out of|of)\s+\d+\s+[^.;,]*)/i.exec(t)||/\b(\d+\s*%\s*of\s+(?:the\s+)?(?:time|trials|opportunities|sessions))/i.exec(t);
+    var when=/\b(within\s+\d+\s+(?:weeks?|months?|days?))/i.exec(t)||/\b(by\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})/i.exec(t);
+    o.mastery=[how&&how[1].replace(/\s+$/,''),when&&when[1]].filter(Boolean).join(', ');
     return o}
 
   /* Names in the text that are not the student's initials, with how often each appears. */
