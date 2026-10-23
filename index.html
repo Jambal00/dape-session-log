@@ -1252,8 +1252,52 @@ function worksReportPanel(s,hs){var sug=worksSuggestion(s,hs),rw=s.reportWorks||
 /* Delete, only for a student with nothing logged (no sessions, no indirect time): an accidental or duplicate entry.
    A student with history can only be set to Exited, so no logged work is ever lost. */
 function studentHasHistory(s){return S.sessions.some(function(x){return x.studentId===s.id})||S.indirect.some(function(x){return x.studentId===s.id})}
+/* Merge: for a duplicate that already has sessions. Moves its sessions, indirect time, day plans, schedule days and
+   What works onto the real student, then deletes the copy. A date the real student already has is never overwritten:
+   that session stays on the copy, and the copy is kept so nothing is lost. */
+function mergeBlock(s){var others=S.students.filter(function(o){return o.id!==s.id}).sort(function(a,b){return (a.schoolId===s.schoolId?0:1)-(b.schoolId===s.schoolId?0:1)||String(a.name).localeCompare(b.name)});
+  var n=sessionsOf(s).length,M=S.merge&&S.merge.sid===s.id?S.merge:null,t=M&&student(M.into);
+  var h='<div class="panel stack" style="margin-top:8px;padding:12px"><strong>Added twice?</strong><span class="muted small">'+esc(s.name)+' has '+n+' session'+(n===1?'':'s')+' logged, so it can\'t simply be deleted. Merge it into the real student: everything moves over, then this copy is deleted.</span>'+
+    '<label style="flex:none">Merge into<select id="merge-into"><option value="">Pick the real student</option>'+others.map(function(o){return '<option value="'+esc(o.id)+'"'+(M&&M.into===o.id?' selected':'')+'>'+esc(o.name+' ('+schoolLabel(o)+(o.iep||liveGoals(o).length?', has IEP':'')+(active(o)?'':', '+(STATUS[o.status]||o.status))+')')+'</option>'}).join('')+'</select></label>';
+  if(t){var clash=sessionsOf(s).filter(function(x){var y=sess(t.id,x.date);return y&&y.status!=='planned'&&x.status!=='planned'}),
+      dropped=sessionsOf(s).filter(function(x){return sess(t.id,x.date)&&x.status==='planned'}).length;n=n-dropped;
+    h+='<button class="btn danger" data-act="mergedo" data-id="'+esc(s.id)+'">Tap again to move '+(n-clash.length)+' session'+(n-clash.length===1?'':'s')+' to '+esc(t.name)+'</button>'+'<span class="muted small">Where both have the same date, results you logged win over a plan without results.</span>'+
+      (clash.length?'<span class="small warn">'+esc(t.name)+' already has a session on '+esc(clash.map(function(x){return md(x.date)}).join(', '))+'. Those stay on this copy, and the copy is kept so nothing is lost.</span>':'<span class="muted small">Then this copy is deleted. This can\'t be undone.</span>')}
+  else h+='<button class="btn danger" data-act="mergedo" data-id="'+esc(s.id)+'">Merge</button>';
+  return h+'<span class="muted small">Or set Status to Exited to just hide it.</span></div>'}
+function mergeStudents(dup,tgt){
+  var ops=[],moved=0,kept=[];
+  function set(path,doc){var c=Object.assign({},doc);delete c.id;ops.push(function(){return S.db.doc(path).set(c)})}
+  function del(path){ops.push(function(){return S.db.doc(path).delete()})}
+  /* goal data: match the copy's objectives to the real student's by short name or number; any others are added to the real student */
+  var gmap={},tg=(tgt.goals||[]).slice(),added=false;
+  (dup.goals||[]).forEach(function(g){var m=tg.filter(function(x){return (g.label&&x.label&&x.label.toLowerCase()===g.label.toLowerCase())||(g.num&&x.num===g.num&&x.annualId&&g.annualId)})[0];
+    if(m)gmap[g.id]=m.id;else{tg.push(g);gmap[g.id]=g.id;added=true}});
+  function remap(o){var r={};Object.keys(o||{}).forEach(function(k){r[gmap[k]||k]=o[k]});return r}
+  /* same date on both: a plan without results gives way to logged results; two sets of logged results are both kept */
+  function logged(x){return x&&x.status!=='planned'}
+  sessionsOf(dup).forEach(function(x){var y=sess(tgt.id,x.date);
+    if(y&&logged(y)&&logged(x)){kept.push(x.date);return}
+    if(y&&!logged(x)){del('sessions/'+x.id);return}
+    var c=Object.assign({},x,{studentId:tgt.id,values:remap(x.values),variants:remap(x.variants),outof:remap(x.outof),help:remap(x.help)});
+    set('sessions/'+tgt.id+'_'+x.date,c);del('sessions/'+x.id);moved++});
+  S.indirect.forEach(function(x){if(x.studentId===dup.id)set('indirect/'+x.id,Object.assign({},x,{studentId:tgt.id}))});
+  /* day plans that mention the copy */
+  S.days.forEach(function(d){var ch=false,c=Object.assign({},d);
+    function sw(a){if(!a||a.indexOf(dup.id)<0)return a;ch=true;var r=a.map(function(v){return v===dup.id?tgt.id:v});return r.filter(function(v,i){return r.indexOf(v)===i})}
+    c.skip=sw(d.skip);
+    if(d.order){c.order={};Object.keys(d.order).forEach(function(k){c.order[k]=sw(d.order[k])})}
+    if(d.pins&&dup.id in d.pins){ch=true;c.pins=Object.assign({},d.pins);if(!(tgt.id in c.pins))c.pins[tgt.id]=c.pins[dup.id];delete c.pins[dup.id]}
+    if(d.adds&&d.adds.some(function(a){return a.id===dup.id})){ch=true;c.adds=d.adds.filter(function(a){return a.id!==tgt.id}).map(function(a){return a.id===dup.id?Object.assign({},a,{id:tgt.id}):a})}
+    if(ch)set('days/'+d.id,c)});
+  /* schedule days and What works the real student doesn't have yet */
+  var slots=(tgt.slots||[]).slice();(dup.slots||[]).forEach(function(sl){if(!slots.some(function(x){return x.day===sl.day}))slots.push(sl)});
+  var w=works(tgt),dw=works(dup);['m','a','p'].forEach(function(k){dw[k].forEach(function(v){if(!w[k].some(function(x){return x.toLowerCase()===v.toLowerCase()}))w[k].push(v)})});if(!w.note)w.note=dw.note;
+  var tp=Object.assign({},tgt,{slots:slots,works:w});if(added)tp.goals=tg;set('students/'+tgt.id,tp);
+  if(!kept.length)del('students/'+dup.id);
+  return write(function(){var p=Promise.resolve();ops.forEach(function(f){p=p.then(f)});return p}).then(function(){return{moved:moved,kept:kept}})}
 function deleteStudentBlock(s){
-  if(studentHasHistory(s))return '<span class="muted small" style="margin-top:8px">'+esc(s.name)+' has sessions logged, so they can\'t be deleted. To hide them, set Status to Exited.</span>';
+  if(studentHasHistory(s))return mergeBlock(s);
   var sure=S.delStu===s.id;
   return '<div class="savebar" style="margin-top:8px"><button class="btn danger" data-act="delstudent" data-id="'+esc(s.id)+'">'+(sure?'Tap again to delete '+esc(s.name):'Delete student')+'</button>'+
     '<span class="muted small">'+(sure?'This can\'t be undone.'+(s.iep||liveGoals(s).length?' Their IEP and objectives are deleted too.':''):'For a student added by mistake or twice. Only shows for students with nothing logged yet.')+'</span></div>'}
@@ -1718,7 +1762,7 @@ document.addEventListener('click',function(e){
   else if(a==='rmind'){var iid=b.dataset.id;write(function(){return S.db.doc('indirect/'+iid).delete()}).then(function(){toast('Removed');render()},function(){});return}
   else if(a==='code'){s=student(b.dataset.id);if(!s)return;var cs=(s.codes||'').split('/').filter(Boolean),ci=cs.indexOf(b.dataset.v);
     if(ci<0)cs.push(b.dataset.v);else cs.splice(ci,1);saveDoc('students',s,{codes:cs.sort().join('/')},'Codes saved');return}
-  else if(a==='edit'){S.delStu=null;S.editId=S.editId===b.dataset.id?null:b.dataset.id}
+  else if(a==='edit'){S.delStu=null;S.merge=null;S.editId=S.editId===b.dataset.id?null:b.dataset.id}
   else if(a==='editschool'){S.schoolEdit=S.schoolEdit===b.dataset.id?null:b.dataset.id;S.scTab='schedule';S.scDraft=S.schoolEdit?scDraftFrom(school(S.schoolEdit)):null;S.scAdding=false;
     if(S.schoolEdit)S.scrollToEl='[data-act=editschool][data-id="'+S.schoolEdit+'"]'}
   else if(a==='sctab'){scSweep();S.scTab=b.dataset.v}
@@ -1736,6 +1780,12 @@ document.addEventListener('click',function(e){
   else if(a==='savelocation'){scSweep();sc=school(b.dataset.id);var dl=S.scDraft;if(!sc||!dl)return;if(!dl.name.trim()){toast('The school name is required');return}
     var sa=dl.address.trim(),sg=geoFor('sc-addr',sa,sc);dl.name=dl.name.trim();dl.alias=dl.alias.trim();dl.address=sa;
     saveDoc('schools',sc,{name:dl.name.trim(),alias:dl.alias.trim(),address:sa,lat:sg.lat,lon:sg.lon},'Location saved');return}
+  else if(a==='mergedo'){var mdup=student(b.dataset.id),mto=val('merge-into');if(!mdup)return;
+    if(!mto){toast('Pick the real student first');return}
+    if(!(S.merge&&S.merge.sid===mdup.id&&S.merge.into===mto)){S.merge={sid:mdup.id,into:mto};render();return}
+    var mt=student(mto);S.merge=null;if(!mt)return;
+    mergeStudents(mdup,mt).then(function(r){if(!r.kept.length)S.editId=mt.id;
+      toast('Merged into '+mt.name+': '+r.moved+' session'+(r.moved===1?'':'s')+' moved'+(r.kept.length?', '+r.kept.length+' kept on the copy (both had results that day)':', copy deleted'));render()},function(){});return}
   else if(a==='delstudent'){var ds0=student(b.dataset.id);if(!ds0)return;
     if(studentHasHistory(ds0)){toast('This student has sessions logged. Set Status to Exited instead.');return}
     if(S.delStu!==ds0.id){S.delStu=ds0.id;render();return}
