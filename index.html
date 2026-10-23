@@ -207,6 +207,14 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .paste{border-style:dashed;border-color:var(--accent)}
 .paste .found{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:2px;font-size:14px}
 .namewarn{display:flex;flex-direction:column;gap:8px;border-color:var(--warn)}
+.objview{gap:6px}
+.obj-ro{border-top:1px solid var(--line);padding-top:8px}
+.obj-ro summary{cursor:pointer;display:flex;flex-direction:column;gap:2px;list-style:none}
+.obj-ro summary::-webkit-details-marker{display:none}
+.obj-ro summary b:after{content:' ▸';color:var(--muted);font-weight:400}
+.obj-ro[open] summary b:after{content:' ▾'}
+.obj-ro p{margin:6px 0 4px;font-size:14px;line-height:1.45}
+.obj-ro span{display:block}
 .example{background:var(--accent-soft);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
 .example .t{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
 .ex{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px;font-variant-numeric:tabular-nums}
@@ -754,7 +762,7 @@ function wizardView(){
     h+='<div class="row">'+list.map(function(q,k){var x=sess(q.s.id,d);return '<button class="chip'+(k===w.i?' on':'')+'" data-act="wzjump" data-i="'+k+'">'+(x?'✓ ':'')+esc(q.s.name)+'</button>'}).join('')+'</div>';
     h+='<div><span class="eyebrow">Student '+(w.i+1)+' of '+list.length+'</span><h2 style="font-size:26px">'+esc(s.name)+'</h2><span class="muted">'+esc([schoolLabel(s),rowTime(o)?(o.pinned?'pinned ':'about ')+rowTime(o):'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · '))+'</span></div>';
     var lastS=history(s.id);if(lastS.length){var ls=lastS[lastS.length-1];h+='<span class="muted small">Last session '+esc(md(ls.date))+(ls.acts&&ls.acts.length?': '+esc(ls.acts.join(', ')):'')+'. Its activities are pre-selected.</span>'}
-    h+=minutesPanel(s,S.draft);
+    h+=worksCard(s)+objectivesCard(s,d,true)+minutesPanel(s,S.draft);
     h+='<label>Plan notes<textarea id="note" placeholder="Equipment to bring, what to try. Initials or nicknames only.">'+esc(S.draft.note)+'</textarea></label>';
     h+='<div class="sticky-actions"><button class="btn" data-act="wzback">Back</button><button class="btn primary" style="flex:1" data-act="wzsave"'+(S.saving?' disabled':'')+'>'+(w.i<list.length-1?'Save and next student':'Save and review')+'</button></div>';
     return h;
@@ -851,6 +859,20 @@ function extraInputs(g,d){var h='';
 function billedNote(s,d){var a=agencyOfStudent(s);if(!a||PAY.onSite(a))return '';var m=(d.absent?0:(num(d.min)?d.min:0))+(num(d.indirect)?d.indirect:0);if(!m)return '<span class="muted small" id="billed"></span>';
   var st=agencyRound(a),q=PAY.roundUp(m,st);return '<span class="muted small" id="billed">'+(q===m?'Bills '+m+' min.':m+' min logged, bills '+q+' min (rounded up to the '+roundName(st)+').')+'</span>'}
 function refreshBilled(){var bn=document.getElementById('billed'),bs=student(S.open);if(bn&&bs&&S.draft){var tmp=document.createElement('div');tmp.innerHTML=billedNote(bs,S.draft);bn.textContent=tmp.textContent}}
+/* Read-only view of the student's IEP objectives while planning: what each one asks for, the target,
+   and how the last session went, so she can pick activities that fit. */
+function objectivesCard(s,date,open){var gs=liveGoals(s),ann=(s.iep&&s.iep.annual)||[];
+  if(!gs.length)return '<div class="panel stack objview"><strong>IEP objectives</strong><span class="muted small">No objectives entered for '+esc(s.name)+' yet. Set up the IEP under Students and IEPs.</span></div>';
+  var h='<div class="panel stack objview"><div class="row spread"><strong>IEP objectives</strong><span class="muted small">read only</span></div>';
+  var lastA=null;
+  gs.forEach(function(g){var a=ann.filter(function(x){return x.id===g.annualId})[0];
+    if(a&&a!==lastA&&ann.length>1){h+='<span class="eyebrow" style="margin-top:4px">'+esc(a.num?'Goal '+a.num:'Annual goal')+'</span>';lastA=a}
+    var l=lastVal(s.id,g.id,date),lv=l&&l.variants&&l.variants[g.id];
+    var sum=[num(g.target)?(g.dir==='max'?'at most ':'target ')+g.target+' '+(g.unit||''):'',l?'last '+md(l.date)+': '+l.values[g.id]+(lv?' ('+lv+')':''):'no data yet'].filter(Boolean).join(' · ');
+    h+='<details class="obj-ro"'+(open?' open':'')+'><summary><b>'+esc((g.num?'Objective '+g.num+' · ':'')+(g.label||'Objective'))+'</b><span class="muted small">'+esc(sum)+'</span></summary>'+
+      (g.text?'<p>'+esc(g.text)+'</p>':'<p class="muted small">No wording entered.</p>')+
+      [g.variants&&g.variants.length?'Levels: '+g.variants.join(', '):'',g.baseline?'Baseline: '+g.baseline:'',g.mastery?'Mastery: '+g.mastery:''].filter(Boolean).map(function(x){return '<span class="muted small">'+esc(x)+'</span>'}).join('')+'</details>'});
+  return h+'</div>'}
 function minutesPanel(s,d){
   var h='<div class="panel stack"><div class="row"><label>Direct minutes<input type="number" inputmode="numeric" id="e-min" value="'+(num(d.min)?d.min:'')+'"'+(d.absent?' disabled':'')+'></label>'+
     '<label>Indirect minutes<input type="number" inputmode="numeric" id="e-ind" value="'+(num(d.indirect)?d.indirect:'')+'"></label></div>'+billedNote(s,d)+'</div>';
@@ -875,7 +897,7 @@ function entryView(){
   var est=estFor(s.id,S.date),where=[schoolLabel(s),est?'about '+fmtTime(est):'',(s.direct||s.indirect)?'IEP '+(s.direct||0)+' direct / '+(s.indirect||0)+' indirect':'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · ');
   var h='<div class="row spread"><button class="btn ghost" data-act="back">‹ '+(S.view==='plan'?'Back to plan':S.fromStu?'Back to '+s.name:'Back to the day')+'</button><span class="muted small">'+esc(md(S.date))+'</span></div>'+
     '<div><h1>'+esc(s.name)+'</h1>'+(where?'<span class="muted">'+esc(where)+'</span>':'')+'</div>'+
-    worksCard(s)+timerPanel(s,d)+'<h2>Lesson plan</h2>'+minutesPanel(s,d)+'<button class="btn primary" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
+    worksCard(s)+timerPanel(s,d)+'<h2>Lesson plan</h2>'+objectivesCard(s,S.date,false)+minutesPanel(s,d)+'<button class="btn primary" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
     '<button class="btn '+(d.absent?'on':'')+'" data-act="absent" aria-pressed="'+!!d.absent+'">'+(d.absent?'Marked absent':'Mark absent')+'</button>';
   if(!d.absent){
     h+='<div class="panel">';
