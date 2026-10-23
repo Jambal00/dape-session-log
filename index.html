@@ -1249,6 +1249,14 @@ function worksReportPanel(s,hs){var sug=worksSuggestion(s,hs),rw=s.reportWorks||
   return '<div class="suggest"><strong>Suggested from your session notes</strong><span>'+esc(sug)+'</span><div class="row"><button class="btn primary" data-act="wkrep" data-id="'+esc(s.id)+'" data-v="add">Add to report</button>'+
     '<button class="chip" data-act="wkrep" data-id="'+esc(s.id)+'" data-v="edit">Edit</button><button class="chip" data-act="wkrep" data-id="'+esc(s.id)+'" data-v="out">Leave out</button></div>'+
     '<span class="muted small">Built only from what you tapped under "What did you use today?". It goes in only if you add it.</span></div>'}
+/* Delete, only for a student with nothing logged (no sessions, no indirect time): an accidental or duplicate entry.
+   A student with history can only be set to Exited, so no logged work is ever lost. */
+function studentHasHistory(s){return S.sessions.some(function(x){return x.studentId===s.id})||S.indirect.some(function(x){return x.studentId===s.id})}
+function deleteStudentBlock(s){
+  if(studentHasHistory(s))return '<span class="muted small" style="margin-top:8px">'+esc(s.name)+' has sessions logged, so they can\'t be deleted. To hide them, set Status to Exited.</span>';
+  var sure=S.delStu===s.id;
+  return '<div class="savebar" style="margin-top:8px"><button class="btn danger" data-act="delstudent" data-id="'+esc(s.id)+'">'+(sure?'Tap again to delete '+esc(s.name):'Delete student')+'</button>'+
+    '<span class="muted small">'+(sure?'This can\'t be undone.'+(s.iep||liveGoals(s).length?' Their IEP and objectives are deleted too.':''):'For a student added by mistake or twice. Only shows for students with nothing logged yet.')+'</span></div>'}
 function slotEditor(s){
   var ed=S.slotEdit&&S.slotEdit.sid===s.id?S.slotEdit:null,cur=ed?s.slots[ed.i]||{}:{},pinOn=ed?!!cur.pin:false;
   var sc=school(s.schoolId),ds=sc&&sc.days&&sc.days.length?sc.days:[0,1,2,3,4,5,6];
@@ -1292,7 +1300,7 @@ function studentsView(){
         iepCard(s)+
         '<h2 style="margin-top:8px">Schedule</h2>'+
         slotEditor(s)+worksEditor(s)+
-        '<h2 style="margin-top:8px">Sessions</h2>'+sessionsBody(s)+'</div>'}
+        '<h2 style="margin-top:8px">Sessions</h2>'+sessionsBody(s)+deleteStudentBlock(s)+'</div>'}
     return o}).join('')+'</div>':'<div class="list"><div class="empty">'+(S.students.length?'No students in this group.':'No students yet. Add the first one below.')+'</div></div>';
   h+='<div class="panel stack"><h2>Add a student</h2><div class="row"><label>Initials or nickname<input id="s-name" placeholder="Never the real name"></label>'+
     '<label>School<select id="s-school">'+schoolOptions('')+'</select></label></div>'+
@@ -1710,7 +1718,7 @@ document.addEventListener('click',function(e){
   else if(a==='rmind'){var iid=b.dataset.id;write(function(){return S.db.doc('indirect/'+iid).delete()}).then(function(){toast('Removed');render()},function(){});return}
   else if(a==='code'){s=student(b.dataset.id);if(!s)return;var cs=(s.codes||'').split('/').filter(Boolean),ci=cs.indexOf(b.dataset.v);
     if(ci<0)cs.push(b.dataset.v);else cs.splice(ci,1);saveDoc('students',s,{codes:cs.sort().join('/')},'Codes saved');return}
-  else if(a==='edit'){S.editId=S.editId===b.dataset.id?null:b.dataset.id}
+  else if(a==='edit'){S.delStu=null;S.editId=S.editId===b.dataset.id?null:b.dataset.id}
   else if(a==='editschool'){S.schoolEdit=S.schoolEdit===b.dataset.id?null:b.dataset.id;S.scTab='schedule';S.scDraft=S.schoolEdit?scDraftFrom(school(S.schoolEdit)):null;S.scAdding=false;
     if(S.schoolEdit)S.scrollToEl='[data-act=editschool][data-id="'+S.schoolEdit+'"]'}
   else if(a==='sctab'){scSweep();S.scTab=b.dataset.v}
@@ -1728,6 +1736,10 @@ document.addEventListener('click',function(e){
   else if(a==='savelocation'){scSweep();sc=school(b.dataset.id);var dl=S.scDraft;if(!sc||!dl)return;if(!dl.name.trim()){toast('The school name is required');return}
     var sa=dl.address.trim(),sg=geoFor('sc-addr',sa,sc);dl.name=dl.name.trim();dl.alias=dl.alias.trim();dl.address=sa;
     saveDoc('schools',sc,{name:dl.name.trim(),alias:dl.alias.trim(),address:sa,lat:sg.lat,lon:sg.lon},'Location saved');return}
+  else if(a==='delstudent'){var ds0=student(b.dataset.id);if(!ds0)return;
+    if(studentHasHistory(ds0)){toast('This student has sessions logged. Set Status to Exited instead.');return}
+    if(S.delStu!==ds0.id){S.delStu=ds0.id;render();return}
+    S.delStu=null;write(function(){return S.db.doc('students/'+ds0.id).delete()}).then(function(){S.editId=null;toast(ds0.name+' deleted');render()},function(){});return}
   else if(a==='addstudent'){var n=val('s-name');if(!n){toast('Enter initials or a nickname first');return}
     var nid='s_'+rid();
     write(function(){return S.db.doc('students/'+nid).set({name:n,schoolId:val('s-school'),goals:[],slots:[],order:S.students.length})}).then(function(){S.editId=nid;S.stFilter='active';toast('Student added. Add the schedule and IEP below.');render()},function(){});return}
