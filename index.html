@@ -215,6 +215,11 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .obj-ro[open] summary b:after{content:' ▾'}
 .obj-ro p{margin:6px 0 4px;font-size:14px;line-height:1.45}
 .obj-ro span{display:block}
+.actn{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:99px;background:var(--accent-ink);color:var(--accent);font:700 12px var(--body);margin-right:6px;padding:0 5px}
+.actn.big{background:var(--accent);color:var(--accent-ink);min-width:26px;height:26px;font-size:13px;margin:0}
+.actorder{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.actrow{display:flex;align-items:center;gap:10px}
+.actrow .nm{flex:1;min-width:0}
 .example{background:var(--accent-soft);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
 .example .t{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
 .ex{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px;font-variant-numeric:tabular-nums}
@@ -873,13 +878,21 @@ function objectivesCard(s,date,open){var gs=liveGoals(s),ann=(s.iep&&s.iep.annua
       (g.text?'<p>'+esc(g.text)+'</p>':'<p class="muted small">No wording entered.</p>')+
       [g.variants&&g.variants.length?'Levels: '+g.variants.join(', '):'',g.baseline?'Baseline: '+g.baseline:'',g.mastery?'Mastery: '+g.mastery:''].filter(Boolean).map(function(x){return '<span class="muted small">'+esc(x)+'</span>'}).join('')+'</details>'});
   return h+'</div>'}
+/* The picked activities in the order she'll do them: tap order, then ▲ ▼ to rearrange. Saved in that order and
+   carried into the next plan. */
+function actOrderList(d){if(!d.acts.length)return '';
+  return '<div class="actorder"><strong class="small">Today\'s order</strong>'+d.acts.map(function(n,i){
+    return '<div class="actrow"><span class="actn big">'+(i+1)+'</span><span class="nm">'+esc(n)+'</span>'+
+      '<span class="lu-move" style="flex-direction:row"><button data-act="actmv" data-i="'+i+'" data-n="-1" aria-label="Move '+esc(n)+' earlier"'+(i?'':' disabled')+'>▲</button>'+
+      '<button data-act="actmv" data-i="'+i+'" data-n="1" aria-label="Move '+esc(n)+' later"'+(i<d.acts.length-1?'':' disabled')+'>▼</button></span></div>'}).join('')+'</div>'}
 function minutesPanel(s,d){
   var h='<div class="panel stack"><div class="row"><label>Direct minutes<input type="number" inputmode="numeric" id="e-min" value="'+(num(d.min)?d.min:'')+'"'+(d.absent?' disabled':'')+'></label>'+
     '<label>Indirect minutes<input type="number" inputmode="numeric" id="e-ind" value="'+(num(d.indirect)?d.indirect:'')+'"></label></div>'+billedNote(s,d)+'</div>';
   if(d.absent)return h;
   var names=S.activities.map(function(a){return String(a.name)});d.acts.forEach(function(n){if(names.indexOf(n)<0)names.push(n)});
   return h+'<div class="panel stack"><strong>Activities</strong>'+
-    (names.length?'<div class="row">'+names.map(function(n){return '<button class="chip '+(d.acts.indexOf(n)>=0?'on':'')+'" data-act="act" data-v="'+esc(n)+'">'+esc(n)+'</button>'}).join('')+'</div>':'<span class="muted small">No activities in the list yet. Add the first one below.</span>')+
+    (names.length?'<span class="muted small">Tap them in the order you\'ll do them.</span><div class="row">'+names.map(function(n){var k=d.acts.indexOf(n);return '<button class="chip '+(k>=0?'on':'')+'" data-act="act" data-v="'+esc(n)+'" aria-pressed="'+(k>=0)+'">'+(k>=0?'<span class="actn">'+(k+1)+'</span>':'')+esc(n)+'</button>'}).join('')+'</div>':'<span class="muted small">No activities in the list yet. Add the first one below.</span>')+
+    actOrderList(d)+
     '<div class="row end"><label>New activity<input id="act-new" placeholder="Invented one? Add it here"></label><button class="btn primary" data-act="addact">Add</button></div></div>';
 }
 
@@ -1748,6 +1761,7 @@ document.addEventListener('click',function(e){
     else if(rv2==='save'){var tx=val('wk-rep');S.wkEdit=null;saveDoc('students',s,{reportWorks:tx?{state:'added',text:tx}:{state:'out',text:''}},tx?'Added to the report':'Left out');return}
     else if(rv2==='out'){saveDoc('students',s,{reportWorks:{state:'out',text:''}},'Left out of the report');return}
     else if(rv2==='show'){saveDoc('students',s,{reportWorks:{}},'Suggestion is back');return}}
+  else if(a==='actmv'){var am=i+(+b.dataset.n);if(!d||am<0||am>=d.acts.length)return;var av0=d.acts.splice(i,1)[0];d.acts.splice(am,0,av0)}
   else if(a==='act'){var av=b.dataset.v,ai=d.acts.indexOf(av);if(ai<0)d.acts.push(av);else d.acts.splice(ai,1)}
   else if(a==='addact'){var an=val('act-new');if(!an){toast('Type the activity name first');return}
     var ex=S.activities.filter(function(x){return String(x.name).toLowerCase()===an.toLowerCase()})[0];
