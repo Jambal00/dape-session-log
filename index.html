@@ -220,6 +220,19 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .actorder{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:10px}
 .actrow{display:flex;align-items:center;gap:10px}
 .actrow .nm{flex:1;min-width:0}
+.actcount{gap:0}
+.acrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.actcount .row.spread+.acrow{border-top:0}
+.acrow .nm{flex:1;min-width:0;font-weight:600}
+.acrow .nm small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.acrow .nm .linkbtn{font-size:13px;padding:0;min-height:0}
+.acrow.skipped .nm{opacity:.65}
+.actn.big.done{background:var(--accent-soft);color:var(--accent)}
+.actn.big.off{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.cstep{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:none}
+.cstep button{width:40px;height:40px;border:0;background:var(--bg);font:600 20px var(--body);color:var(--ink);cursor:pointer}
+.cstep input{width:48px;min-height:40px;height:40px;border:0;border-left:1px solid var(--line);border-right:1px solid var(--line);border-radius:0;text-align:center;font:700 16px var(--body);padding:0}
+.tag.sk{background:var(--pin-soft);color:var(--pin-ink);font-size:11px;border-radius:99px;padding:1px 7px}
 .example{background:var(--accent-soft);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
 .example .t{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
 .ex{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px;font-variant-numeric:tabular-nums}
@@ -852,7 +865,7 @@ function saveSession(kind,after){var d=S.draft,id=S.open,date=S.date;
   var vals={};Object.keys(d.values).forEach(function(k){if(num(d.values[k]))vals[k]=d.values[k]});
   var doc={studentId:id,date:date,absent:d.absent,values:d.absent?{}:vals,variants:d.absent?{}:d.variants,note:d.note.trim(),updated:new Date().toISOString()};
   var s=student(id),est=estFor(id,date);if(est)doc.time=est;if(d.start)doc.start=d.start;if(d.end)doc.end=d.end;
-  doc.min=d.absent?0:(num(d.min)?d.min:0);doc.indirect=num(d.indirect)?d.indirect:0;doc.acts=d.absent?[]:d.acts;doc.used=d.absent?[]:(d.used||[]);doc.outof=d.absent?{}:d.outof;doc.help=d.absent?{}:d.help;
+  doc.min=d.absent?0:(num(d.min)?d.min:0);doc.indirect=num(d.indirect)?d.indirect:0;doc.acts=d.absent?[]:d.acts;var ac={};(d.absent?[]:d.acts).forEach(function(n){if(d.actCounts&&num(d.actCounts[n]))ac[n]=d.actCounts[n]});doc.actCounts=ac;doc.actSkip=d.absent?[]:(d.actSkip||[]).filter(function(n){return d.acts.indexOf(n)>=0});doc.used=d.absent?[]:(d.used||[]);doc.outof=d.absent?{}:d.outof;doc.help=d.absent?{}:d.help;
   var x0=sess(id,date);doc.status=(kind==='save'||(x0&&x0.status!=='planned'))?'logged':'planned';
   S.saving=true;render();
   write(function(){return S.db.doc('sessions/'+id+'_'+date).set(doc)}).then(function(){S.saving=false;toast(doc.status==='planned'?'Plan saved':'Saved');after();render()},function(){S.saving=false;render()});
@@ -880,17 +893,31 @@ function objectivesCard(s,date,open){var gs=liveGoals(s),ann=(s.iep&&s.iep.annua
   return h+'</div>'}
 /* The picked activities in the order she'll do them: tap order, then ▲ ▼ to rearrange. Saved in that order and
    carried into the next plan. */
+/* Session view: one compact row per planned activity, in order, with − count +, last time's count, and Skip.
+   Counts (session.actCounts) and skips (session.actSkip) are saved with the session. A skipped activity stays in the
+   next plan. */
+function lastActCount(sid,name,before){var h=history(sid),i;for(i=h.length-1;i>=0;i--){var c=h[i].actCounts;if(h[i].date<before&&c&&num(c[name]))return{v:c[name],d:h[i].date}}return null}
+function actCountList(s,d){var c=d.actCounts||{},sk=d.actSkip||[];
+  return '<div class="panel stack actcount"><div class="row spread"><strong>Activities</strong><span class="muted small">count as you go</span></div>'+d.acts.map(function(n,i){
+    var skipped=sk.indexOf(n)>=0,l=lastActCount(s.id,n,S.date),v=c[n];
+    return '<div class="acrow'+(skipped?' skipped':'')+'"><span class="actn big'+(skipped?' off':num(v)?' done':'')+'">'+(i+1)+'</span>'+
+      '<span class="nm">'+(skipped?'<s>'+esc(n)+'</s>':esc(n))+'<small>'+(skipped?'<span class="tag sk">skipped today</span> · <button type="button" class="linkbtn" data-act="actskip" data-v="'+esc(n)+'">Undo</button>':
+        (l?'last time '+l.v:history(s.id).some(function(h){return h.date<S.date&&(h.acts||[]).indexOf(n)>=0})?'no count yet':'new today')+' · <button type="button" class="linkbtn" data-act="actskip" data-v="'+esc(n)+'">Skip</button>')+'</small></span>'+
+      (skipped?'':'<span class="cstep"><button data-act="actc" data-v="'+esc(n)+'" data-n="-1" aria-label="One less">−</button><input type="number" inputmode="numeric" data-actc="'+esc(n)+'" value="'+(num(v)?v:'')+'" placeholder="–" aria-label="'+esc(n)+' count"><button data-act="actc" data-v="'+esc(n)+'" data-n="1" aria-label="One more">+</button></span>')+'</div>'}).join('')+
+    '<button type="button" class="linkbtn" style="align-self:flex-start" data-act="actedit">+ Add or change activities</button></div>'}
 function actOrderList(d){if(!d.acts.length)return '';
   return '<div class="actorder"><strong class="small">Today\'s order</strong>'+d.acts.map(function(n,i){
     return '<div class="actrow"><span class="actn big">'+(i+1)+'</span><span class="nm">'+esc(n)+'</span>'+
       '<span class="lu-move" style="flex-direction:row"><button data-act="actmv" data-i="'+i+'" data-n="-1" aria-label="Move '+esc(n)+' earlier"'+(i?'':' disabled')+'>▲</button>'+
       '<button data-act="actmv" data-i="'+i+'" data-n="1" aria-label="Move '+esc(n)+' later"'+(i<d.acts.length-1?'':' disabled')+'>▼</button></span></div>'}).join('')+'</div>'}
-function minutesPanel(s,d){
+function minutesPanel(s,d,counting){
   var h='<div class="panel stack"><div class="row"><label>Direct minutes<input type="number" inputmode="numeric" id="e-min" value="'+(num(d.min)?d.min:'')+'"'+(d.absent?' disabled':'')+'></label>'+
     '<label>Indirect minutes<input type="number" inputmode="numeric" id="e-ind" value="'+(num(d.indirect)?d.indirect:'')+'"></label></div>'+billedNote(s,d)+'</div>';
   if(d.absent)return h;
   var names=S.activities.map(function(a){return String(a.name)});d.acts.forEach(function(n){if(names.indexOf(n)<0)names.push(n)});
-  return h+'<div class="panel stack"><strong>Activities</strong>'+
+  /* In a session with activities planned: count on each line. "Add or change activities" brings back the chips and order. */
+  if(counting&&d.acts.length&&!S.actEdit)return h+actCountList(s,d);
+  return h+'<div class="panel stack"><div class="row spread"><strong>Activities</strong>'+(counting&&d.acts.length?'<button type="button" class="linkbtn" data-act="actedit">Done changing</button>':'')+'</div>'+
     (names.length?'<span class="muted small">Tap them in the order you\'ll do them.</span><div class="row">'+names.map(function(n){var k=d.acts.indexOf(n);return '<button class="chip '+(k>=0?'on':'')+'" data-act="act" data-v="'+esc(n)+'" aria-pressed="'+(k>=0)+'">'+(k>=0?'<span class="actn">'+(k+1)+'</span>':'')+esc(n)+'</button>'}).join('')+'</div>':'<span class="muted small">No activities in the list yet. Add the first one below.</span>')+
     actOrderList(d)+
     '<div class="row end"><label>New activity<input id="act-new" placeholder="Invented one? Add it here"></label><button class="btn primary" data-act="addact">Add</button></div></div>';
@@ -910,7 +937,7 @@ function entryView(){
   var est=estFor(s.id,S.date),where=[schoolLabel(s),est?'about '+fmtTime(est):'',(s.direct||s.indirect)?'IEP '+(s.direct||0)+' direct / '+(s.indirect||0)+' indirect':'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · ');
   var h='<div class="row spread"><button class="btn ghost" data-act="back">‹ '+(S.view==='plan'?'Back to plan':S.fromStu?'Back to '+s.name:'Back to the day')+'</button><span class="muted small">'+esc(md(S.date))+'</span></div>'+
     '<div><h1>'+esc(s.name)+'</h1>'+(where?'<span class="muted">'+esc(where)+'</span>':'')+'</div>'+
-    worksCard(s)+timerPanel(s,d)+'<h2>Lesson plan</h2>'+objectivesCard(s,S.date,false)+minutesPanel(s,d)+'<button class="btn primary" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
+    worksCard(s)+timerPanel(s,d)+'<h2>Lesson plan</h2>'+objectivesCard(s,S.date,false)+minutesPanel(s,d,true)+'<button class="btn primary" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
     '<button class="btn '+(d.absent?'on':'')+'" data-act="absent" aria-pressed="'+!!d.absent+'">'+(d.absent?'Marked absent':'Mark absent')+'</button>';
   if(!d.absent){
     h+='<div class="panel">';
@@ -1644,8 +1671,8 @@ function placesPanel(){
 }
 
 /* ---------- actions ---------- */
-function openEntry(id){var x=sess(id,S.date);S.open=id;S.confirmDel=false;
-  S.draft={start:(x&&x.start)||'',end:(x&&x.end)||'',absent:!!(x&&x.absent),values:Object.assign({},x&&x.values),variants:Object.assign({},x&&x.variants),note:(x&&x.note)||'',acts:((x&&x.acts)||[]).slice(),used:((x&&x.used)||[]).slice(),outof:Object.assign({},x&&x.outof),help:Object.assign({},x&&x.help)};
+function openEntry(id){var x=sess(id,S.date);S.open=id;S.actEdit=false;S.confirmDel=false;
+  S.draft={start:(x&&x.start)||'',end:(x&&x.end)||'',absent:!!(x&&x.absent),values:Object.assign({},x&&x.values),variants:Object.assign({},x&&x.variants),note:(x&&x.note)||'',acts:((x&&x.acts)||[]).slice(),actCounts:Object.assign({},x&&x.actCounts),actSkip:((x&&x.actSkip)||[]).slice(),used:((x&&x.used)||[]).slice(),outof:Object.assign({},x&&x.outof),help:Object.assign({},x&&x.help)};
   var s=student(id);
   if(x){S.draft.min=x.min;S.draft.indirect=x.indirect}
   else if(s){var sl0=slotOn(s,S.date),ad0=(dayDoc(S.date).adds||[]).filter(function(a){return a.id===id})[0],h0=history(id);S.draft.min=sl0?sl0.min:ad0&&num(ad0.min)?ad0.min:s.direct;S.draft.indirect=s.indirect;if(h0.length)S.draft.acts=(h0[h0.length-1].acts||[]).slice()}
@@ -1761,6 +1788,10 @@ document.addEventListener('click',function(e){
     else if(rv2==='save'){var tx=val('wk-rep');S.wkEdit=null;saveDoc('students',s,{reportWorks:tx?{state:'added',text:tx}:{state:'out',text:''}},tx?'Added to the report':'Left out');return}
     else if(rv2==='out'){saveDoc('students',s,{reportWorks:{state:'out',text:''}},'Left out of the report');return}
     else if(rv2==='show'){saveDoc('students',s,{reportWorks:{}},'Suggestion is back');return}}
+  else if(a==='actc'){var an=b.dataset.v;d.actCounts=d.actCounts||{};var cv=d.actCounts[an];
+    if(num(cv))d.actCounts[an]=Math.max(0,cv+(+b.dataset.n));else if(+b.dataset.n>0)d.actCounts[an]=1}
+  else if(a==='actskip'){var sn=b.dataset.v;d.actSkip=d.actSkip||[];var si2=d.actSkip.indexOf(sn);if(si2<0){d.actSkip.push(sn);if(d.actCounts)delete d.actCounts[sn]}else d.actSkip.splice(si2,1)}
+  else if(a==='actedit'){S.actEdit=!S.actEdit}
   else if(a==='actmv'){var am=i+(+b.dataset.n);if(!d||am<0||am>=d.acts.length)return;var av0=d.acts.splice(i,1)[0];d.acts.splice(am,0,av0)}
   else if(a==='act'){var av=b.dataset.v,ai=d.acts.indexOf(av);if(ai<0)d.acts.push(av);else d.acts.splice(ai,1)}
   else if(a==='addact'){var an=val('act-new');if(!an){toast('Type the activity name first');return}
@@ -1867,6 +1898,7 @@ document.addEventListener('click',function(e){
 });
 document.addEventListener('input',function(e){var t=e.target;
   if(t.id==='note'&&S.draft)S.draft.note=t.value;
+  else if(t.dataset&&t.dataset.actc!=null&&S.draft){S.draft.actCounts=S.draft.actCounts||{};if(t.value===''||!isFinite(+t.value))delete S.draft.actCounts[t.dataset.actc];else S.draft.actCounts[t.dataset.actc]=Math.max(0,+t.value)}
   else if((t.id==='e-start'||t.id==='e-end')&&S.draft){S.draft[t.id==='e-start'?'start':'end']=t.value;
     if(S.draft.start&&S.draft.end){var dm=minsBetween(S.draft.start,S.draft.end);if(dm>0){S.draft.min=dm;var em=document.getElementById('e-min');if(em)em.value=dm;refreshBilled()}}}
   else if((t.id==='e-min'||t.id==='e-ind')&&S.draft){var k=t.id==='e-min'?'min':'indirect';if(t.value===''||!isFinite(+t.value))delete S.draft[k];else S.draft[k]=+t.value;
