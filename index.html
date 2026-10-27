@@ -2058,6 +2058,10 @@ document.addEventListener('change',function(e){var t=e.target;
   else if(t.id==='prog-to'){S.pTo=t.value;render()}});
 document.addEventListener('input',function(e){if(e.target.id==='prog-q'){S.progQ=e.target.value;var p=e.target.selectionStart;render();var n=document.getElementById('prog-q');if(n){n.focus();try{n.setSelectionRange(p,p)}catch(_){}}}});
 function iepInput(e){var t=e.target;if(t.dataset&&t.dataset.iep&&S.iepEd){setP(S.iepEd.d,t.dataset.iep,t.value);if(t.tagName==='SELECT')render()}}
+/* Copying selected text takes the words only, not the page's colors or dark backgrounds, so it pastes cleanly into SpEd Forms, email or anywhere else. */
+document.addEventListener('copy',function(e){var t=document.activeElement,sel=getSelection();
+  if(!e.clipboardData||!sel||sel.isCollapsed||(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA')))return;
+  e.clipboardData.setData('text/plain',sel.toString());e.preventDefault()});
 document.addEventListener('input',iepInput);document.addEventListener('change',function(e){if(e.target.tagName==='SELECT')iepInput(e)});
 document.addEventListener('input',function(e){var t=e.target;if(!t.dataset||!(t.dataset.agf||t.dataset.agr||t.dataset.ags))return;var dd=agD(t.dataset.agw);if(!dd)return;
   if(t.dataset.ags){if(dd.subSys[+t.dataset.ags])dd.subSys[+t.dataset.ags][t.dataset.agk]=t.value;return}
