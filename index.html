@@ -630,7 +630,7 @@ function nowPanel(P){
     cur=stops[k+1];arrived=false}
   var name=cur.sc.alias||cur.sc.name,next=stops[stops.indexOf(cur)+1],h='<div class="stack" style="gap:10px">';
   if(!arrived){
-    var who=cur.rows.filter(function(o){return cur.items.some(function(it){return it.id===o.s.id})}).map(function(o){return (o.pinned?PIN:'')+snameT(o.s)});
+    var who=cur.rows.filter(function(o){return cur.items.some(function(it){return it.id===o.s.id})}).map(function(o){return (o.pinned?PIN:'')+o.s.name});
     h+='<div class="nextcard"><span class="eyebrow">'+(k<0?'First stop':'Next stop')+(cur.arrive?' · arrive about '+esc(fmtTime(cur.arrive)):'')+'</span><h2>'+esc(name)+'</h2>'+
       (who.length?'<span>'+esc(who.join(', '))+'</span>':'')+
       '<button class="btn" data-act="arrive" data-sc="'+esc(cur.id)+'">I\'m at '+esc(name)+'</button></div>'+
