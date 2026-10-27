@@ -316,6 +316,8 @@ var S={view:'home',menu:false,wz:{step:1,i:0},legs:[],settings:{},stFilter:'acti
        open:null,draft:null,progId:null,period:'all',editId:null,schoolEdit:null,saving:false};
 var DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var HELP=['Independent','Verbal cue','Demonstration','Hands-on help'];
+/* Level of help for a goal in a session: any number of these (saved as a list; older sessions saved one). */
+function helpList(v){return Array.isArray(v)?v.slice():v?[v]:[]}
 var CODES=[['401','S/LI','Speech/Language Impaired'],['402','DCD-MM','Developmental Cognitive Disabilities: Mild-Moderate'],['403','DCD-SP','Developmental Cognitive Disabilities: Severe-Profound'],
   ['404','PI','Physically Impaired'],['405','D/HH','Deaf/Hard of Hearing'],['406','B/VI','Blind/Visually Impaired'],['407','SLD','Specific Learning Disabilities'],
   ['408','EBD','Emotional or Behavioral Disorders'],['410','OHD','Other Health Disabilities'],['411','ASD','Autism Spectrum Disorders'],['412','D/D','Developmentally Delayed'],
@@ -872,7 +874,8 @@ function saveSession(kind,after){var d=S.draft,id=S.open,date=S.date;
 }
 function extraInputs(g,d){var h='';
   if(g.kind==='ratio')h+='<div class="row"><label style="flex:0 1 200px">Out of how many tries<input type="number" inputmode="numeric" id="of-'+esc(g.id)+'" data-g="'+esc(g.id)+'" data-x="outof" value="'+(num(d.outof[g.id])?d.outof[g.id]:'')+'"></label></div>';
-  return h+'<div class="row">'+HELP.map(function(v){return '<button class="chip '+(d.help[g.id]===v?'on':'')+'" data-act="help" data-g="'+esc(g.id)+'" data-v="'+v+'">'+v+'</button>'}).join('')+'</div>'}
+  var hl=helpList(d.help[g.id]);
+  return h+'<div class="row" role="group" aria-label="Level of help (pick any)">'+HELP.map(function(v){var on=hl.indexOf(v)>=0;return '<button class="chip '+(on?'on':'')+'" data-act="help" data-g="'+esc(g.id)+'" data-v="'+v+'" aria-pressed="'+on+'">'+(on?'✓ ':'')+v+'</button>'}).join('')+'</div>'}
 /* For per-session agencies: what this session bills after rounding up to the quarter hour. */
 function billedNote(s,d){var a=agencyOfStudent(s);if(!a||PAY.onSite(a))return '';var m=(d.absent?0:(num(d.min)?d.min:0))+(num(d.indirect)?d.indirect:0);if(!m)return '<span class="muted small" id="billed"></span>';
   var st=agencyRound(a),q=PAY.roundUp(m,st);return '<span class="muted small" id="billed">'+(q===m?'Bills '+m+' min.':m+' min logged, bills '+q+' min (rounded up to the '+roundName(st)+').')+'</span>'}
@@ -1038,7 +1041,7 @@ function summary(s,hs){
     var p=pts.map(function(x){return{d:x.date,v:x.values[g.id]}}),st=stats(g,p),l=pts[pts.length-1],vr=l.variants&&l.variants[g.id];
     out.push(head,'Progress: '+s.name+' averaged '+st.avg+' '+g.unit+' (range '+st.min+' to '+st.max+') across '+pts.length+' session'+(pts.length===1?'':'s')+
       (st.metN!=null?'; '+(g.dir==='max'?'at or under ':'met target of ')+g.target+' '+g.unit+' in '+st.metN+' of '+pts.length:'')+
-      '. Most recent: '+l.values[g.id]+' '+g.unit+(l.outof&&num(l.outof[g.id])?' out of '+l.outof[g.id]:'')+(vr?' ('+vr+')':'')+(l.help&&l.help[g.id]?', '+l.help[g.id].toLowerCase():'')+' on '+md(l.date)+'.','');
+      '. Most recent: '+l.values[g.id]+' '+g.unit+(l.outof&&num(l.outof[g.id])?' out of '+l.outof[g.id]:'')+(vr?' ('+vr+')':'')+(l.help&&helpList(l.help[g.id]).length?', '+helpList(l.help[g.id]).join(' and ').toLowerCase():'')+' on '+md(l.date)+'.','');
   });
   if(s.reportWorks&&s.reportWorks.state==='added'&&s.reportWorks.text)out.push('What works: '+s.reportWorks.text,'');
   var notes=hs.filter(function(x){return x.note}).slice(-5);
@@ -1766,7 +1769,8 @@ document.addEventListener('click',function(e){
   else if(a==='copy'){var t=document.getElementById('sum').textContent;
     (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast('Copied')},function(){
       var r=document.createRange();r.selectNodeContents(document.getElementById('sum'));var sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast('Selected. Use Copy from the menu.')});return}
-  else if(a==='help'){if(d.help[g]===b.dataset.v)delete d.help[g];else d.help[g]=b.dataset.v}
+  else if(a==='help'){var hl0=helpList(d.help[g]),hk=hl0.indexOf(b.dataset.v);if(hk<0)hl0.push(b.dataset.v);else hl0.splice(hk,1);
+    hl0.sort(function(x,y){return HELP.indexOf(x)-HELP.indexOf(y)});if(hl0.length)d.help[g]=hl0;else delete d.help[g]}
   else if(a==='savetimes'){sc=school(b.dataset.id);if(!sc)return;var tt={};(sc.days||[]).forEach(function(d){var ar=val('st-arr-'+d),lv=val('st-lv-'+d);
       if(lv&&ar&&lv<=ar){tt._bad=DAYS[d]}if(ar||lv)tt[d]={arrive:ar,leave:lv}});
     if(tt._bad){toast('On '+tt._bad+', leave time is before arrival');return}
