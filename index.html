@@ -284,6 +284,8 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .sysrow .r+.r{border-top:1px solid var(--line)}
 .sysrow .r+.r input{font-size:14px}
 .sysrow .x{border:0;background:none;color:var(--muted);font-size:20px;padding:0 14px;min-height:44px;cursor:pointer}
+.scode{font:500 .78em var(--body);color:var(--muted);letter-spacing:.02em;white-space:nowrap;font-variant-numeric:tabular-nums}
+.nextcard .scode,.tile.lead .scode,.chip.on .scode{color:inherit;opacity:.8}
 .check{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border:0;border-top:1px solid var(--line);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:60px}
 .check:first-child{border-top:0}
 .check .box{flex:0 0 26px;height:26px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;color:var(--accent-ink)}
@@ -406,6 +408,9 @@ function active(s){return !s.status||s.status==='active'}
 function activeStudents(){return S.students.filter(active)}
 var STATUS={active:'Active',graduated:'Graduated',exited:'Exited'};
 function agency(id){return S.agencies.filter(function(a){return a.id===id})[0]}
+/* A student's initials with their disability code(s) right after, wherever students are listed. */
+function sname(s){return esc(s.name)+(s.codes?' <span class="scode">'+esc(s.codes)+'</span>':'')}
+function snameT(s){return s.name+(s.codes?' '+s.codes:'')}
 function agencyOfStudent(s){var sc=school(s.schoolId);return sc&&sc.agencyId?agency(sc.agencyId):null}
 function dayWord(d){return d===today()?'today':d===shift(today(),1)?'tomorrow':'this day'}
 var PAY=window.DAPE_PAY,PLAN=window.DAPE_PLAN,SUB=window.DAPE_SUBMIT;
@@ -530,7 +535,7 @@ function emptyRoster(){return '<div class="list"><div class="empty">'+(S.loaded?
 
 function comingUp(){
   var t=today(),out=[];
-  activeStudents().forEach(function(s){if(s.iepNext&&s.iepNext>=t&&s.iepNext<=shift(t,30))out.push({d:s.iepNext,t:'IEP meeting, '+s.name})});
+  activeStudents().forEach(function(s){if(s.iepNext&&s.iepNext>=t&&s.iepNext<=shift(t,30))out.push({d:s.iepNext,t:'IEP meeting, '+snameT(s)})});
   S.schools.forEach(function(sc){(sc.reports||[]).forEach(function(r){if(r.date>=t&&r.date<=shift(t,21))out.push({d:r.date,t:'Report due, '+(sc.alias||sc.name)+(r.label?' ('+r.label+')':'')})})});
   if(!out.length)return '';
   out.sort(function(a,b){return a.d<b.d?-1:1});
@@ -625,7 +630,7 @@ function nowPanel(P){
     cur=stops[k+1];arrived=false}
   var name=cur.sc.alias||cur.sc.name,next=stops[stops.indexOf(cur)+1],h='<div class="stack" style="gap:10px">';
   if(!arrived){
-    var who=cur.rows.filter(function(o){return cur.items.some(function(it){return it.id===o.s.id})}).map(function(o){return (o.pinned?PIN:'')+o.s.name});
+    var who=cur.rows.filter(function(o){return cur.items.some(function(it){return it.id===o.s.id})}).map(function(o){return (o.pinned?PIN:'')+snameT(o.s)});
     h+='<div class="nextcard"><span class="eyebrow">'+(k<0?'First stop':'Next stop')+(cur.arrive?' · arrive about '+esc(fmtTime(cur.arrive)):'')+'</span><h2>'+esc(name)+'</h2>'+
       (who.length?'<span>'+esc(who.join(', '))+'</span>':'')+
       '<button class="btn" data-act="arrive" data-sc="'+esc(cur.id)+'">I\'m at '+esc(name)+'</button></div>'+
@@ -652,10 +657,10 @@ function nowPanel(P){
       else if(cur.leave&&live.done>cur.leave){why=true;msg+=' Done about '+fmtTime(live.done)+', past your usual '+fmtTime(cur.leave)+'.'}
       if(why)h+='<div class="lu-note bad" style="border-radius:12px">'+esc(msg)+'</div>'}}
   if(running){var rx2=sess(running.s.id,d);
-    h+='<div class="nextcard"><span class="eyebrow">In session since '+esc(fmtTime(rx2.start))+'</span><h2>'+esc(running.s.name)+'</h2><span>'+Math.max(0,minsBetween(rx2.start,t))+' of '+rowMin(running)+' min</span>'+
+    h+='<div class="nextcard"><span class="eyebrow">In session since '+esc(fmtTime(rx2.start))+'</span><h2>'+sname(running.s)+'</h2><span>'+Math.max(0,minsBetween(rx2.start,t))+' of '+rowMin(running)+' min</span>'+
       '<button class="btn" data-act="open" data-id="'+esc(running.s.id)+'">Open '+esc(running.s.name)+'</button></div>'}
   else if(rem.length){var o1=byId[rem[0].id],x1=sess(o1.s.id,d),r1=lv[rem[0].id],acts=(x1&&x1.acts&&x1.acts.length?x1.acts:[]).join(', ');
-    h+='<div class="nextcard"><span class="eyebrow">Up next'+(r1&&r1.start?' · '+(o1.pinned?'pinned ':'about ')+esc(fmtTime(o1.pinned?o1.pinT:r1.start)):'')+'</span><h2>'+(o1.pinned?PIN+' ':'')+esc(o1.s.name)+'</h2>'+
+    h+='<div class="nextcard"><span class="eyebrow">Up next'+(r1&&r1.start?' · '+(o1.pinned?'pinned ':'about ')+esc(fmtTime(o1.pinned?o1.pinT:r1.start)):'')+'</span><h2>'+(o1.pinned?PIN+' ':'')+sname(o1.s)+'</h2>'+
       '<span>'+rowMin(o1)+' min'+(acts?' · '+esc(acts):'')+'</span><div class="row">'+
       '<button class="btn" style="flex:1" data-act="startsess" data-id="'+esc(o1.s.id)+'">Start session</button>'+
       (rem.length>1?'<button class="btn alt" data-act="later" data-sc="'+esc(cur.id)+'" data-id="'+esc(o1.s.id)+'">Not ready, later</button>':'')+'</div></div>'}
@@ -663,7 +668,7 @@ function nowPanel(P){
   if(!running&&rem.length&&rem[0].pin){var wait=minsBetween(t,rem[0].pin);if(wait>cur.gap)h+='<span class="muted small">'+wait+' min until '+esc(byId[rem[0].id].s.name)+'\'s pinned time. A good time for indirect work.</span>'}
   var rest=rem.slice(running?0:1);
   if(rest.length)h+='<span class="eyebrow">Still to see here</span><div class="nowlist">'+rest.map(function(it){var o=byId[it.id],r=lv[it.id];
-      return '<div><span>'+(o.pinned?PIN+' ':'')+esc(o.s.name)+' <span class="muted small">'+rowMin(o)+' min</span></span><span>'+(r&&r.start?esc(fmtTime(o.pinned?o.pinT:r.start))+' <span class="muted small">'+(o.pinned?'pinned':'about')+'</span>':'')+'</span></div>'}).join('')+'</div>';
+      return '<div><span>'+(o.pinned?PIN+' ':'')+sname(o.s)+' <span class="muted small">'+rowMin(o)+' min</span></span><span>'+(r&&r.start?esc(fmtTime(o.pinned?o.pinT:r.start))+' <span class="muted small">'+(o.pinned?'pinned':'about')+'</span>':'')+'</span></div>'}).join('')+'</div>';
   if(live.issues.some(function(x){return x.type==='pin'}))h+='<span class="muted small">At this pace someone runs into a pin. Use "Start next" on the reminder, or Plan my Day to move students.</span>';
   h+='<button class="btn'+(rem.length||running?'':' primary')+'" data-act="leave" data-sc="'+esc(cur.id)+'">'+(next?'Leave for '+esc(next.sc.alias||next.sc.name):'Leave '+esc(name))+'</button>';
   return h+'</div>'}
@@ -699,7 +704,7 @@ function todayView(){
     var sub=[o.sl?o.sl.min+' direct'+(s.indirect?' / '+s.indirect+' indirect':''):o.add?rowMin(o)+' min, added for today':'added for this day',o.sl&&o.sl.time&&grp[(s.schoolId||'')+'|'+o.sl.time]>1?'group':'',cl?'school closed'+(cl.label?' ('+cl.label+')':''):''].filter(Boolean).join(' · ');
     var pinned=o.pinned,tm=x&&x.start?fmtTime(x.start):rowTime(o),tag=x&&x.start?(x.end?'<br><span class="est">to '+esc(fmtTime(x.end))+'</span>':inSession(x)?'<br><span class="est">in session</span>':''):pinned?'<br><span class="pin-tag">'+PIN+' pinned</span>':tm?'<br><span class="est">about</span>':'';
     return '<button class="item'+(pinned?' pinned-row':'')+'" data-act="open" data-id="'+esc(s.id)+'"><span class="time">'+esc(tm)+tag+'</span>'+
-      '<span class="nm">'+esc(s.name)+(sub?'<br><span class="sub">'+esc(sub)+'</span>':'')+'</span>'+statusPill(x)+'</button>'}
+      '<span class="nm">'+sname(s)+(sub?'<br><span class="sub">'+esc(sub)+'</span>':'')+'</span>'+statusPill(x)+'</button>'}
   P.stops.forEach(function(st){
     if(st.leg)h+=legRow(st.leg);
     var ag=st.sc&&agency(st.sc.agencyId);
@@ -735,7 +740,7 @@ function indirectOutside(date){var out={};
   return out}
 var IKIND={meeting:'Meeting',indirect:'Indirect work'};
 function entryText(x){var st=x.studentId&&student(x.studentId),sc=school(entrySchoolId(x));
-  return [(IKIND[x.kind]||'Indirect work')+(x.start?' at '+fmtTime(x.start):''),sc?(sc.alias||sc.name):'',x.studentId?(st?st.name:'Removed student'):'',x.min+' min',x.note||''].filter(Boolean).join(' · ')}
+  return [(IKIND[x.kind]||'Indirect work')+(x.start?' at '+fmtTime(x.start):''),sc?(sc.alias||sc.name):'',x.studentId?(st?snameT(st):'Removed student'):'',x.min+' min',x.note||''].filter(Boolean).join(' · ')}
 function dayTotals(date,P){var out={};
   function b(k){return out[k]||(out[k]={stu:0,trav:0,miles:0,tax:0})}
   var by=dayByAgency(date);Object.keys(by).forEach(function(k){b(k).stu+=by[k]});
@@ -755,7 +760,7 @@ function indirectBlock(P){var list=S.indirect.filter(function(x){return x.date==
   return h+'<div class="panel stack" style="padding:12px"><strong>Add a meeting or indirect time</strong>'+
     '<span class="seg" role="group" style="align-self:flex-start">'+['meeting','indirect'].map(function(k){return '<button type="button" class="'+((f.kind||'meeting')===k?'on':'')+'" data-act="indkind" data-v="'+k+'" aria-pressed="'+((f.kind||'meeting')===k)+'">'+IKIND[k]+'</button>'}).join('')+'</span>'+
     '<div class="row"><label>School<select id="ind-school">'+S.schools.map(function(sc){return '<option value="'+esc(sc.id)+'"'+(sc.id===scSel?' selected':'')+'>'+esc(sc.alias||sc.name)+'</option>'}).join('')+'</select></label>'+
-    '<label>Student (optional)<select id="ind-student"><option value="">Whole school, no student</option>'+activeStudents().map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+' ('+esc(schoolLabel(s))+')</option>'}).join('')+'</select></label></div>'+
+    '<label>Student (optional)<select id="ind-student"><option value="">Whole school, no student</option>'+activeStudents().map(function(s){return '<option value="'+esc(s.id)+'">'+esc(snameT(s))+' ('+esc(schoolLabel(s))+')</option>'}).join('')+'</select></label></div>'+
     '<div class="row"><label>Started at'+timeField('id="ind-start"',S.date===today()?nowHM():'')+'</label><label>Minutes<input type="number" inputmode="numeric" id="ind-min"></label></div>'+
     '<label>What it was<input id="ind-note" placeholder="IEP meeting, phone call, talking with a para. No real names."></label>'+
     '<div class="row"><button class="btn primary" style="flex:1" data-act="addind">Save</button><button class="btn" data-act="indform">Cancel</button></div>'+
@@ -862,8 +867,8 @@ function wizardView(){
     if(!list.length)return h+'<div class="list"><div class="empty">No one to plan for. Everyone is absent or removed for this day.</div></div>'+wzActions(true,true);
     if(w.i>=list.length)w.i=list.length-1;
     var o=list[w.i],s=o.s;if(S.open!==s.id)openEntry(s.id);
-    h+='<div class="row">'+list.map(function(q,k){var x=sess(q.s.id,d);return '<button class="chip'+(k===w.i?' on':'')+'" data-act="wzjump" data-i="'+k+'">'+(x?'✓ ':'')+esc(q.s.name)+'</button>'}).join('')+'</div>';
-    h+='<div><span class="eyebrow">Student '+(w.i+1)+' of '+list.length+'</span><h2 style="font-size:26px">'+esc(s.name)+'</h2><span class="muted">'+esc([schoolLabel(s),rowTime(o)?(o.pinned?'pinned ':'about ')+rowTime(o):'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · '))+'</span></div>';
+    h+='<div class="row">'+list.map(function(q,k){var x=sess(q.s.id,d);return '<button class="chip'+(k===w.i?' on':'')+'" data-act="wzjump" data-i="'+k+'">'+(x?'✓ ':'')+sname(q.s)+'</button>'}).join('')+'</div>';
+    h+='<div><span class="eyebrow">Student '+(w.i+1)+' of '+list.length+'</span><h2 style="font-size:26px">'+sname(s)+'</h2><span class="muted">'+esc([schoolLabel(s),rowTime(o)?(o.pinned?'pinned ':'about ')+rowTime(o):''].filter(Boolean).join(' · '))+'</span></div>';
     var lastS=history(s.id);if(lastS.length){var ls=lastS[lastS.length-1];h+='<span class="muted small">Last session '+esc(md(ls.date))+(ls.acts&&ls.acts.length?': '+esc(ls.acts.join(', ')):'')+'. Its activities are pre-selected.</span>'}
     h+=worksCard(s)+objectivesCard(s,d,true)+minutesPanel(s,S.draft);
     h+='<label>Plan notes<textarea id="note" placeholder="Equipment to bring, what to try. Initials or nicknames only.">'+esc(S.draft.note)+'</textarea></label>';
@@ -880,7 +885,7 @@ function wizardView(){
     (absN?'<span class="muted small">'+absN+' marked absent.</span>':'')+'</div>';
   P5.stops.forEach(function(st){if(st.leg)h+=legRow(st.leg);
     h+='<div class="stop"><h2>'+esc(st.sc?(st.sc.alias||st.sc.name):'No school set')+'</h2><div class="list">'+st.rows.map(function(o){var x=sess(o.s.id,d);
-      return '<div class="item" style="cursor:default"><span class="time">'+esc(rowTime(o))+(o.pinned?'<br><span class="pin-tag">'+PIN+' pinned</span>':'')+'</span><span class="nm">'+esc(o.s.name)+(x&&x.acts&&x.acts.length&&!x.absent?'<br><span class="sub">'+esc(x.acts.join(', '))+'</span>':'')+'</span>'+statusPill(x)+'</div>'}).join('')+'</div></div>'});
+      return '<div class="item" style="cursor:default"><span class="time">'+esc(rowTime(o))+(o.pinned?'<br><span class="pin-tag">'+PIN+' pinned</span>':'')+'</span><span class="nm">'+sname(o.s)+(x&&x.acts&&x.acts.length&&!x.absent?'<br><span class="sub">'+esc(x.acts.join(', '))+'</span>':'')+'</span>'+statusPill(x)+'</div>'}).join('')+'</div></div>'});
   var ks=Object.keys(T);
   if(ks.length&&S.agencies.length)h+='<div class="panel stack"><span class="eyebrow">Expected by agency</span><div class="split">'+ks.map(function(k){var a=agency(k);
       var stuK=0;list5.forEach(function(o){var ak=agencyOfStudent(o.s);if((ak?ak.id:'')===k)stuK+=rowMin(o)+(o.s.indirect||0)});
@@ -908,7 +913,7 @@ function lineupStop(st,d){
     var sub=[rowMin(o)+' min',o.add?'added for today':'',r.withPrev?'with the student above':'',Object.prototype.hasOwnProperty.call(dd.pins||{},s.id)?(o.pinT?'pinned for today':'not pinned today'):''].filter(Boolean).join(' · ');
     h+='<div class="lu-row'+(r.pinned?' pinned-row':'')+'"><span class="lu-move"><button data-act="lumove" data-sc="'+esc(sid)+'" data-id="'+esc(s.id)+'" data-n="-1" aria-label="Move '+esc(s.name)+' up"'+(i?'':' disabled')+'>▲</button>'+
       '<button data-act="lumove" data-sc="'+esc(sid)+'" data-id="'+esc(s.id)+'" data-n="1" aria-label="Move '+esc(s.name)+' down"'+(i<L.rows.length-1?'':' disabled')+'>▼</button></span>'+
-      '<button class="lu-main" data-act="luopen" data-id="'+esc(s.id)+'" aria-expanded="'+open+'"><strong>'+(r.pinned?PIN+' ':'')+esc(s.name)+'</strong><br><span class="sub">'+esc(sub)+'</span></button>'+
+      '<button class="lu-main" data-act="luopen" data-id="'+esc(s.id)+'" aria-expanded="'+open+'"><strong>'+(r.pinned?PIN+' ':'')+sname(s)+'</strong><br><span class="sub">'+esc(sub)+'</span></button>'+
       '<span class="lu-time">'+esc(r.start?fmtTime(r.start):'')+'<span class="sub">'+(r.pinned?'pinned':r.start?'about':'')+'</span></span></div>';
     if(open)h+=lineupMore(o,d);
   });
@@ -918,13 +923,13 @@ function lineupStop(st,d){
       (st.leave?(ov?'<span style="color:var(--warn);font-weight:650;white-space:nowrap">'+ov+' min over</span>':'<span style="color:var(--accent);font-weight:650;white-space:nowrap">Fits ✓</span>'):'')+'</div>'}
   /* students who are out or not seen today */
   st.rows.filter(function(o){return ids.indexOf(o.s.id)<0}).forEach(function(o){var x=sess(o.s.id,d),sk=(dd.skip||[]).indexOf(o.s.id)>=0;
-    h+='<div class="lu-row lu-out"><span style="width:34px"></span><span class="lu-main" style="cursor:default"><strong>'+esc(o.s.name)+'</strong><br><span class="sub">'+(sk?'Not today':'Absent')+'</span></span>'+
+    h+='<div class="lu-row lu-out"><span style="width:34px"></span><span class="lu-main" style="cursor:default"><strong>'+sname(o.s)+'</strong><br><span class="sub">'+(sk?'Not today':'Absent')+'</span></span>'+
       '<button class="chip" data-act="wzst" data-id="'+esc(o.s.id)+'" data-v="in">Seeing</button></div>'});
   h+='</div>';
   if(w.add===sid){var here=st.rows.map(function(o){return o.s.id});
     var cand=activeStudents().filter(function(s){return here.indexOf(s.id)<0&&(s.schoolId||'')===sid});
     h+='<div class="panel stack" style="padding:12px"><strong>Add someone for '+esc(md(d))+' only</strong>'+
-      (cand.length?'<div class="row"><label>Student<select id="lu-add-s">'+cand.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'}).join('')+'</select></label>'+
+      (cand.length?'<div class="row"><label>Student<select id="lu-add-s">'+cand.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(snameT(s))+'</option>'}).join('')+'</select></label>'+
         '<label style="flex:0 1 120px">Minutes<input type="number" inputmode="numeric" id="lu-add-m" value="20"></label></div>'+
         '<div class="row"><button class="btn primary" style="flex:1" data-act="luadd" data-sc="'+esc(sid)+'">Add for today</button><button class="btn" data-act="luaddform" data-sc="">Cancel</button></div>':
         '<span class="muted small">Everyone at '+esc(name)+' is already on today\'s list.</span><button class="btn" data-act="luaddform" data-sc="">Close</button>')+'</div>'}
@@ -1020,9 +1025,9 @@ function timerPanel(s,d){var x=sess(s.id,S.date),isToday=S.date===today();
       '<button class="btn primary" data-act="endsess">End session</button>':'')+'</div>'}
 function entryView(){
   var s=student(S.open),d=S.draft; if(!s){S.open=null;return todayView()}
-  var est=estFor(s.id,S.date),where=[schoolLabel(s),est?'about '+fmtTime(est):'',(s.direct||s.indirect)?'IEP '+(s.direct||0)+' direct / '+(s.indirect||0)+' indirect':'',s.codes?'code '+s.codes:''].filter(Boolean).join(' · ');
+  var est=estFor(s.id,S.date),where=[schoolLabel(s),est?'about '+fmtTime(est):'',(s.direct||s.indirect)?'IEP '+(s.direct||0)+' direct / '+(s.indirect||0)+' indirect':''].filter(Boolean).join(' · ');
   var h='<div class="row spread"><button class="btn ghost" data-act="back">‹ '+(S.view==='plan'?'Back to plan':S.fromStu?'Back to '+s.name:'Back to the day')+'</button><span class="muted small">'+esc(md(S.date))+'</span></div>'+
-    '<div><h1>'+esc(s.name)+'</h1>'+(where?'<span class="muted">'+esc(where)+'</span>':'')+'</div>'+
+    '<div><h1>'+sname(s)+'</h1>'+(where?'<span class="muted">'+esc(where)+'</span>':'')+'</div>'+
     worksCard(s)+timerPanel(s,d)+'<h2>Lesson plan</h2>'+objectivesCard(s,S.date,false)+minutesPanel(s,d,true)+'<button class="btn primary" data-act="saveplan"'+(S.saving?' disabled':'')+'>Save plan</button><h2 style="margin-top:8px">Results</h2>'+
     '<button class="btn '+(d.absent?'on':'')+'" data-act="absent" aria-pressed="'+!!d.absent+'">'+(d.absent?'Marked absent':'Mark absent')+'</button>';
   if(!d.absent){
@@ -1054,11 +1059,11 @@ function entryView(){
 
 function inPeriod(x){if(S.period==='custom')return (!S.pFrom||x.date>=S.pFrom)&&(!S.pTo||x.date<=S.pTo);return S.period==='all'||x.date>=shift(today(),-(+S.period))}
 function progressView(){
-  var h='<div class="stack"><span class="eyebrow">Progress Reports</span><h1>'+(student(S.progId)?esc(student(S.progId).name):'Pick a student')+'</h1></div>';
+  var h='<div class="stack"><span class="eyebrow">Progress Reports</span><h1>'+(student(S.progId)?sname(student(S.progId)):'Pick a student')+'</h1></div>';
   if(!S.students.length)return h+emptyRoster();
   var q=S.progQ.toLowerCase(),hits=S.students.filter(function(x){return !q||String(x.name).toLowerCase().indexOf(q)>=0||schoolLabel(x).toLowerCase().indexOf(q)>=0});
   h+='<label>Find a student<input id="prog-q" type="search" value="'+esc(S.progQ)+'" placeholder="Initials, nickname or school" autocomplete="off"></label>'+
-    '<div class="row">'+(hits.length?hits.map(function(x){return '<button class="chip'+(x.id===S.progId?' on':'')+'" data-act="pickprog" data-id="'+esc(x.id)+'">'+esc(x.name)+(active(x)?'':' ('+esc(STATUS[x.status]||x.status)+')')+'</button>'}).join(''):'<span class="muted small">No student matches that search.</span>')+'</div>';
+    '<div class="row">'+(hits.length?hits.map(function(x){return '<button class="chip'+(x.id===S.progId?' on':'')+'" data-act="pickprog" data-id="'+esc(x.id)+'">'+sname(x)+(active(x)?'':' ('+esc(STATUS[x.status]||x.status)+')')+'</button>'}).join(''):'<span class="muted small">No student matches that search.</span>')+'</div>';
   if(!student(S.progId))return h;
   var s=student(S.progId),hs=history(s.id).filter(inPeriod);
   h+='<div class="row">'+
@@ -1384,7 +1389,7 @@ function studentHasHistory(s){return S.sessions.some(function(x){return x.studen
 function mergeBlock(s){var others=S.students.filter(function(o){return o.id!==s.id}).sort(function(a,b){return (a.schoolId===s.schoolId?0:1)-(b.schoolId===s.schoolId?0:1)||String(a.name).localeCompare(b.name)});
   var n=sessionsOf(s).length,M=S.merge&&S.merge.sid===s.id?S.merge:null,t=M&&student(M.into);
   var h='<div class="panel stack" style="margin-top:8px;padding:12px"><strong>Added twice?</strong><span class="muted small">'+esc(s.name)+' has '+n+' session'+(n===1?'':'s')+' logged, so it can\'t simply be deleted. Merge it into the real student: everything moves over, then this copy is deleted.</span>'+
-    '<label style="flex:none">Merge into<select id="merge-into"><option value="">Pick the real student</option>'+others.map(function(o){return '<option value="'+esc(o.id)+'"'+(M&&M.into===o.id?' selected':'')+'>'+esc(o.name+' ('+schoolLabel(o)+(o.iep||liveGoals(o).length?', has IEP':'')+(active(o)?'':', '+(STATUS[o.status]||o.status))+')')+'</option>'}).join('')+'</select></label>';
+    '<label style="flex:none">Merge into<select id="merge-into"><option value="">Pick the real student</option>'+others.map(function(o){return '<option value="'+esc(o.id)+'"'+(M&&M.into===o.id?' selected':'')+'>'+esc(snameT(o)+' ('+schoolLabel(o)+(o.iep||liveGoals(o).length?', has IEP':'')+(active(o)?'':', '+(STATUS[o.status]||o.status))+')')+'</option>'}).join('')+'</select></label>';
   if(t){var clash=sessionsOf(s).filter(function(x){var y=sess(t.id,x.date);return y&&y.status!=='planned'&&x.status!=='planned'}),
       dropped=sessionsOf(s).filter(function(x){return sess(t.id,x.date)&&x.status==='planned'}).length;n=n-dropped;
     h+='<button class="btn danger" data-act="mergedo" data-id="'+esc(s.id)+'">Tap again to move '+(n-clash.length)+' session'+(n-clash.length===1?'':'s')+' to '+esc(t.name)+'</button>'+'<span class="muted small">Where both have the same date, results you logged win over a plan without results.</span>'+
@@ -1481,8 +1486,8 @@ function studentsView(){
     return '<button class="chip'+(S.stFilter===f[0]?' on':'')+'" data-act="stfilter" data-v="'+f[0]+'">'+f[1]+' '+cnt(f[0])+'</button>'}).join('')+'</div>';
   var shown=S.students.filter(function(s){return S.stFilter==='all'||(s.status||'active')===S.stFilter});
   h+=shown.length?'<div class="list">'+shown.map(function(s){
-    var open=S.editId===s.id,sub=[schoolLabel(s),s.grade?'grade '+s.grade:'',s.codes?'code '+s.codes:'',s.slots.length?s.slots.map(slotShort).join(', '):'no schedule'].filter(Boolean).join(' · ');
-    var o='<button class="item" data-act="edit" data-id="'+esc(s.id)+'" aria-expanded="'+open+'"><span class="nm">'+esc(s.name)+'<br><span class="sub">'+esc(sub)+'</span></span>'+(active(s)?(s.iep?'<span class="pill">'+liveGoals(s).length+' objective'+(liveGoals(s).length===1?'':'s')+'</span>':'<span class="pill todo">IEP to set up</span>'):'<span class="pill gone">'+esc(STATUS[s.status]||s.status)+'</span>')+'</button>';
+    var open=S.editId===s.id,sub=[schoolLabel(s),s.grade?'grade '+s.grade:'',s.slots.length?s.slots.map(slotShort).join(', '):'no schedule'].filter(Boolean).join(' · ');
+    var o='<button class="item" data-act="edit" data-id="'+esc(s.id)+'" aria-expanded="'+open+'"><span class="nm">'+sname(s)+'<br><span class="sub">'+esc(sub)+'</span></span>'+(active(s)?(s.iep?'<span class="pill">'+liveGoals(s).length+' objective'+(liveGoals(s).length===1?'':'s')+'</span>':'<span class="pill todo">IEP to set up</span>'):'<span class="pill gone">'+esc(STATUS[s.status]||s.status)+'</span>')+'</button>';
     if(open){o+='<div class="stack edit">'+
         '<div class="row"><label>Initials or nickname<input id="st-name" value="'+esc(s.name)+'"></label><label>Grade<input id="st-grade" value="'+esc(s.grade||'')+'"></label></div>'+
         '<label>School<select id="st-school">'+schoolOptions(s.schoolId)+'</select></label>'+
