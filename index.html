@@ -285,7 +285,7 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .sysrow .r+.r input{font-size:14px}
 .sysrow .x{border:0;background:none;color:var(--muted);font-size:20px;padding:0 14px;min-height:44px;cursor:pointer}
 .scode{font:500 .78em var(--body);color:var(--muted);letter-spacing:.02em;white-space:nowrap;font-variant-numeric:tabular-nums}
-.nextcard .scode,.tile.lead .scode,.chip.on .scode{color:inherit;opacity:.8}
+.nextcard .scode,.tile.lead .scode{color:inherit;opacity:.8}
 .check{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border:0;border-top:1px solid var(--line);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:60px}
 .check:first-child{border-top:0}
 .check .box{flex:0 0 26px;height:26px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;color:var(--accent-ink)}
@@ -867,7 +867,7 @@ function wizardView(){
     if(!list.length)return h+'<div class="list"><div class="empty">No one to plan for. Everyone is absent or removed for this day.</div></div>'+wzActions(true,true);
     if(w.i>=list.length)w.i=list.length-1;
     var o=list[w.i],s=o.s;if(S.open!==s.id)openEntry(s.id);
-    h+='<div class="row">'+list.map(function(q,k){var x=sess(q.s.id,d);return '<button class="chip'+(k===w.i?' on':'')+'" data-act="wzjump" data-i="'+k+'">'+(x?'✓ ':'')+sname(q.s)+'</button>'}).join('')+'</div>';
+    h+='<div class="row">'+list.map(function(q,k){var x=sess(q.s.id,d);return '<button class="chip'+(k===w.i?' on':'')+'" data-act="wzjump" data-i="'+k+'">'+(x?'✓ ':'')+esc(q.s.name)+'</button>'}).join('')+'</div>';
     h+='<div><span class="eyebrow">Student '+(w.i+1)+' of '+list.length+'</span><h2 style="font-size:26px">'+sname(s)+'</h2><span class="muted">'+esc([schoolLabel(s),rowTime(o)?(o.pinned?'pinned ':'about ')+rowTime(o):''].filter(Boolean).join(' · '))+'</span></div>';
     var lastS=history(s.id);if(lastS.length){var ls=lastS[lastS.length-1];h+='<span class="muted small">Last session '+esc(md(ls.date))+(ls.acts&&ls.acts.length?': '+esc(ls.acts.join(', ')):'')+'. Its activities are pre-selected.</span>'}
     h+=worksCard(s)+objectivesCard(s,d,true)+minutesPanel(s,S.draft);
@@ -1063,7 +1063,7 @@ function progressView(){
   if(!S.students.length)return h+emptyRoster();
   var q=S.progQ.toLowerCase(),hits=S.students.filter(function(x){return !q||String(x.name).toLowerCase().indexOf(q)>=0||schoolLabel(x).toLowerCase().indexOf(q)>=0});
   h+='<label>Find a student<input id="prog-q" type="search" value="'+esc(S.progQ)+'" placeholder="Initials, nickname or school" autocomplete="off"></label>'+
-    '<div class="row">'+(hits.length?hits.map(function(x){return '<button class="chip'+(x.id===S.progId?' on':'')+'" data-act="pickprog" data-id="'+esc(x.id)+'">'+sname(x)+(active(x)?'':' ('+esc(STATUS[x.status]||x.status)+')')+'</button>'}).join(''):'<span class="muted small">No student matches that search.</span>')+'</div>';
+    '<div class="row">'+(hits.length?hits.map(function(x){return '<button class="chip'+(x.id===S.progId?' on':'')+'" data-act="pickprog" data-id="'+esc(x.id)+'">'+esc(x.name)+(active(x)?'':' ('+esc(STATUS[x.status]||x.status)+')')+'</button>'}).join(''):'<span class="muted small">No student matches that search.</span>')+'</div>';
   if(!student(S.progId))return h;
   var s=student(S.progId),hs=history(s.id).filter(inPeriod);
   h+='<div class="row">'+
