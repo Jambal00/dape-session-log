@@ -77,6 +77,30 @@
     if(s==null||a==null||l==null||l<=a)return min;
     var over=Math.max(0,Math.min(s+min,l)-Math.max(s,a));return min-over}
 
-  var API={outsideMin:outsideMin,toMin:toMin,toTime:toTime,lineUp:lineUp,moveBefore:moveBefore,moveAfter:moveAfter,fixFor:fixFor,startOrder:startOrder};
+  /* ---------- schedule patterns ----------
+     A schedule line (slot) says which days a student is seen:
+       every 1 (or missing): every week on sl.day
+       every 2: every other week on sl.day, counting from sl.anchor
+       every 'month': on sl.day in certain weeks of the month, sl.weeks = [1,2,3,4] and/or 5 for "last"
+       every 'dates': on each date in sl.dates (YYYY-MM-DD), any weekday
+     Week of the month: days 1-7 are the 1st, 8-14 the 2nd, and so on; "last" is the final one in the month. */
+  function ymd(s){var a=String(s).split('-');return[+a[0],+a[1],+a[2]]}
+  function dowOf(s){var a=ymd(s);return new Date(a[0],a[1]-1,a[2]).getDay()}
+  function weekNo(s){var a=ymd(s);return Math.floor((Date.UTC(a[0],a[1]-1,a[2])/864e5+4)/7)}
+  function daysIn(y,m){return new Date(y,m,0).getDate()}
+  function slotMatches(sl,date){if(!sl)return false;
+    if(sl.every==='dates')return (sl.dates||[]).indexOf(date)>=0;
+    if(sl.day!==dowOf(date))return false;
+    if(sl.every===2)return !sl.anchor||(weekNo(date)-weekNo(sl.anchor))%2===0;
+    if(sl.every==='month'){var a=ymd(date),n=Math.ceil(a[2]/7),last=a[2]+7>daysIn(a[0],a[1]),w=sl.weeks||[];
+      return w.indexOf(n)>=0||(last&&w.indexOf(5)>=0)}
+    return true}
+  /* The next n dates a slot falls on, starting from (and including) a date. */
+  function nextDates(sl,from,n){var out=[],a=ymd(from),d=new Date(a[0],a[1]-1,a[2]),i;
+    for(i=0;i<400&&out.length<n;i++){var s=d.getFullYear()+'-'+(d.getMonth()<9?'0':'')+(d.getMonth()+1)+'-'+(d.getDate()<10?'0':'')+d.getDate();
+      if(slotMatches(sl,s))out.push(s);d.setDate(d.getDate()+1)}
+    return out}
+
+  var API={slotMatches:slotMatches,nextDates:nextDates,outsideMin:outsideMin,toMin:toMin,toTime:toTime,lineUp:lineUp,moveBefore:moveBefore,moveAfter:moveAfter,fixFor:fixFor,startOrder:startOrder};
   if(typeof module!=='undefined'&&module.exports)module.exports=API;else root.DAPE_PLAN=API;
 })(this);

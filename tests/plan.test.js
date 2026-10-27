@@ -98,4 +98,25 @@ check('Indirect time at an on-site school: only the minutes outside arrive-to-le
   assert.strictEqual(P.outsideMin('11:00',25,'',''),25);
 });
 
+check('Schedule patterns: weekly, every 2 weeks, certain weeks of the month, specific dates',function(){
+  // Nov 2026 Thursdays: 5, 12, 19, 26. First three Thursdays -> 5, 12, 19 yes; 26 no; a Wednesday never.
+  var m={day:4,every:'month',weeks:[1,2,3]};
+  assert.deepStrictEqual(['2026-11-05','2026-11-12','2026-11-19','2026-11-26','2026-11-04'].map(function(d){return P.slotMatches(m,d)}),[true,true,true,false,false]);
+  assert.deepStrictEqual(P.nextDates(m,'2026-10-27',6),['2026-11-05','2026-11-12','2026-11-19','2026-12-03','2026-12-10','2026-12-17']);
+  // Oct 2026 Fridays: 2, 9, 16, 23, 30. "Last Friday" -> Oct 30 only.
+  var last={day:5,every:'month',weeks:[5]};
+  assert.deepStrictEqual(['2026-10-23','2026-10-30'].map(function(d){return P.slotMatches(last,d)}),[false,true]);
+  // Dec 2026 Thursdays: 3, 10, 17, 24, 31. "4th" is Dec 24, not the 5th Thursday (31); "last" is Dec 31.
+  assert.strictEqual(P.slotMatches({day:4,every:'month',weeks:[4]},'2026-12-24'),true);
+  assert.strictEqual(P.slotMatches({day:4,every:'month',weeks:[4]},'2026-12-31'),false);
+  assert.strictEqual(P.slotMatches({day:4,every:'month',weeks:[5]},'2026-12-31'),true);
+  // Specific dates, on any weekday.
+  var d={every:'dates',dates:['2026-10-30','2026-11-06']};
+  assert.deepStrictEqual(['2026-10-30','2026-11-06','2026-11-13'].map(function(x){return P.slotMatches(d,x)}),[true,true,false]);
+  // Every week and every 2 weeks still behave as before. Mondays: Oct 26, Nov 2, Nov 9.
+  assert.strictEqual(P.slotMatches({day:1,every:1},'2026-11-02'),true);
+  var two={day:1,every:2,anchor:'2026-10-26'};
+  assert.deepStrictEqual(['2026-10-26','2026-11-02','2026-11-09'].map(function(x){return P.slotMatches(two,x)}),[true,false,true]);
+});
+
 console.log('\nAll plan checks passed ('+n+')');

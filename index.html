@@ -233,6 +233,8 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .cstep button{width:40px;height:40px;border:0;background:var(--bg);font:600 20px var(--body);color:var(--ink);cursor:pointer}
 .cstep input{width:48px;min-height:40px;height:40px;border:0;border-left:1px solid var(--line);border-right:1px solid var(--line);border-radius:0;text-align:center;font:700 16px var(--body);padding:0}
 .tag.sk{background:var(--pin-soft);color:var(--pin-ink);font-size:11px;border-radius:99px;padding:1px 7px}
+.prevbox{background:var(--accent-soft);border-radius:10px;padding:10px 12px;font-size:14px}
+.prevbox b{display:block}
 .example{background:var(--accent-soft);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
 .example .t{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
 .ex{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px;font-variant-numeric:tabular-nums}
@@ -346,11 +348,21 @@ function student(id){return S.students.filter(function(s){return s.id===id})[0]}
 function school(id){return S.schools.filter(function(s){return s.id===id})[0]}
 function schoolLabel(s){var sc=school(s.schoolId);return sc?(sc.alias||sc.name):(s.site||'')}
 function closedOn(sc,date){return (sc.closed||[]).filter(function(c){return date>=c.from&&date<=(c.to||c.from)})[0]}
-function slotOn(s,date){var d=dow(date);return (s.slots||[]).filter(function(sl){
-  return sl.day===d&&(sl.every!==2||!sl.anchor||(wk(date)-wk(sl.anchor))%2===0)})[0]}
+function slotOn(s,date){return (s.slots||[]).filter(function(sl){return PLAN.slotMatches(sl,date)})[0]}
 /* A schedule slot is a day the student is seen. Pinned slots carry a fixed time and a reason; other slots may carry an
    older time (sl.time) that is only used as a starting order. */
-function slotText(sl){return DAYS[sl.day]+(sl.pin?' · pinned '+fmtTime(sl.pinTime):'')+', '+sl.min+' min'+(sl.every===2?', every 2 weeks':'')}
+var WKN={1:'1st',2:'2nd',3:'3rd',4:'4th',5:'last'};
+function andList(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' & '+a[a.length-1]}
+function upcoming(sl){return (sl.dates||[]).filter(function(d){return d>=today()}).sort()}
+var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function shortDate(d){var a=parts(d);return DAYS[dow(d)]+' '+MON[a[1]-1]+' '+a[2]}
+/* How often a schedule line repeats, in words */
+function slotWhen(sl){
+  if(sl.every==='dates'){var u=upcoming(sl);return u.length+' date'+(u.length===1?'':'s')}
+  if(sl.every==='month'){var w=(sl.weeks||[]).slice().sort();return DAYS[sl.day]+', '+(w.length===1&&w[0]===5?'last one of the month':andList(w.map(function(x){return WKN[x]}))+' week'+(w.length===1?'':'s'))}
+  return DAYS[sl.day]+(sl.every===2?', every 2 weeks':'')}
+function slotText(sl){return slotWhen(sl)+(sl.pin?' · pinned '+fmtTime(sl.pinTime):'')+', '+sl.min+' min'}
+function slotShort(sl){return sl.every==='dates'?'set dates':sl.every==='month'?DAYS[sl.day]+' ('+(sl.weeks||[]).slice().sort().map(function(x){return WKN[x]}).join(', ')+')':DAYS[sl.day]}
 function slotOrderTime(sl){return sl?(sl.pin?sl.pinTime:sl.time)||'':''}
 /* A school's usual times on a weekday: {arrive, leave} (either may be ''). */
 function schoolTimes(sc,day){var t=sc&&sc.times&&sc.times[day];return{arrive:(t&&t.arrive)||'',leave:(t&&t.leave)||''}}
@@ -1337,7 +1349,7 @@ function mergeStudents(dup,tgt){
     if(d.adds&&d.adds.some(function(a){return a.id===dup.id})){ch=true;c.adds=d.adds.filter(function(a){return a.id!==tgt.id}).map(function(a){return a.id===dup.id?Object.assign({},a,{id:tgt.id}):a})}
     if(ch)set('days/'+d.id,c)});
   /* schedule days and What works the real student doesn't have yet */
-  var slots=(tgt.slots||[]).slice();(dup.slots||[]).forEach(function(sl){if(!slots.some(function(x){return x.day===sl.day}))slots.push(sl)});
+  var slots=(tgt.slots||[]).slice();(dup.slots||[]).forEach(function(sl){if(sl.every==='dates'||sl.every==='month'?!slots.some(function(x){return JSON.stringify(x)===JSON.stringify(sl)}):!slots.some(function(x){return x.day===sl.day&&x.every!=='dates'}))slots.push(sl)});
   var w=works(tgt),dw=works(dup);['m','a','p'].forEach(function(k){dw[k].forEach(function(v){if(!w[k].some(function(x){return x.toLowerCase()===v.toLowerCase()}))w[k].push(v)})});if(!w.note)w.note=dw.note;
   var tp=Object.assign({},tgt,{slots:slots,works:w});if(added)tp.goals=tg;set('students/'+tgt.id,tp);
   if(!kept.length)del('students/'+dup.id);
@@ -1354,20 +1366,43 @@ function slotEditor(s){
     var editing=ed&&ed.i===i;
     return '<div class="row spread'+(sl.pin?' pinned-row':'')+'" style="'+(sl.pin?'padding-left:8px;':'')+(editing?'background:var(--accent-soft);border-radius:8px;padding:6px 8px;':'')+'"><span style="min-width:0;flex:1">'+
       (sl.pin?PIN+' ':'')+esc(slotText(sl))+(sl.pin&&sl.pinReason?'<br><span class="muted small">'+esc(sl.pinReason)+'</span>':'')+
+      (sl.every==='dates'?'<br><span class="muted small">'+esc(upcoming(sl).map(shortDate).join(', ')||'no dates left, add more')+'</span>':
+        sl.every==='month'?'<br><span class="muted small">next: '+esc((PLAN.nextDates(sl,today(),1).map(shortDate)[0])||'')+'</span>':'')+
       (!sl.pin&&sl.time?'<br><span class="muted small">Usual order: around '+esc(fmtTime(sl.time))+'</span>':'')+'</span>'+
       '<span class="row" style="gap:6px;flex-wrap:nowrap"><button class="chip" data-act="editslot" data-id="'+esc(s.id)+'" data-i="'+i+'">Edit</button><button class="chip" data-act="rmslot" data-id="'+esc(s.id)+'" data-i="'+i+'">Remove</button></span></div>'}).join('')
     :'<span class="muted small">No days yet. Add each day she sees this student.</span>';
-  h+='<div class="panel stack" style="padding:12px;margin-top:4px"><strong>'+(ed?'Change '+DAYS[cur.day]:'Add a day')+'</strong>'+
-    '<div class="row"><label>Day<select id="sl-day">'+ds.concat(ed&&ds.indexOf(cur.day)<0?[cur.day]:[]).map(function(i){return '<option value="'+i+'"'+(ed&&cur.day===i?' selected':'')+'>'+DAYS[i]+'</option>'}).join('')+'</select></label>'+
+  var ev=ed?(cur.every==='month'||cur.every==='dates'?cur.every:String(cur.every||1)):'1',wks=cur.weeks||[1],dts=ed?upcoming(cur):[];
+  h+='<div class="panel stack" style="padding:12px;margin-top:4px"><strong>'+(ed?'Change '+esc(slotWhen(cur)):'Add a day')+'</strong>'+
+    '<div class="row"><label id="sl-day-l"'+(ev==='dates'?' hidden':'')+'>Day<select id="sl-day">'+ds.concat(ed&&ds.indexOf(cur.day)<0?[cur.day]:[]).map(function(i){return '<option value="'+i+'"'+(ed&&cur.day===i?' selected':'')+'>'+DAYS[i]+'</option>'}).join('')+'</select></label>'+
     '<label>Minutes<input type="number" inputmode="numeric" id="sl-min" value="'+(ed?cur.min:(num(s.direct)?s.direct+(num(s.indirect)?s.indirect:0):20))+'"></label></div>'+
-    '<div class="row"><label>How often<select id="sl-every"><option value="1">Every week</option><option value="2"'+(ed&&cur.every===2?' selected':'')+'>Every 2 weeks</option></select></label>'+
-    '<label>First date (for every 2 weeks)<input type="date" id="sl-anchor" value="'+esc(ed&&cur.anchor||S.date)+'"></label></div>'+
+    '<label style="flex:none">How often<select id="sl-every">'+[['1','Every week'],['2','Every 2 weeks'],['month','Certain weeks of the month'],['dates','Specific dates']].map(function(o){return '<option value="'+o[0]+'"'+(ev===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></label>'+
+    '<label style="flex:none" id="sl-anchor-l"'+(ev==='2'?'':' hidden')+'>First date of the 2-week pattern<input type="date" id="sl-anchor" value="'+esc(ed&&cur.anchor||S.date)+'"></label>'+
+    '<div class="stack" style="gap:8px" id="sl-weeks-l"'+(ev==='month'?'':' hidden')+'><strong class="small">Which weeks</strong><div class="row" id="sl-weeks">'+[1,2,3,4,5].map(function(w){var on=wks.indexOf(w)>=0;return '<button type="button" class="chip'+(on?' on':'')+'" data-wk="'+w+'" aria-pressed="'+on+'">'+(on?'✓ ':'')+(w===5?'Last':WKN[w])+'</button>'}).join('')+'</div>'+
+      '<div class="prevbox" id="sl-preview"></div></div>'+
+    '<div class="stack" style="gap:8px" id="sl-dates-l"'+(ev==='dates'?'':' hidden')+'><div class="row end"><label>Add a date<input type="date" id="sl-newdate" value="'+S.date+'"></label><button type="button" class="btn" id="sl-adddate">Add</button></div>'+
+      '<div class="row" id="sl-dates">'+dts.map(function(d){return '<button type="button" class="chip" data-sld="'+d+'" aria-label="Remove '+esc(shortDate(d))+'">'+esc(shortDate(d))+' <span class="x">×</span></button>'}).join('')+'</div>'+
+      '<span class="muted small">Past dates drop off on their own.</span></div>'+
     '<label>When<select id="sl-when"><option value="any">Any time: placed when you plan the day</option><option value="pin"'+(pinOn?' selected':'')+'>Pinned time: should not move</option></select></label>'+
     '<div class="row" id="sl-pinrow"'+(pinOn?'':' hidden')+'><label style="flex:1 1 220px">Pinned at'+timeField('id="sl-time"',cur.pinTime||'')+'</label>'+
       '<label>Why (optional)<input id="sl-reason" value="'+esc(cur.pinReason||'')+'" placeholder="e.g. class leaves for lunch at 10:05"></label></div>'+
     '<div class="row"><button class="btn primary" style="flex:1" data-act="addslot" data-id="'+esc(s.id)+'">'+(ed?'Save changes':'Add day')+'</button>'+(ed?'<button class="btn" data-act="cancelslot">Cancel</button>':'')+'</div>'+
     '<span class="muted small">Most students are "Any time". Pin only the ones whose time really can\'t move.</span></div>';
+  setTimeout(slPreview,0);
   return h}
+/* Schedule editor helpers: show the fields for the chosen "How often", keep the weeks and dates as she taps, preview dates. */
+function slWeeks(){return [].map.call(document.querySelectorAll('#sl-weeks .on'),function(b){return +b.dataset.wk})}
+function slDates(){return [].map.call(document.querySelectorAll('#sl-dates [data-sld]'),function(b){return b.dataset.sld})}
+function slPreview(){var pv=document.getElementById('sl-preview');if(!pv)return;var w=slWeeks();
+  if(!w.length){pv.innerHTML='<span class="muted small">Tap at least one week.</span>';return}
+  var nx=PLAN.nextDates({day:+val('sl-day'),every:'month',weeks:w},today(),6);pv.innerHTML='<b>Next dates</b>'+esc(nx.map(shortDate).join(', '))}
+document.addEventListener('change',function(e){var t=e.target;
+  if(t.id==='sl-every'){var v=t.value,sh=function(id,on){var x=document.getElementById(id);if(x)x.hidden=!on};sh('sl-anchor-l',v==='2');sh('sl-weeks-l',v==='month');sh('sl-dates-l',v==='dates');sh('sl-day-l',v!=='dates');slPreview()}
+  else if(t.id==='sl-day')slPreview()});
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-wk],[data-sld],#sl-adddate');if(!b)return;
+  if(b.dataset.wk){var on=!b.classList.contains('on');b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);b.textContent=(on?'✓ ':'')+(b.dataset.wk==='5'?'Last':WKN[b.dataset.wk]);slPreview()}
+  else if(b.dataset.sld)b.remove();
+  else{var nd=val('sl-newdate');if(!nd){toast('Pick a date');return}if(nd<today()){toast('That date has passed');return}if(slDates().indexOf(nd)>=0)return;
+    var box=document.getElementById('sl-dates'),list=slDates().concat([nd]).sort();box.innerHTML=list.map(function(d){return '<button type="button" class="chip" data-sld="'+d+'" aria-label="Remove '+esc(shortDate(d))+'">'+esc(shortDate(d))+' <span class="x">×</span></button>'}).join('')}});
 function studentsView(){
   var h='<div class="stack"><span class="eyebrow">Students and IEPs</span><h1>Caseload</h1></div>';
   if(!S.loaded)return h+emptyRoster();
@@ -1378,7 +1413,7 @@ function studentsView(){
     return '<button class="chip'+(S.stFilter===f[0]?' on':'')+'" data-act="stfilter" data-v="'+f[0]+'">'+f[1]+' '+cnt(f[0])+'</button>'}).join('')+'</div>';
   var shown=S.students.filter(function(s){return S.stFilter==='all'||(s.status||'active')===S.stFilter});
   h+=shown.length?'<div class="list">'+shown.map(function(s){
-    var open=S.editId===s.id,sub=[schoolLabel(s),s.grade?'grade '+s.grade:'',s.codes?'code '+s.codes:'',s.slots.length?s.slots.map(function(sl){return DAYS[sl.day]}).join(', '):'no schedule'].filter(Boolean).join(' · ');
+    var open=S.editId===s.id,sub=[schoolLabel(s),s.grade?'grade '+s.grade:'',s.codes?'code '+s.codes:'',s.slots.length?s.slots.map(slotShort).join(', '):'no schedule'].filter(Boolean).join(' · ');
     var o='<button class="item" data-act="edit" data-id="'+esc(s.id)+'" aria-expanded="'+open+'"><span class="nm">'+esc(s.name)+'<br><span class="sub">'+esc(sub)+'</span></span>'+(active(s)?(s.iep?'<span class="pill">'+liveGoals(s).length+' objective'+(liveGoals(s).length===1?'':'s')+'</span>':'<span class="pill todo">IEP to set up</span>'):'<span class="pill gone">'+esc(STATUS[s.status]||s.status)+'</span>')+'</button>';
     if(open){o+='<div class="stack edit">'+
         '<div class="row"><label>Initials or nickname<input id="st-name" value="'+esc(s.name)+'"></label><label>Grade<input id="st-grade" value="'+esc(s.grade||'')+'"></label></div>'+
@@ -1873,7 +1908,9 @@ document.addEventListener('click',function(e){
   else if(a==='addslot'){s=student(b.dataset.id);if(!s)return;var mn=+val('sl-min'),pin=val('sl-when')==='pin',ptm=val('sl-time');
     if(!(mn>0)){toast('Enter the minutes');return} if(pin&&!ptm){toast('Pick the pinned time');return}
     var ed=S.slotEdit&&S.slotEdit.sid===s.id?S.slotEdit:null,old=ed?s.slots[ed.i]||{}:{};
-    var ns={day:+val('sl-day'),min:mn,every:+val('sl-every')===2?2:1};
+    var evv=val('sl-every'),ns={day:+val('sl-day'),min:mn,every:evv==='2'?2:evv==='month'||evv==='dates'?evv:1};
+    if(evv==='month'){ns.weeks=slWeeks();if(!ns.weeks.length){toast('Tap at least one week');return}}
+    if(evv==='dates'){ns.dates=slDates().filter(function(d){return d>=today()});if(!ns.dates.length){toast('Add at least one date');return}ns.day=dow(ns.dates[0])}
     if(old.time)ns.time=old.time;
     if(pin){ns.pin=true;ns.pinTime=ptm;ns.pinReason=val('sl-reason')}
     if(ns.every===2){if(!val('sl-anchor')){toast('Pick the first date for the 2-week pattern');return} ns.anchor=val('sl-anchor')}
