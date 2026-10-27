@@ -33,6 +33,10 @@ No identifiable student data. Students are entered as initials or a nickname onl
 
 `pay.js` holds the pay rules (base rate, travel time, mileage rates by date, mileage from an agency office, tax miles) as plain functions. `tests/pay.test.js` checks them against worked examples whose answers are calculated by hand in the comments. Run `node tests/pay.test.js` before every push to `main`; it must end with "All pay checks passed".
 
+## Submitting hours
+
+`submit.js` decides which worked days still need hours submitted to each agency (same day, next day or weekly, the last 14 days only, never before the agency turned it on). `tests/submit.test.js` checks it. Run `node tests/submit.test.js` before every push to `main`; it must end with "All submit checks passed".
+
 ## Running it locally
 
 Serve the folder with any static web server, for example `python3 -m http.server`, and open the page.

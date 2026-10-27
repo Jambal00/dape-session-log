@@ -258,6 +258,32 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .wzrow{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;border-top:1px solid var(--line)}
 .wzrow:first-child{border-top:0}
 .wzrow .nm{font-weight:600;min-width:0;flex:1 1 140px}
+.subbox{grid-column:1/-1;border:1px solid var(--line);border-radius:10px;padding:4px 12px;margin:2px 0 10px;display:flex;flex-direction:column}
+.subbox.done{background:var(--accent-soft);border-color:transparent}
+.subbox .hd{display:flex;justify-content:space-between;align-items:center;padding:6px 0 2px;font-size:13px;color:var(--muted)}
+.subbox .hd b{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase}
+.subbox .ok{color:var(--good);font-weight:700;letter-spacing:0;text-transform:none;font-size:14px}
+.subck{display:flex;align-items:center;gap:10px;min-height:44px}
+.subck>button.tk{display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;padding:6px 0;min-height:44px}
+.subck .box{flex:0 0 24px;height:24px;border-radius:6px;border:2px solid var(--muted);display:grid;place-items:center;color:var(--accent-ink)}
+.subck .box.on{background:var(--accent);border-color:var(--accent)}
+.subck .box svg{width:16px;height:16px}
+.menu .go .subbadge,.tile .subbadge{font:700 11px/1 var(--body);color:#fff}
+.subck .t{font-size:12px;color:var(--muted);white-space:nowrap}
+.subck a{color:var(--good);font-weight:600;font-size:13px;text-decoration:none;white-space:nowrap;padding:8px 0}
+.subwarn{background:color-mix(in srgb,var(--warn) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--warn) 45%,var(--surface));border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.subwarn>b{color:var(--warn);font-size:16px}
+.subwarn .od{background:var(--surface);border-radius:10px;padding:6px 12px;display:flex;flex-direction:column}
+.subwarn .od .hd{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;font-size:14px}
+.subwarn .od .hd b{font-weight:700}
+.subbadge{display:inline-block;background:var(--warn);color:#fff;border-radius:99px;font:700 11px/1 var(--body);padding:4px 8px;letter-spacing:0;vertical-align:2px;margin-left:6px}
+.tile.lead b .subbadge{background:var(--surface);color:var(--warn);opacity:1}
+.sysrow{border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;background:var(--surface)}
+.sysrow .r{display:flex;align-items:center}
+.sysrow input{border:0;border-radius:0;flex:1;min-width:0}
+.sysrow .r+.r{border-top:1px solid var(--line)}
+.sysrow .r+.r input{font-size:14px}
+.sysrow .x{border:0;background:none;color:var(--muted);font-size:20px;padding:0 14px;min-height:44px;cursor:pointer}
 .check{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border:0;border-top:1px solid var(--line);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:60px}
 .check:first-child{border-top:0}
 .check .box{flex:0 0 26px;height:26px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;color:var(--accent-ink)}
@@ -298,6 +324,7 @@ pre.sum{white-space:pre-wrap;word-break:break-word;font:14px/1.45 var(--body);ma
 <script src="pay.js"></script>
 <script src="plan.js"></script>
 <script src="iep.js"></script>
+<script src="submit.js"></script>
 <div class="wrap" id="auth" hidden>
   <div class="stack"><span class="eyebrow">DAPE Session Log</span><h1>Sign in</h1></div>
   <form class="panel stack" id="auth-form">
@@ -381,7 +408,7 @@ var STATUS={active:'Active',graduated:'Graduated',exited:'Exited'};
 function agency(id){return S.agencies.filter(function(a){return a.id===id})[0]}
 function agencyOfStudent(s){var sc=school(s.schoolId);return sc&&sc.agencyId?agency(sc.agencyId):null}
 function dayWord(d){return d===today()?'today':d===shift(today(),1)?'tomorrow':'this day'}
-var PAY=window.DAPE_PAY,PLAN=window.DAPE_PLAN;
+var PAY=window.DAPE_PAY,PLAN=window.DAPE_PLAN,SUB=window.DAPE_SUBMIT;
 function reimburses(a){return PAY.reimburses(a)}
 function paysTravel(a){return PAY.paysTravel(a)}
 function travelRate(a){return PAY.travelRate(a)}
@@ -430,7 +457,7 @@ function render(){
   var pinned=WIDE.matches;document.body.classList.toggle('pinned',pinned);
   menuEl.hidden=!(S.menu||pinned);
   menuEl.innerHTML=(S.menu||pinned)?'<div class="sheet" role="'+(pinned?'navigation':'dialog')+'" aria-label="Menu"><div class="head">'+(pinned?'':'<button class="burger" data-act="menu" aria-label="Close menu">'+CLOSE+'</button>')+'<span class="brand" style="font:700 20px var(--display)">DAPE Log</span></div>'+
-    NAV.map(function(n,k){return (n[3]&&(k===0||NAV[k-1][3]!==n[3])?'<div class="grp">'+esc(n[3])+'</div>':'')+'<button class="go'+(S.view===n[0]||(S.view==='iep'&&n[0]==='students')?' on':'')+'" data-act="go" data-v="'+n[0]+'"><b>'+esc(n[1])+'</b><span>'+esc(n[2])+'</span></button>'}).join('')+
+    NAV.map(function(n,k){return (n[3]&&(k===0||NAV[k-1][3]!==n[3])?'<div class="grp">'+esc(n[3])+'</div>':'')+'<button class="go'+(S.view===n[0]||(S.view==='iep'&&n[0]==='students')?' on':'')+'" data-act="go" data-v="'+n[0]+'"><b>'+esc(n[1])+(n[0]==='today'?subBadge():'')+'</b><span>'+esc(n[2])+'</span></button>'}).join('')+
     '<button class="go" data-act="signout" style="margin-top:auto"><b>Sign out</b><span>You will need your email and password to sign back in</span></button></div>':'';
   var h='';
   if(S.dbState==='none')h+='<div class="banner">Entries can\'t be saved right now. Check your connection, then reload the page.</div>';
@@ -464,8 +491,9 @@ function homeView(){
   var h='<div class="stack"><span class="eyebrow">'+esc(longDate(t))+'</span><h1>Good '+(new Date().getHours()<12?'morning':new Date().getHours()<17?'afternoon':'evening')+(myName()?', '+esc(myName()):'')+'</h1>'+
     '<span class="muted">'+(!S.loaded?'Loading…':sc.length?sc.length+' session'+(sc.length===1?'':'s')+' today'+(schools.length?' at '+esc(schools.join(' and ')):''):'Nothing scheduled today')+'</span></div>';
   var noIep=activeStudents().filter(function(s){return !s.iep}).length,nextRep=nextReport(),su=setupStatus();
+  h+=subReminder();
   h+='<div class="sec"><span class="eyebrow">Every day</span></div><div class="tiles">'+
-    '<button class="tile lead" data-act="go" data-v="today"><b>Today\'s Plan</b><span>'+(sc.length?'Log results as you go, then check hours and travel':'Open the day view')+'</span></button>'+
+    '<button class="tile lead" data-act="go" data-v="today"><b>Today\'s Plan'+subBadge()+'</b><span>'+(sc.length?'Log results as you go, then check hours and travel':'Open the day view')+'</span></button>'+
     '<button class="tile" data-act="go" data-v="plan" style="grid-column:1/-1;min-height:84px"><b>Plan my Day</b><span>'+(nn?esc(dayWord(nw)==='this day'?longDate(nw):dayWord(nw).replace(/^./,function(c){return c.toUpperCase()}))+': '+planned+' of '+nn+' planned':'Pick a day to plan')+'</span></button></div>';
   h+='<div class="sec"><span class="eyebrow">A few times a year</span></div><div class="tiles">'+
     '<button class="tile" data-act="go" data-v="students"><b>Students and IEPs</b><span>'+nAct+' active'+(S.loaded&&noIep?'<br><span class="warn">'+noIep+' IEP'+(noIep===1?'':'s')+' to set up</span>':'')+'</span></button>'+
@@ -732,6 +760,45 @@ function indirectBlock(P){var list=S.indirect.filter(function(x){return x.date==
     '<label>What it was<input id="ind-note" placeholder="IEP meeting, phone call, talking with a para. No real names."></label>'+
     '<div class="row"><button class="btn primary" style="flex:1" data-act="addind">Save</button><button class="btn" data-act="indform">Cancel</button></div>'+
     '<span class="muted small">Billed to the school\'s agency. For an agency that pays for time on site, the minutes outside your time at the school are paid on top. Picking a student also counts the minutes as that student\'s indirect time.</span></div>'}
+/* ---------- submitting hours ----------
+   Ticks live on the day document of the period's key (the day, or the Monday for a weekly agency):
+   sub {agencyId: {systemId: ISO time}}, and subSig {agencyId: 'hours|miles'} as they were at the last tick. */
+function subTicks(key,ag){return (dayDoc(key).sub||{})[ag]||{}}
+/* Days she worked for each agency: a logged session (not absent) or any meeting or indirect time. */
+function workedMap(from,to){var out={};function add(d,a){if(!a)return;var l=out[d]||(out[d]=[]);if(l.indexOf(a.id)<0)l.push(a.id)}
+  S.sessions.forEach(function(x){if(x.date<from||x.date>to||x.status==='planned'||x.absent)return;var st=student(x.studentId);if(st)add(x.date,agencyOfStudent(st))});
+  S.indirect.forEach(function(x){if(x.date<from||x.date>to||!num(x.min))return;add(x.date,entryAgency(x))});
+  return out}
+function owedNow(){if(!S.loaded||!S.agencies.some(function(a){return SUB.setup(a)}))return [];var t=today();
+  return SUB.owed({agencies:S.agencies,worked:workedMap(shift(t,-21),t),ticks:subTicks,today:t})}
+function subTick(ag,key,sys,sig){var dd=dayDoc(key),sub=Object.assign({},dd.sub||{}),m=Object.assign({},sub[ag]||{}),a=agency(ag),st=SUB.setup(a);
+  if(m[sys])delete m[sys];else m[sys]=new Date().toISOString();sub[ag]=m;var patch={sub:sub};
+  if(sig){var sg=Object.assign({},dd.subSig||{});sg[ag]=sig;patch.subSig=sg}
+  var pr=st&&SUB.progress(st,m);saveDay(key,patch,pr&&pr.complete?'Submitted to '+a.name:m[sys]?'Ticked':'Unticked')}
+function shortDay(d){var a=parts(d);return new Date(a[0],a[1]-1,a[2]).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}
+function hm(iso){var d=new Date(iso);return isNaN(d)?'':d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}
+function subRow(ag,key,y,ticks,sig,noTime){var on=!!ticks[y.id];
+  return '<div class="subck"><button type="button" class="tk" data-act="subtick" data-ag="'+esc(ag)+'" data-key="'+esc(key)+'" data-sys="'+esc(y.id)+'"'+(sig?' data-sig="'+esc(sig)+'"':'')+' role="checkbox" aria-checked="'+on+'">'+
+    '<span class="box'+(on?' on':'')+'">'+(on?TICK:'')+'</span><span style="flex:1;min-width:0">'+esc(y.name)+'</span>'+(on&&!noTime?'<span class="t">'+esc(hm(ticks[y.id]))+'</span>':'')+'</button>'+
+    (!on&&y.url?'<a href="'+esc(y.url)+'" target="_blank" rel="noopener">Open ↗</a>':'')+'</div>'}
+/* The checkboxes under one agency's line in the day total. */
+function subBox(a,date,sig){var st=SUB.setup(a);if(!st||date>today()||(st.since&&SUB.periodFor(st.due,date).to<st.since))return '';
+  var p=SUB.periodFor(st.due,date),ticks=subTicks(p.key,a.id),pr=SUB.progress(st,ticks),wk=st.due==='week';
+  var last=Object.keys(ticks).map(function(k){return ticks[k]}).sort().pop(),old=(dayDoc(p.key).subSig||{})[a.id];
+  var h='<div class="subbox'+(pr.complete?' done':'')+'" id="subbox-'+esc(a.id)+'"><div class="hd">'+(pr.complete?'<span class="ok">✓ Submitted'+(wk?' for the week':'')+'</span><span>'+esc(hm(last))+'</span>':
+    '<b>Submit hours'+(wk?' · week of '+esc(md(p.from)):'')+'</b><span>'+pr.done+' of '+pr.total+'</span>')+'</div>'+
+    st.systems.map(function(y){return subRow(a.id,p.key,y,ticks,wk?'':sig,pr.complete)}).join('');
+  if(!wk&&pr.done&&old&&sig&&old!==sig)h+='<span class="small" style="color:var(--warn);padding:2px 0 6px">Hours or miles changed since you ticked. Check them in the agency\'s system too.</span>';
+  else if(wk&&!pr.complete)h+='<span class="small muted" style="padding:2px 0 6px">Covers '+esc(md(p.from))+' to '+esc(md(p.to))+', due '+esc(shortDay(shift(p.to,1)))+'.</span>';
+  return h+'</div>'}
+/* Home: what is left to submit, ticked off right there. */
+function subReminder(){var L=owedNow();if(!L.length)return '';
+  return '<div class="subwarn" role="region" aria-label="Hours not submitted"><b>Hours not submitted: '+L.length+'</b>'+L.map(function(o){var a=agency(o.agencyId),ticks=subTicks(o.key,o.agencyId);
+      return '<div class="od"><div class="hd"><b>'+(o.due==='week'?'Week of '+esc(md(o.from)):esc(shortDay(o.key)))+' · '+esc(a.name)+'</b><span class="muted">'+o.done+' of '+o.total+'</span></div>'+
+        o.missing.map(function(y){return subRow(o.agencyId,o.key,y,ticks,'')}).join('')+
+        '<button type="button" class="linkbtn" data-act="subopen" data-d="'+esc(o.due==='week'?o.from:o.key)+'" data-ag="'+esc(o.agencyId)+'">Open this day</button></div>'}).join('')+
+    '<span class="small" style="color:var(--warn)">Tick them here, or open the day to check the hours first. Only the last 2 weeks show.</span></div>'}
+function subBadge(){var n=owedNow().length;return n?'<span class="subbadge">'+n+' to submit</span>':''}
 function dayPanel(P){
   var m=dayMinutes(S.date),ags={};S.agencies.forEach(function(a){ags[a.id]=a});
   var R=PAY.dayPay({date:S.date,agencies:ags,sessionMin:sessionsByAgency(S.date),studentMin:entriesByAgency(S.date),onSiteMin:onSiteByAgency(S.date,P),addMin:indirectOutside(S.date),legs:P.legs}),T=R.totals,ks=Object.keys(R.byAgency);
@@ -746,7 +813,8 @@ function dayPanel(P){
       if(a&&reimburses(a)&&r1(x.paidMiles)!==r1(x.miles))bits.push(r1(x.paidMiles)+' mi paid'+(x.officeUsed?' (from office)':''));
       if(a&&reimburses(a)&&x.rates.mile!=null&&x.paidMiles)bits.push(money(x.rates.mile)+'/mi');
       var note=(x.unpaid.length?' ('+x.unpaid.join(' and ')+' not paid)':'')+(x.missing.length?' · missing '+x.missing.filter(function(v,i,s){return s.indexOf(v)===i}).join(', '):'');
-      return '<span>'+esc(a?a.name:'No agency set')+'</span><span class="muted small">'+esc(bits.join(' · ')+note)+'</span><span class="n">'+(paid?money(x.pay.total):'')+'</span>'}).join('')+'</div>';
+      return '<span>'+esc(a?a.name:'No agency set')+'</span><span class="muted small">'+esc(bits.join(' · ')+note)+'</span><span class="n">'+(paid?money(x.pay.total):'')+'</span>'+
+        (a?subBox(a,S.date,hrs(x.studentMin+x.travelMin)+'|'+r1(x.miles)):'')}).join('')+'</div>';
   if(missing)h+='<span class="muted small">Some drives have no distance yet. Add them under Schools, in Home and drive distances.</span>';
   else if(test)h+='<span class="muted small">Miles use test distances for now.</span>';
   if(r1(T.taxMiles)!==r1(T.miles))h+='<span class="muted small">Miles for taxes count the miles each agency pays on, and leave out agencies where you chose not to track miles.</span>';
@@ -1498,7 +1566,9 @@ function agencyOptions(sel){return '<option value="">No agency set</option>'+S.a
 function agDraftFrom(a){a=a||{};var rs=PAY.mileRates(a).map(function(r){return{from:r.from,rate:String(r.rate)}});if(!rs.length)rs=[{from:'',rate:''}];
   return{name:a.name||'',rate:num(a.rate)?String(a.rate):'',paysTravel:a.id?paysTravel(a):true,travelOwn:!!(a.travelOwn&&num(a.travelRate)),
   travelRate:num(a.travelRate)?String(a.travelRate):'',reimburseMiles:a.id?reimburses(a):true,mileRates:rs,office:a.mileFrom==='office',officeAddress:a.officeAddress||'',officeLat:typeof a.officeLat==='number'?a.officeLat:null,officeLon:typeof a.officeLon==='number'?a.officeLon:null,
-  taxMiles:a.taxMiles!==false,onsite:a.payClock==='onsite',roundTo:String(agencyRound(a)),note:a.note||''}}
+  taxMiles:a.taxMiles!==false,onsite:a.payClock==='onsite',roundTo:String(agencyRound(a)),note:a.note||'',
+  subOn:!!(a.submit&&a.submit.on),subDue:a.submit&&a.submit.due||'same',subSince:a.submit&&a.submit.since||'',
+  subSys:(a.submit&&a.submit.systems||[]).map(function(y){return{id:y.id,name:y.name||'',url:y.url||''}})}}
 /* The draft's rate in effect today, for the example day. */
 function draftRateToday(d){var t=today(),best=null;d.mileRates.forEach(function(r){var v=r.rate!==''&&isFinite(+r.rate)?+r.rate:null;if(v!=null&&(r.from||'')<=t&&(!best||(r.from||'')>=best.from))best={from:r.from||'',rate:v}});return best}
 function rateRows(w,d){
@@ -1547,9 +1617,23 @@ function agencyForm(w,d,id){
     '<div class="pl"><b>Track these miles</b>'+agSwitch(w,'taxMiles',d.taxMiles,'Track these miles for taxes')+
       '<small>'+(d.taxMiles?'Driving for work can be deductible even when the agency does not reimburse it. Your tax preparer can confirm which miles count.':'These miles are left out of your tax mileage.')+'</small></div></div>';
   h+='<div class="example" id="'+w+'-ex">'+agExample(d)+'</div>';
+  h+=subSetup(w,d);
   if(w==='edit')h+='<label>Notes<textarea id="edit-note" data-agw="edit" data-agf="note" placeholder="Invoice contact, billing cycle, anything to remember">'+esc(d.note)+'</textarea></label>';
   h+=w==='edit'?'<button class="btn primary" data-act="saveag" data-id="'+esc(id)+'">Save agency</button>':'<button class="btn primary" data-act="addag">Add agency</button>';
   return h}
+var SUBDUE=[['same','Same day'],['next','Next day'],['week','Weekly']];
+function subSetup(w,d){
+  var h='<div class="paysheet"><div class="sect">Submitting hours</div><div class="pl"><b>Remind me to submit hours</b>'+agSwitch(w,'subOn',d.subOn,'Remind me to submit hours')+
+    '<small>'+(d.subOn?'Each day you work for this agency, Today\'s Plan shows a checkbox for each system below. Anything left unticked shows on Home the next morning.':'Turn on to tick off each system you enter your time into, and get reminded about days you missed.')+'</small>';
+  if(d.subOn){
+    h+='<div class="sub" style="flex-direction:column;align-items:stretch;gap:8px">'+d.subSys.map(function(y,i){
+      return '<div class="sysrow"><div class="r"><input data-agw="'+w+'" data-ags="'+i+'" data-agk="name" value="'+esc(y.name)+'" placeholder="System name, e.g. Timesheet portal" aria-label="System name"><button type="button" class="x" data-act="agsys-" data-w="'+w+'" data-i="'+i+'" aria-label="Remove '+esc(y.name||'this system')+'">×</button></div>'+
+        '<div class="r"><input data-agw="'+w+'" data-ags="'+i+'" data-agk="url" value="'+esc(y.url)+'" placeholder="Link (optional)" inputmode="url" autocapitalize="off" aria-label="Link to '+esc(y.name||'this system')+'"></div></div>'}).join('')+
+      '<button type="button" class="linkbtn" data-act="agsys+" data-w="'+w+'">+ Add a system</button>'+
+      '<span class="small" style="font-weight:600;margin-top:4px">Due</span>'+
+      '<span class="seg" role="group" aria-label="Hours due" style="align-self:flex-start">'+SUBDUE.map(function(o){var on=d.subDue===o[0];return '<button type="button" class="'+(on?'on':'')+'" data-act="agdue" data-w="'+w+'" data-v="'+o[0]+'" aria-pressed="'+on+'">'+o[1]+'</button>'}).join('')+'</span>'+
+      '<span class="small muted">'+(d.subDue==='week'?'One set of checkboxes for the whole week, Monday to Sunday, due the Monday after.':d.subDue==='next'?'Due the day after you work. The reminder shows the morning after that.':'Due the day you work. The reminder shows the next morning.')+'</span></div>'}
+  return h+'</div></div>'}
 function agSummary(a){
   return [num(a.rate)?money(a.rate)+'/hr'+(PAY.onSite(a)?' for time on site':''):'no hourly rate',(PAY.onSite(a)?'time on site':'sessions')+(agencyRound(a)?' rounded up to the '+roundName(agencyRound(a)):' not rounded'),
     !paysTravel(a)?'travel time not paid':a.travelOwn&&num(a.travelRate)?'travel '+money(a.travelRate)+'/hr':'travel at base rate',
@@ -1560,6 +1644,7 @@ function agFields(d){
   function n(v){return v!==''&&isFinite(+v)?+v:null}
   if(!d.name.trim())return 'Enter the agency name first';
   if(d.paysTravel&&d.travelOwn&&n(d.travelRate)==null)return 'Enter the travel rate';
+  if(d.subOn&&!d.subSys.some(function(y){return y.name.trim()}))return 'Name at least one system you submit hours to, or turn Submitting hours off';
   var rates=[],i,seen={};
   if(d.reimburseMiles){
     for(i=0;i<d.mileRates.length;i++){var r=d.mileRates[i],f=i===0?'':(r.from||''),v=n(r.rate);
@@ -1572,7 +1657,11 @@ function agFields(d){
   var cur=PAY.mileRateOn({mileRates:rates},today());
   return{name:d.name.trim(),rate:n(d.rate),paysTravel:d.paysTravel,travelOwn:!!(d.paysTravel&&d.travelOwn),travelRate:d.paysTravel&&d.travelOwn?n(d.travelRate):null,
     reimburseMiles:d.reimburseMiles,mileRates:d.reimburseMiles?rates:[],mileRate:d.reimburseMiles&&cur?cur.rate:null,
-    mileFrom:d.reimburseMiles&&d.office?'office':'home',payClock:d.onsite?'onsite':'session',roundTo:isFinite(+d.roundTo)?+d.roundTo:15,officeAddress:d.officeAddress.trim(),officeLat:d.officeLat==null?null:d.officeLat,officeLon:d.officeLon==null?null:d.officeLon,taxMiles:d.taxMiles,note:d.note.trim()}}
+    mileFrom:d.reimburseMiles&&d.office?'office':'home',payClock:d.onsite?'onsite':'session',roundTo:isFinite(+d.roundTo)?+d.roundTo:15,officeAddress:d.officeAddress.trim(),officeLat:d.officeLat==null?null:d.officeLat,officeLon:d.officeLon==null?null:d.officeLon,taxMiles:d.taxMiles,note:d.note.trim(),
+    submit:subFields(d)}}
+/* Submitting hours: the systems she enters time into. Turning it on starts counting from today, so days before that are never asked about. */
+function subFields(d){var sys=d.subSys.filter(function(y){return y.name.trim()}).map(function(y){var u=y.url.trim();if(u&&!/^https?:\/\//i.test(u))u='https://'+u;return{id:y.id||'sy_'+rid(),name:y.name.trim(),url:u}});
+  var on=d.subOn&&sys.length>0;return{on:on,due:d.subDue,systems:sys,since:on?(d.subSince||today()):''}}
 function agenciesView(){
   var h='<div class="stack"><span class="eyebrow">Agencies</span><h1>Who pays, and how much</h1>'+
     '<span class="muted small">Each school belongs to one agency. Hours and miles are split by agency. A drive is billed to the agency of the school you are driving to, and the drive from home to the first school counts.</span></div>';
@@ -1580,7 +1669,7 @@ function agenciesView(){
   h+=S.agencies.length?'<div class="list">'+S.agencies.map(function(a){
     var open=S.agEdit===a.id,ns=S.schools.filter(function(sc){return sc.agencyId===a.id});
     /* Collapsed: name, rate and how time is paid, and its schools. The full pay sheet opens one agency at a time. */
-    var sub=[num(a.rate)?money(a.rate)+'/hr':'no rate yet',PAY.onSite(a)?'time on site':'per session',ns.length?ns.map(function(sc){return sc.alias||sc.name}).join(', '):'no schools'].join(' · ');
+    var su=SUB.setup(a),sub=[num(a.rate)?money(a.rate)+'/hr':'no rate yet',PAY.onSite(a)?'time on site':'per session',su?'submits to '+su.systems.length+' system'+(su.systems.length===1?'':'s'):'',ns.length?ns.map(function(sc){return sc.alias||sc.name}).join(', '):'no schools'].filter(Boolean).join(' · ');
     var o='<button class="item" data-act="editag" data-id="'+esc(a.id)+'" aria-expanded="'+open+'"'+(open?' style="background:var(--accent-soft)"':'')+'><span class="nm">'+esc(a.name)+'<br><span class="sub">'+esc(sub)+'</span></span><span class="chev" aria-hidden="true">'+(open?'▾':'▸')+'</span></button>';
     if(open)o+='<div class="stack edit">'+agencyForm('edit',S.agDraft,a.id)+'</div>';
     return o}).join('')+'</div>':'<div class="list"><div class="empty">No agencies yet. Add the first one below, then pick it on each school.</div></div>';
@@ -1741,7 +1830,12 @@ document.addEventListener('click',function(e){
   else if(a==='agadd'){S.agAdding=!S.agAdding;if(S.agAdding){S.agEdit=null;S.agDraft=null}}
   else if(a==='aground'){var dr=agD(b.dataset.w);if(!dr)return;dr.roundTo=b.dataset.v}
   else if(a==='agq'){var dq=agD(b.dataset.w);if(!dq)return;dq[b.dataset.f]=b.dataset.v==='1'}
-  else if(a==='agsw'){var ds=agD(b.dataset.w);if(!ds)return;ds[b.dataset.f]=!ds[b.dataset.f]}
+  else if(a==='agsw'){var ds=agD(b.dataset.w);if(!ds)return;ds[b.dataset.f]=!ds[b.dataset.f];if(b.dataset.f==='subOn'&&ds.subOn&&!ds.subSys.length)ds.subSys.push({id:'',name:'',url:''})}
+  else if(a==='agsys+'){var dy=agD(b.dataset.w);if(!dy)return;dy.subSys.push({id:'',name:'',url:''})}
+  else if(a==='agsys-'){var dz=agD(b.dataset.w);if(!dz)return;dz.subSys.splice(i,1)}
+  else if(a==='agdue'){var du=agD(b.dataset.w);if(!du)return;du.subDue=b.dataset.v}
+  else if(a==='subtick'){subTick(b.dataset.ag,b.dataset.key,b.dataset.sys,b.dataset.sig||'');return}
+  else if(a==='subopen'){S.date=b.dataset.d;S.open=null;S.view='today';window.scrollTo(0,0);S.scrollToEl='#subbox-'+b.dataset.ag}
   else if(a==='agrate+'){var dr=agD(b.dataset.w);if(!dr)return;dr.mileRates.push({from:'',rate:''})}
   else if(a==='agrate-'){var dx=agD(b.dataset.w);if(!dx)return;dx.mileRates.splice(i,1)}
   else if(a==='addag'){var fa=agFields(agD('new'));if(typeof fa==='string'){toast(fa);return}
@@ -1960,7 +2054,8 @@ document.addEventListener('change',function(e){var t=e.target;
 document.addEventListener('input',function(e){if(e.target.id==='prog-q'){S.progQ=e.target.value;var p=e.target.selectionStart;render();var n=document.getElementById('prog-q');if(n){n.focus();try{n.setSelectionRange(p,p)}catch(_){}}}});
 function iepInput(e){var t=e.target;if(t.dataset&&t.dataset.iep&&S.iepEd){setP(S.iepEd.d,t.dataset.iep,t.value);if(t.tagName==='SELECT')render()}}
 document.addEventListener('input',iepInput);document.addEventListener('change',function(e){if(e.target.tagName==='SELECT')iepInput(e)});
-document.addEventListener('input',function(e){var t=e.target;if(!t.dataset||!(t.dataset.agf||t.dataset.agr))return;var dd=agD(t.dataset.agw);if(!dd)return;
+document.addEventListener('input',function(e){var t=e.target;if(!t.dataset||!(t.dataset.agf||t.dataset.agr||t.dataset.ags))return;var dd=agD(t.dataset.agw);if(!dd)return;
+  if(t.dataset.ags){if(dd.subSys[+t.dataset.ags])dd.subSys[+t.dataset.ags][t.dataset.agk]=t.value;return}
   if(t.dataset.agf)dd[t.dataset.agf]=t.value;else if(dd.mileRates[+t.dataset.agr])dd.mileRates[+t.dataset.agr][t.dataset.agk]=t.value;
   var ex=document.getElementById(t.dataset.agw+'-ex');if(ex)ex.innerHTML=agExample(dd)});
 document.addEventListener('change',function(e){var t=e.target;if(t.dataset&&t.dataset.luarr!=null){var dd=dayDoc(S.date),ar=Object.assign({},dd.arrive||{});if(t.value)ar[t.dataset.luarr]=t.value;else delete ar[t.dataset.luarr];saveDay(S.date,{arrive:ar},'Arrival changed for today')}});
