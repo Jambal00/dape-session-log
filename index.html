@@ -318,6 +318,9 @@ var DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var HELP=['Independent','Verbal cue','Demonstration','Hands-on help'];
 /* Level of help for a goal in a session: any number of these (saved as a list; older sessions saved one). */
 function helpList(v){return Array.isArray(v)?v.slice():v?[v]:[]}
+/* The goal's own levels picked in a session: also any number (older sessions saved one). */
+var pickList=helpList;
+function sameList(a,b){a=pickList(a);b=pickList(b);return a.length===b.length&&a.every(function(x,i){return x===b[i]})}
 var CODES=[['401','S/LI','Speech/Language Impaired'],['402','DCD-MM','Developmental Cognitive Disabilities: Mild-Moderate'],['403','DCD-SP','Developmental Cognitive Disabilities: Severe-Profound'],
   ['404','PI','Physically Impaired'],['405','D/HH','Deaf/Hard of Hearing'],['406','B/VI','Blind/Visually Impaired'],['407','SLD','Specific Learning Disabilities'],
   ['408','EBD','Emotional or Behavioral Disorders'],['410','OHD','Other Health Disabilities'],['411','ASD','Autism Spectrum Disorders'],['412','D/D','Developmentally Delayed'],
@@ -888,7 +891,7 @@ function objectivesCard(s,date,open){var gs=liveGoals(s),ann=(s.iep&&s.iep.annua
   var lastA=null;
   gs.forEach(function(g){var a=ann.filter(function(x){return x.id===g.annualId})[0];
     if(a&&a!==lastA&&ann.length>1){h+='<span class="eyebrow" style="margin-top:4px">'+esc(a.num?'Goal '+a.num:'Annual goal')+'</span>';lastA=a}
-    var l=lastVal(s.id,g.id,date),lv=l&&l.variants&&l.variants[g.id];
+    var l=lastVal(s.id,g.id,date),lv=l&&l.variants&&pickList(l.variants[g.id]).join(', ');
     var sum=[num(g.target)?(g.dir==='max'?'at most ':'target ')+g.target+' '+(g.unit||''):'',l?'last '+md(l.date)+': '+l.values[g.id]+(lv?' ('+lv+')':''):'no data yet'].filter(Boolean).join(' · ');
     h+='<details class="obj-ro"'+(open?' open':'')+'><summary><b>'+esc((g.num?'Objective '+g.num+' · ':'')+(g.label||'Objective'))+'</b><span class="muted small">'+esc(sum)+'</span></summary>'+
       (g.text?'<p>'+esc(g.text)+'</p>':'<p class="muted small">No wording entered.</p>')+
@@ -953,11 +956,11 @@ function entryView(){
         '<div class="stepper"><button data-act="step" data-g="'+esc(g.id)+'" data-n="-1" aria-label="Less">−</button>'+
         '<input type="number" inputmode="decimal" id="val-'+esc(g.id)+'" data-g="'+esc(g.id)+'" value="'+(num(v)?v:'')+'" placeholder="–" aria-label="'+esc(g.label)+'">'+
         '<button data-act="step" data-g="'+esc(g.id)+'" data-n="1" aria-label="More">+</button><span class="muted">'+esc(g.unit)+'</span></div>'+extraInputs(g,d);
-      if(g.variants&&g.variants.length&&!sess(s.id,S.date)&&last&&last.variants&&last.variants[g.id]&&d.variants[g.id]===last.variants[g.id])h+='<span class="muted small">Starting at last time\'s level ('+esc(md(last.date))+').</span>';
+      if(g.variants&&g.variants.length&&!sess(s.id,S.date)&&last&&last.variants&&pickList(last.variants[g.id]).length&&sameList(d.variants[g.id],last.variants[g.id]))h+='<span class="muted small">Starting at last time\'s level ('+esc(md(last.date))+').</span>';
       if(g.variants&&g.variants.length)h+='<div class="row">'+g.variants.map(function(vr){
-        return '<button class="chip '+(d.variants[g.id]===vr?'on':'')+'" data-act="variant" data-g="'+esc(g.id)+'" data-v="'+esc(vr)+'">'+esc(vr)+'</button>'}).join('')+'</div>';
+        var on=pickList(d.variants[g.id]).indexOf(vr)>=0;return '<button class="chip '+(on?'on':'')+'" data-act="variant" data-g="'+esc(g.id)+'" data-v="'+esc(vr)+'" aria-pressed="'+on+'">'+(on?'✓ ':'')+esc(vr)+'</button>'}).join('')+'</div>';
       if(last)h+='<div><button class="chip" data-act="same" data-g="'+esc(g.id)+'">Same as '+esc(md(last.date))+': '+last.values[g.id]+
-        (last.variants&&last.variants[g.id]?' ('+esc(last.variants[g.id])+')':'')+'</button></div>';
+        (last.variants&&pickList(last.variants[g.id]).length?' ('+esc(pickList(last.variants[g.id]).join(', '))+')':'')+'</button></div>';
       h+='</div>';
     });
     h+='</div>';
@@ -1038,7 +1041,7 @@ function summary(s,hs){
     var nth=g.num||String(goalsR.filter(function(q){return q.text}).indexOf(g)+1);
     var head=g.num?'Objective '+g.num+': '+(g.text||g.label)+(g.retired?' (ended '+md(g.retired)+')':''):(g.text?'Objective '+nth+': '+g.text:g.label+':');
     if(!pts.length){out.push(head,'Progress: no data recorded this period.','');return}
-    var p=pts.map(function(x){return{d:x.date,v:x.values[g.id]}}),st=stats(g,p),l=pts[pts.length-1],vr=l.variants&&l.variants[g.id];
+    var p=pts.map(function(x){return{d:x.date,v:x.values[g.id]}}),st=stats(g,p),l=pts[pts.length-1],vr=l.variants&&pickList(l.variants[g.id]).join(', ');
     out.push(head,'Progress: '+s.name+' averaged '+st.avg+' '+g.unit+' (range '+st.min+' to '+st.max+') across '+pts.length+' session'+(pts.length===1?'':'s')+
       (st.metN!=null?'; '+(g.dir==='max'?'at or under ':'met target of ')+g.target+' '+g.unit+' in '+st.metN+' of '+pts.length:'')+
       '. Most recent: '+l.values[g.id]+' '+g.unit+(l.outof&&num(l.outof[g.id])?' out of '+l.outof[g.id]:'')+(vr?' ('+vr+')':'')+(l.help&&helpList(l.help[g.id]).length?', '+helpList(l.help[g.id]).join(' and ').toLowerCase():'')+' on '+md(l.date)+'.','');
@@ -1679,7 +1682,7 @@ function openEntry(id){var x=sess(id,S.date);S.open=id;S.actEdit=false;S.confirm
   var s=student(id);
   if(x){S.draft.min=x.min;S.draft.indirect=x.indirect}
   else if(s){var sl0=slotOn(s,S.date),ad0=(dayDoc(S.date).adds||[]).filter(function(a){return a.id===id})[0],h0=history(id);S.draft.min=sl0?sl0.min:ad0&&num(ad0.min)?ad0.min:s.direct;S.draft.indirect=s.indirect;if(h0.length)S.draft.acts=(h0[h0.length-1].acts||[]).slice()}
-if(!x&&s)liveGoals(s).forEach(function(g){var l=lastVal(id,g.id,S.date);if(l&&l.variants&&l.variants[g.id])S.draft.variants[g.id]=l.variants[g.id]});}
+if(!x&&s)liveGoals(s).forEach(function(g){var l=lastVal(id,g.id,S.date);if(l&&l.variants&&pickList(l.variants[g.id]).length)S.draft.variants[g.id]=pickList(l.variants[g.id])});}
 function leaveEntry(){S.open=null;if(S.fromStu){S.view='students';S.editId=S.fromStu;S.date=S.fromDate||S.date;S.fromStu=null;window.scrollTo(0,0)}}
 function val(id){var e=document.getElementById(id);return e?e.value.trim():''}
 function nv(id){var v=val(id);return v!==''&&isFinite(+v)?+v:null}
@@ -1716,8 +1719,10 @@ document.addEventListener('click',function(e){
   else if(a==='back'){leaveEntry()}
   else if(a==='absent'){d.absent=!d.absent}
   else if(a==='step'){var cur=d.values[g];d.values[g]=num(cur)?Math.max(0,r1(cur+(+b.dataset.n))):(+b.dataset.n>0?1:0)}
-  else if(a==='variant'){if(d.variants[g]===b.dataset.v)delete d.variants[g];else d.variants[g]=b.dataset.v}
-  else if(a==='same'){var l=lastVal(S.open,g,S.date);if(l){d.values[g]=l.values[g];if(l.variants&&l.variants[g])d.variants[g]=l.variants[g]}}
+  else if(a==='variant'){var vl=pickList(d.variants[g]),vk=vl.indexOf(b.dataset.v);if(vk<0)vl.push(b.dataset.v);else vl.splice(vk,1);
+    var gv=(liveGoals(student(S.open)||{goals:[]}).filter(function(q){return q.id===g})[0]||{}).variants||[];vl.sort(function(x,y){return gv.indexOf(x)-gv.indexOf(y)});
+    if(vl.length)d.variants[g]=vl;else delete d.variants[g]}
+  else if(a==='same'){var l=lastVal(S.open,g,S.date);if(l){d.values[g]=l.values[g];if(l.variants&&pickList(l.variants[g]).length)d.variants[g]=pickList(l.variants[g])}}
   else if(a==='save'||a==='saveplan'){saveSession(a,function(){leaveEntry()});return}
   else if(a==='wznext'){S.wz.step=Math.min(5,S.wz.step+1);S.wz.i=0;S.open=null;window.scrollTo(0,0)}
   else if(a==='wzback'){S.open=null;if(S.wz.step===4&&S.wz.i>0)S.wz.i--;else{S.wz.step=Math.max(1,S.wz.step-1);if(S.wz.step===4)S.wz.i=Math.max(0,wzStudents(S.date).length-1)}window.scrollTo(0,0)}
