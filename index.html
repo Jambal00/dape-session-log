@@ -286,6 +286,10 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .sysrow .x{border:0;background:none;color:var(--muted);font-size:20px;padding:0 14px;min-height:44px;cursor:pointer}
 .scode{font:500 .78em var(--body);color:var(--muted);letter-spacing:.02em;white-space:nowrap;font-variant-numeric:tabular-nums}
 .nextcard .scode,.tile.lead .scode{color:inherit;opacity:.8}
+.actlist{display:flex;flex-direction:column}
+.actli{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.actli:first-child{border-top:0}
+.actli input{flex:1;min-width:0}
 .check{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border:0;border-top:1px solid var(--line);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:60px}
 .check:first-child{border-top:0}
 .check .box{flex:0 0 26px;height:26px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;color:var(--accent-ink)}
@@ -1001,6 +1005,34 @@ function actOrderList(d){if(!d.acts.length)return '';
     return '<div class="actrow"><span class="actn big">'+(i+1)+'</span><span class="nm">'+esc(n)+'</span>'+
       '<span class="lu-move" style="flex-direction:row"><button data-act="actmv" data-i="'+i+'" data-n="-1" aria-label="Move '+esc(n)+' earlier"'+(i?'':' disabled')+'>▲</button>'+
       '<button data-act="actmv" data-i="'+i+'" data-n="1" aria-label="Move '+esc(n)+' later"'+(i<d.acts.length-1?'':' disabled')+'>▼</button></span></div>'}).join('')+'</div>'}
+/* ---------- editing the activity list ----------
+   Sessions keep activity names, so renaming also renames it in every session that used it (planned or logged),
+   keeping its counts and history together. Renaming to a name already on the list merges the two.
+   Deleting only takes it off the list: sessions that used it keep it. */
+function actUses(n){return S.sessions.filter(function(x){return (x.acts||[]).indexOf(n)>=0||(x.actCounts&&Object.prototype.hasOwnProperty.call(x.actCounts,n))||(x.actSkip||[]).indexOf(n)>=0}).length}
+function actManager(d){
+  var h='<div class="panel stack"><div class="row spread"><strong>Edit activity list</strong><button type="button" class="linkbtn" data-act="actmanage">Done</button></div>'+
+    '<span class="muted small">Renaming changes it everywhere, in past and planned sessions too, so counts and history stay together. Deleting takes it off this list; sessions that used it keep it.</span><div class="actlist">';
+  h+=S.activities.map(function(a){var n=String(a.name),u=actUses(n);
+    if(S.actRen===a.id)return '<div class="actli"><input id="act-ren" value="'+esc(n)+'" aria-label="New name for '+esc(n)+'"><span class="row" style="gap:8px;flex:0 0 auto"><button class="btn primary" data-act="actrensave" data-id="'+esc(a.id)+'">Save</button><button class="btn" data-act="actren" data-id="">Cancel</button></span></div>';
+    var sure=S.actDel===a.id;
+    return '<div class="actli"><span style="flex:1;min-width:0"><b>'+esc(n)+'</b><br><span class="muted small">'+(u?'in '+u+' session'+(u===1?'':'s'):'not used yet')+'</span></span>'+
+      '<span class="row" style="gap:8px;flex:0 0 auto"><button class="btn" data-act="actren" data-id="'+esc(a.id)+'">Rename</button><button class="btn'+(sure?' danger':'')+'" data-act="actdel" data-id="'+esc(a.id)+'">'+(sure?'Tap again':'Delete')+'</button></span></div>'}).join('')||'<div class="muted small" style="padding:10px 0">No activities in the list yet.</div>';
+  return h+'</div></div>'}
+function renameInSession(x,from,to){var o=Object.assign({},x);delete o.id;
+  if(o.acts){var a=[];o.acts.forEach(function(n){var m=n===from?to:n;if(a.indexOf(m)<0)a.push(m)});o.acts=a}
+  if(o.actCounts&&Object.prototype.hasOwnProperty.call(o.actCounts,from)){var c=Object.assign({},o.actCounts);if(!num(c[to]))c[to]=c[from];delete c[from];o.actCounts=c}
+  if(o.actSkip){var k=[];o.actSkip.forEach(function(n){var m=n===from?to:n;if(k.indexOf(m)<0)k.push(m)});o.actSkip=k}
+  return o}
+function renameActivity(a,nn){var from=String(a.name);nn=nn.trim();
+  if(!nn){toast('Type the new name');return}
+  if(nn===from){S.actRen=null;render();return}
+  var ex=S.activities.filter(function(x){return x.id!==a.id&&String(x.name).toLowerCase()===nn.toLowerCase()})[0],to=ex?String(ex.name):nn;
+  var hit=S.sessions.filter(function(x){return ((x.acts||[]).indexOf(from)>=0||(x.actCounts&&Object.prototype.hasOwnProperty.call(x.actCounts,from))||(x.actSkip||[]).indexOf(from)>=0)});
+  write(function(){return Promise.all(hit.map(function(x){return S.db.doc('sessions/'+x.id).set(renameInSession(x,from,to))})).then(function(){
+      return ex?S.db.doc('activities/'+a.id).delete():S.db.doc('activities/'+a.id).set({name:to})})}).then(function(){
+    var d=S.draft;if(d){var r=renameInSession(d,from,to);d.acts=r.acts||d.acts;if(r.actCounts)d.actCounts=r.actCounts;if(r.actSkip)d.actSkip=r.actSkip}
+    S.actRen=null;toast((ex?'Merged into '+to:'Renamed to '+to)+(hit.length?' in '+hit.length+' session'+(hit.length===1?'':'s'):''));render()},function(){})}
 function minutesPanel(s,d,counting){
   var h='<div class="panel stack"><div class="row"><label>Direct minutes<input type="number" inputmode="numeric" id="e-min" value="'+(num(d.min)?d.min:'')+'"'+(d.absent?' disabled':'')+'></label>'+
     '<label>Indirect minutes<input type="number" inputmode="numeric" id="e-ind" value="'+(num(d.indirect)?d.indirect:'')+'"></label></div>'+billedNote(s,d)+'</div>';
@@ -1008,7 +1040,8 @@ function minutesPanel(s,d,counting){
   var names=S.activities.map(function(a){return String(a.name)});d.acts.forEach(function(n){if(names.indexOf(n)<0)names.push(n)});
   /* In a session with activities planned: count on each line. "Add or change activities" brings back the chips and order. */
   if(counting&&d.acts.length&&!S.actEdit)return h+actCountList(s,d);
-  return h+'<div class="panel stack"><div class="row spread"><strong>Activities</strong>'+(counting&&d.acts.length?'<button type="button" class="linkbtn" data-act="actedit">Done changing</button>':'')+'</div>'+
+  if(S.actManage)return h+actManager(d);
+  return h+'<div class="panel stack"><div class="row spread"><strong>Activities</strong><span class="row" style="gap:16px;flex:0 0 auto">'+(names.length?'<button type="button" class="linkbtn" data-act="actmanage">Edit list</button>':'')+(counting&&d.acts.length?'<button type="button" class="linkbtn" data-act="actedit">Done changing</button>':'')+'</span></div>'+
     (names.length?'<span class="muted small">Tap them in the order you\'ll do them.</span><div class="row">'+names.map(function(n){var k=d.acts.indexOf(n);return '<button class="chip '+(k>=0?'on':'')+'" data-act="act" data-v="'+esc(n)+'" aria-pressed="'+(k>=0)+'">'+(k>=0?'<span class="actn">'+(k+1)+'</span>':'')+esc(n)+'</button>'}).join('')+'</div>':'<span class="muted small">No activities in the list yet. Add the first one below.</span>')+
     actOrderList(d)+
     '<div class="row end"><label>New activity<input id="act-new" placeholder="Invented one? Add it here"></label><button class="btn primary" data-act="addact">Add</button></div></div>';
@@ -1810,7 +1843,7 @@ function openEntry(id){var x=sess(id,S.date);S.open=id;S.actEdit=false;S.confirm
   S.draft={start:(x&&x.start)||'',end:(x&&x.end)||'',absent:!!(x&&x.absent),values:Object.assign({},x&&x.values),variants:Object.assign({},x&&x.variants),note:(x&&x.note)||'',acts:((x&&x.acts)||[]).slice(),actCounts:Object.assign({},x&&x.actCounts),actSkip:((x&&x.actSkip)||[]).slice(),used:((x&&x.used)||[]).slice(),outof:Object.assign({},x&&x.outof),help:Object.assign({},x&&x.help)};
   var s=student(id);
   if(x){S.draft.min=x.min;S.draft.indirect=x.indirect}
-  else if(s){var sl0=slotOn(s,S.date),ad0=(dayDoc(S.date).adds||[]).filter(function(a){return a.id===id})[0],h0=history(id);S.draft.min=sl0?sl0.min:ad0&&num(ad0.min)?ad0.min:s.direct;S.draft.indirect=s.indirect;if(h0.length)S.draft.acts=(h0[h0.length-1].acts||[]).slice()}
+  else if(s){var sl0=slotOn(s,S.date),ad0=(dayDoc(S.date).adds||[]).filter(function(a){return a.id===id})[0],h0=history(id);S.draft.min=sl0?sl0.min:ad0&&num(ad0.min)?ad0.min:s.direct;S.draft.indirect=s.indirect;if(h0.length){var known=S.activities.map(function(x){return String(x.name)});S.draft.acts=(h0[h0.length-1].acts||[]).filter(function(n){return !known.length||known.indexOf(n)>=0})}}
 if(!x&&s)liveGoals(s).forEach(function(g){var l=lastVal(id,g.id,S.date);if(l&&l.variants&&pickList(l.variants[g.id]).length)S.draft.variants[g.id]=pickList(l.variants[g.id])});}
 function leaveEntry(){S.open=null;if(S.fromStu){S.view='students';S.editId=S.fromStu;S.date=S.fromDate||S.date;S.fromStu=null;window.scrollTo(0,0)}}
 function val(id){var e=document.getElementById(id);return e?e.value.trim():''}
@@ -1935,6 +1968,13 @@ document.addEventListener('click',function(e){
     if(num(cv))d.actCounts[an]=Math.max(0,cv+(+b.dataset.n));else if(+b.dataset.n>0)d.actCounts[an]=1}
   else if(a==='actskip'){var sn=b.dataset.v;d.actSkip=d.actSkip||[];var si2=d.actSkip.indexOf(sn);if(si2<0){d.actSkip.push(sn);if(d.actCounts)delete d.actCounts[sn]}else d.actSkip.splice(si2,1)}
   else if(a==='actedit'){S.actEdit=!S.actEdit}
+  else if(a==='actmanage'){S.actManage=!S.actManage;S.actRen=null;S.actDel=null}
+  else if(a==='actren'){S.actRen=b.dataset.id||null;S.actDel=null;if(S.actRen)setTimeout(function(){var x=document.getElementById('act-ren');if(x){x.focus();x.select()}},0)}
+  else if(a==='actrensave'){var ar0=S.activities.filter(function(x){return x.id===b.dataset.id})[0];if(ar0)renameActivity(ar0,val('act-ren'));return}
+  else if(a==='actdel'){var ad1=S.activities.filter(function(x){return x.id===b.dataset.id})[0];if(!ad1)return;
+    if(S.actDel!==ad1.id){S.actDel=ad1.id;S.actRen=null;render();return}
+    S.actDel=null;var dn=String(ad1.name);
+    write(function(){return S.db.doc('activities/'+ad1.id).delete()}).then(function(){var d1=S.draft;if(d1&&d1.acts){var ix=d1.acts.indexOf(dn);if(ix>=0)d1.acts.splice(ix,1)}toast(dn+' deleted');render()},function(){});return}
   else if(a==='actmv'){var am=i+(+b.dataset.n);if(!d||am<0||am>=d.acts.length)return;var av0=d.acts.splice(i,1)[0];d.acts.splice(am,0,av0)}
   else if(a==='act'){var av=b.dataset.v,ai=d.acts.indexOf(av);if(ai<0)d.acts.push(av);else d.acts.splice(ai,1)}
   else if(a==='addact'){var an=val('act-new');if(!an){toast('Type the activity name first');return}
@@ -2062,6 +2102,8 @@ function iepInput(e){var t=e.target;if(t.dataset&&t.dataset.iep&&S.iepEd){setP(S
 document.addEventListener('copy',function(e){var t=document.activeElement,sel=getSelection();
   if(!e.clipboardData||!sel||sel.isCollapsed||(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA')))return;
   e.clipboardData.setData('text/plain',sel.toString());e.preventDefault()});
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.id==='act-ren'){e.preventDefault();var sv=document.querySelector('[data-act=actrensave]');if(sv)sv.click()}
+  else if(e.key==='Escape'&&e.target.id==='act-ren'){S.actRen=null;render()}});
 document.addEventListener('input',iepInput);document.addEventListener('change',function(e){if(e.target.tagName==='SELECT')iepInput(e)});
 document.addEventListener('input',function(e){var t=e.target;if(!t.dataset||!(t.dataset.agf||t.dataset.agr||t.dataset.ags))return;var dd=agD(t.dataset.agw);if(!dd)return;
   if(t.dataset.ags){if(dd.subSys[+t.dataset.ags])dd.subSys[+t.dataset.ags][t.dataset.agk]=t.value;return}
