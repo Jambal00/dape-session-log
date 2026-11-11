@@ -764,9 +764,11 @@ function sessionsByAgency(date){var out={};
   S.sessions.forEach(function(x){if(x.date!==date||x.status==='planned')return;var m=(!x.absent&&num(x.min)?x.min:0)+(num(x.indirect)?x.indirect:0);if(!m)return;
     var s=student(x.studentId),a=s&&agencyOfStudent(s),k=a?a.id:'';(out[k]=out[k]||[]).push({min:m,round:agencyRound(a)})});
   return out}
-/* Separately logged indirect time and meetings, by agency (on-site agencies are handled by indirectOutside). */
+/* Separately logged indirect time and meetings, by agency (on-site agencies are handled by indirectOutside).
+   Each entry rounds up to the agency's step like a session (Pete, 2026-11-11), so they are returned in the sessionMin shape. */
 function entriesByAgency(date){var out={};
-  S.indirect.forEach(function(x){if(x.date!==date||!num(x.min))return;var a=entryAgency(x);if(PAY.onSite(a))return;var k=a?a.id:'';out[k]=(out[k]||0)+x.min});return out}
+  S.indirect.forEach(function(x){if(x.date!==date||!num(x.min))return;var a=entryAgency(x);if(PAY.onSite(a))return;var k=a?a.id:'';(out[k]=out[k]||[]).push({min:x.min,round:agencyRound(a)})});return out}
+function withEntries(sm,em){Object.keys(em).forEach(function(k){sm[k]=(sm[k]||[]).concat(em[k])});return sm}
 function dayByAgency(date){var out={};
   function add(sid,m){var s=student(sid),a=s&&agencyOfStudent(s),k=a?a.id:'';out[k]=(out[k]||0)+m}
   S.sessions.forEach(function(x){if(x.date===date&&x.status!=='planned'){var m=(!x.absent&&num(x.min)?x.min:0)+(num(x.indirect)?x.indirect:0);if(m)add(x.studentId,m)}});
@@ -774,7 +776,7 @@ function dayByAgency(date){var out={};
 /* For agencies paid for time on site: indirect time and meetings outside her arrive-to-leave time, paid on top. */
 function indirectOutside(date){var out={};
   S.indirect.forEach(function(x){if(x.date!==date||!num(x.min))return;var a=entryAgency(x);if(!PAY.onSite(a))return;
-    var t=siteTimes(date,entrySchoolId(x)),m=PLAN.outsideMin(x.start,x.min,t.arrive,t.leave);if(m>0)out[a.id]=(out[a.id]||0)+m});
+    var t=siteTimes(date,entrySchoolId(x)),m=PLAN.outsideMin(x.start,x.min,t.arrive,t.leave);if(m>0)out[a.id]=(out[a.id]||0)+PAY.roundUp(m,agencyRound(a))});
   return out}
 var IKIND={meeting:'Meeting',indirect:'Indirect work'};
 function entryText(x){var st=x.studentId&&student(x.studentId),sc=school(entrySchoolId(x));
@@ -845,7 +847,7 @@ function subReminder(){var L=owedNow();if(!L.length)return '';
 function subBadge(){var n=owedNow().length;return n?'<span class="subbadge">'+n+' to submit</span>':''}
 function dayPanel(P){
   var m=dayMinutes(S.date),ags={};S.agencies.forEach(function(a){ags[a.id]=a});
-  var R=PAY.dayPay({date:S.date,agencies:ags,sessionMin:sessionsByAgency(S.date),studentMin:entriesByAgency(S.date),onSiteMin:onSiteByAgency(S.date,P),addMin:indirectOutside(S.date),legs:P.legs}),T=R.totals,ks=Object.keys(R.byAgency);
+  var R=PAY.dayPay({date:S.date,agencies:ags,sessionMin:withEntries(sessionsByAgency(S.date),entriesByAgency(S.date)),onSiteMin:onSiteByAgency(S.date,P),addMin:indirectOutside(S.date),legs:P.legs}),T=R.totals,ks=Object.keys(R.byAgency);
   var missing=P.legs.some(function(l){return l.miles==null}),test=P.legs.some(function(l){return l.test});
   var h='<div class="panel stack"><span class="eyebrow">Day total</span>'+
     '<div class="row" style="gap:22px"><div><div class="stat">'+hrs(m.d+m.i+T.travelMin)+'</div><span class="muted small">total hours<br>'+hrs(m.d+m.i)+(S.indirect.some(function(x){return x.date===S.date})?' students and meetings + ':' students + ')+hrs(T.travelMin)+' travel</span></div>'+
@@ -853,7 +855,7 @@ function dayPanel(P){
     (r1(T.taxMiles)!==r1(T.miles)?'<div><div class="stat">'+r1(T.taxMiles)+'</div><span class="muted small">miles<br>for taxes</span></div>':'')+'</div>';
   if(ks.length)h+='<div class="split">'+ks.map(function(k){var a=agency(k),x=R.byAgency[k],paid=a&&(x.rates.base!=null||x.rates.travel!=null||x.rates.mile!=null);
       var bits=[hrs(x.studentMin+x.travelMin)+' hrs'+(x.clock==='onsite'?' ('+hrs(x.studentMin-(x.addMin||0))+' on site'+(x.roundedUp?', rounded up from '+hrs(x.onSiteLogged):'')+(x.addMin?', '+hrs(x.addMin)+' outside':'')+')':''),r1(x.miles)+' mi'];
-      if(x.clock!=='onsite'&&x.roundedUp)bits.push('sessions rounded up (+'+x.roundedUp+' min)');
+      if(x.clock!=='onsite'&&x.roundedUp)bits.push('rounded up (+'+x.roundedUp+' min)');
       if(a&&reimburses(a)&&r1(x.paidMiles)!==r1(x.miles))bits.push(r1(x.paidMiles)+' mi paid'+(x.officeUsed?' (from office)':''));
       if(a&&reimburses(a)&&x.rates.mile!=null&&x.paidMiles)bits.push(money(x.rates.mile)+'/mi');
       var note=(x.unpaid.length?' ('+x.unpaid.join(' and ')+' not paid)':'')+(x.missing.length?' · missing '+x.missing.filter(function(v,i,s){return s.indexOf(v)===i}).join(', '):'');
@@ -1665,7 +1667,7 @@ function studentsView(){
 /* Read-only: a school bills the way its agency is set up. */
 function schoolBillingLine(sc){var a=agency(sc.agencyId);
   return '<h2 style="margin-top:8px">Billing</h2><span class="muted small">'+(!a?'Pick the agency that pays for this school to set how it bills.':
-    esc(a.name)+(PAY.onSite(a)?' pays for time on site'+(agencyRound(a)?', with each visit rounded up to the '+esc(roundName(agencyRound(a))):', not rounded')+'.':agencyRound(a)?' rounds each session up to the '+esc(roundName(agencyRound(a)))+'.':' bills sessions as logged, with no rounding.')+' This school uses its agency\'s settings; change them under Agencies.')+'</span>'}
+    esc(a.name)+(PAY.onSite(a)?' pays for time on site'+(agencyRound(a)?', with each visit rounded up to the '+esc(roundName(agencyRound(a))):', not rounded')+'.':agencyRound(a)?' rounds each session, meeting and indirect entry up to the '+esc(roundName(agencyRound(a)))+'.':' bills sessions and meetings as logged, with no rounding.')+' This school uses its agency\'s settings; change them under Agencies.')+'</span>'}
 /* ---------- school tabs ----------
    S.scTab: which tab is showing. S.scDraft: the open school's unsaved edits (days, times, gap, agencyId, name, alias, address). */
 var SCTABS=[['schedule','Schedule'],['billing','Billing'],['holidays','Holidays'],['location','Location']];
