@@ -37,6 +37,10 @@ No identifiable student data. Students are entered as initials or a nickname onl
 
 `submit.js` decides which worked days still need hours submitted to each agency (same day, next day or weekly, the last 14 days only, never before the agency turned it on). `tests/submit.test.js` checks it. Run `node tests/submit.test.js` before every push to `main`; it must end with "All submit checks passed".
 
+## To-dos
+
+`todo.js` groups and sorts to-dos (overdue, today, this week, later, no date, done; important first). `tests/todo.test.js` checks it. Run `node tests/todo.test.js` before every push to `main`; it must end with "All to-do checks passed".
+
 ## Running it locally
 
 Serve the folder with any static web server, for example `python3 -m http.server`, and open the page.

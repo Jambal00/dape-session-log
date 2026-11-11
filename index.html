@@ -290,6 +290,34 @@ label{font-weight:600;font-size:14px;display:flex;flex-direction:column;gap:4px;
 .actli{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
 .actli:first-child{border-top:0}
 .actli input{flex:1;min-width:0}
+.tdgrp{display:flex;justify-content:space-between;align-items:baseline;margin:18px 0 6px}
+.tdgrp b{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase}
+.tdgrp.late b{color:var(--bad)}
+.tdrow{display:flex;align-items:flex-start;gap:4px;border-top:1px solid var(--line)}
+.tdrow:first-child{border-top:0}
+.tdck{flex:0 0 52px;min-height:52px;border:0;background:none;cursor:pointer;display:grid;place-items:center;padding:0}
+.tdck::before{content:"";grid-area:1/1;width:24px;height:24px;border-radius:50%;border:2px solid var(--muted)}
+.tdck.on::before{background:var(--accent);border-color:var(--accent)}
+.tdck svg{grid-area:1/1;width:15px;height:15px;color:var(--accent-ink);position:relative}
+.tdmain{flex:1;min-width:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;padding:13px 12px 13px 0;display:flex;flex-direction:column;gap:3px}
+.tdmain .t{font-weight:600}
+.tdrow.done .tdmain .t{color:var(--muted);text-decoration:line-through}
+.tdmain .s{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:13px;color:var(--muted)}
+.tdstar{color:var(--warn)}
+.tdlate{color:var(--bad);font-weight:600}
+.tdbill{color:var(--good);font-weight:600}
+.tdcat{font:600 11.5px var(--body);border-radius:99px;padding:2px 8px;background:var(--accent-soft);color:var(--good)}
+.tdcat.k1{background:color-mix(in srgb,#3b5bdb 16%,var(--surface));color:color-mix(in srgb,#3b5bdb 80%,var(--ink))}
+.tdcat.k2{background:color-mix(in srgb,#9c36b5 16%,var(--surface));color:color-mix(in srgb,#9c36b5 80%,var(--ink))}
+.tdcat.k3{background:color-mix(in srgb,var(--warn) 16%,var(--surface));color:var(--warn)}
+.tdcat.k4{background:color-mix(in srgb,#0b7285 16%,var(--surface));color:color-mix(in srgb,#0b7285 80%,var(--ink))}
+.tdundo{padding:10px 12px 12px 56px;display:flex;flex-direction:column;gap:8px;font-size:14px;border-top:1px dashed var(--line)}
+.tdundo .row{flex-wrap:wrap}
+.tdag{display:flex;align-items:center;min-height:44px;padding:0 10px;border-radius:8px;background:var(--bg);font-weight:500}
+.tdsheet-dim{position:fixed;inset:0;background:rgba(10,20,15,.4);z-index:40}
+.tdsheet{position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--surface);border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;max-height:92vh;overflow:auto;box-shadow:0 -10px 30px rgba(0,0,0,.2)}
+.tdsheet>*,.tdsheet>label{flex:0 0 auto}
+@media (min-width:1000px){.tdsheet{left:50%;right:auto;width:520px;transform:translateX(-50%);bottom:24px;border-radius:18px}}
 .check{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border:0;border-top:1px solid var(--line);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:60px}
 .check:first-child{border-top:0}
 .check .box{flex:0 0 26px;height:26px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;color:var(--accent-ink)}
@@ -331,6 +359,7 @@ pre.sum{white-space:pre-wrap;word-break:break-word;font:14px/1.45 var(--body);ma
 <script src="plan.js"></script>
 <script src="iep.js"></script>
 <script src="submit.js"></script>
+<script src="todo.js"></script>
 <div class="wrap" id="auth" hidden>
   <div class="stack"><span class="eyebrow">DAPE Session Log</span><h1>Sign in</h1></div>
   <form class="panel stack" id="auth-form">
@@ -347,7 +376,7 @@ pre.sum{white-space:pre-wrap;word-break:break-word;font:14px/1.45 var(--body);ma
 
 <script>
 (function(){
-var S={view:'home',menu:false,wz:{step:1,i:0},legs:[],settings:{},stFilter:'active',progQ:'',agencies:[],agEdit:null,date:today(),students:[],schools:[],sessions:[],activities:[],indirect:[],days:[],indForm:false,loaded:false,db:null,dbState:'wait',
+var S={view:'home',menu:false,wz:{step:1,i:0},legs:[],settings:{},stFilter:'active',progQ:'',agencies:[],agEdit:null,date:today(),students:[],schools:[],sessions:[],activities:[],indirect:[],todos:[],days:[],indForm:false,loaded:false,db:null,dbState:'wait',
        open:null,draft:null,progId:null,period:'all',editId:null,schoolEdit:null,saving:false};
 var DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var HELP=['Independent','Verbal cue','Demonstration','Hands-on help'];
@@ -417,7 +446,7 @@ function sname(s){return esc(s.name)+(s.codes?' <span class="scode">'+esc(s.code
 function snameT(s){return s.name+(s.codes?' '+s.codes:'')}
 function agencyOfStudent(s){var sc=school(s.schoolId);return sc&&sc.agencyId?agency(sc.agencyId):null}
 function dayWord(d){return d===today()?'today':d===shift(today(),1)?'tomorrow':'this day'}
-var PAY=window.DAPE_PAY,PLAN=window.DAPE_PLAN,SUB=window.DAPE_SUBMIT;
+var PAY=window.DAPE_PAY,PLAN=window.DAPE_PLAN,SUB=window.DAPE_SUBMIT,TD=window.DAPE_TODO;
 function reimburses(a){return PAY.reimburses(a)}
 function paysTravel(a){return PAY.paysTravel(a)}
 function travelRate(a){return PAY.travelRate(a)}
@@ -442,6 +471,7 @@ function start(db){
     sub('sessions',db.collection('sessions').limit(1000),function(a){S.sessions=a});
     sub('activities',db.collection('activities'),function(a){S.activities=a.sort(function(x,y){return String(x.name).localeCompare(String(y.name))})});
     sub('indirect',db.collection('indirect').limit(1000),function(a){S.indirect=a});
+    sub('todos',db.collection('todos').limit(1000),function(a){S.todos=a});
     sub('days',db.collection('days').limit(1000),function(a){S.days=a});
     sub('legs',db.collection('legs'),function(a){S.legs=a});
     sub('settings',db.collection('settings'),function(a){var m={};a.forEach(function(o){m[o.id]=o});S.settings=m});
@@ -474,6 +504,7 @@ function render(){
   else if(S.view==='today')h+=S.open?entryView():todayView();
   else if(S.view==='plan')h+=wizardView();
   else if(S.view==='progress')h+=progressView();
+  else if(S.view==='todos')h+=todosView();
   else if(S.view==='students')h+=studentsView();
   else if(S.view==='iep')h+=iepView();
   else if(S.view==='agencies')h+=agenciesView();
@@ -485,7 +516,7 @@ function render(){
 }
 var BURGER='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
 var CLOSE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
-var NAV=[['home','Home','Start here'],['today',"Today's Plan",'Sessions, results, hours and travel','Every day'],['plan','Plan my Day','Lesson plans for an upcoming day','Every day'],
+var NAV=[['home','Home','Start here'],['today',"Today's Plan",'Sessions, results, hours and travel','Every day'],['plan','Plan my Day','Lesson plans for an upcoming day','Every day'],['todos','To-dos','One-off tasks and their billable time','Every day'],
   ['students','Students and IEPs','IEPs, goals, schedules, status','A few times a year'],['progress','Progress Reports','Averages and SpEd Forms text','A few times a year'],
   ['profile','My profile','Your name and home address','Setup'],['schools','Schools','Calendars, report dates, drive distances','Setup'],['agencies','Agencies','Pay rates and mileage rates','Setup']];
 function nextWorkDay(from){var d=shift(from,1),i;for(i=0;i<14;i++){if(scheduledOn(d).length)return d;d=shift(d,1)}return shift(from,1)}
@@ -504,6 +535,9 @@ function homeView(){
   h+='<div class="sec"><span class="eyebrow">Every day</span></div><div class="tiles">'+
     '<button class="tile lead" data-act="go" data-v="today"><b>Today\'s Plan'+subBadge()+'</b><span>'+(sc.length?'Log results as you go, then check hours and travel':'Open the day view')+'</span></button>'+
     '<button class="tile" data-act="go" data-v="plan" style="grid-column:1/-1;min-height:84px"><b>Plan my Day</b><span>'+(nn?esc(dayWord(nw)==='this day'?longDate(nw):dayWord(nw).replace(/^./,function(c){return c.toUpperCase()}))+': '+planned+' of '+nn+' planned':'Pick a day to plan')+'</span></button></div>';
+  var tc=TD.counts(S.todos,t);
+  h+='<div class="tiles" style="margin-top:10px"><button class="tile" data-act="go" data-v="todos" style="grid-column:1/-1;min-height:72px"><b>To-dos</b><span>'+(!tc.open?'Nothing open':
+    [tc.overdue?'<span class="warn">'+tc.overdue+' overdue</span>':'',tc.today?tc.today+' due today':'',tc.open+' open'].filter(Boolean).join(' · '))+'</span></button></div>';
   h+='<div class="sec"><span class="eyebrow">A few times a year</span></div><div class="tiles">'+
     '<button class="tile" data-act="go" data-v="students"><b>Students and IEPs</b><span>'+nAct+' active'+(S.loaded&&noIep?'<br><span class="warn">'+noIep+' IEP'+(noIep===1?'':'s')+' to set up</span>':'')+'</span></button>'+
     '<button class="tile" data-act="go" data-v="progress"><b>Progress Reports</b><span>'+(nextRep?'Next due '+esc(md(nextRep.date))+' at '+esc(nextRep.school):'Search a student')+'</span></button></div>';
@@ -724,7 +758,7 @@ function dayMinutes(date){var d=0,i=0;
 function hrs(m){return Math.round(m/60*100)/100}
 /* An indirect time or meeting entry belongs to its school (or its student's school), and is billed to that school's agency. */
 function entrySchoolId(x){var s=x.studentId&&student(x.studentId);return x.schoolId||(s&&s.schoolId)||''}
-function entryAgency(x){var sc=school(entrySchoolId(x));return sc&&sc.agencyId?agency(sc.agencyId):null}
+function entryAgency(x){var sc=school(entrySchoolId(x));if(sc)return sc.agencyId?agency(sc.agencyId):null;return x.agencyId?agency(x.agencyId)||null:null}
 /* Each logged session's combined direct and indirect minutes, by agency: pay.js rounds these up per session. */
 function sessionsByAgency(date){var out={};
   S.sessions.forEach(function(x){if(x.date!==date||x.status==='planned')return;var m=(!x.absent&&num(x.min)?x.min:0)+(num(x.indirect)?x.indirect:0);if(!m)return;
@@ -744,7 +778,8 @@ function indirectOutside(date){var out={};
   return out}
 var IKIND={meeting:'Meeting',indirect:'Indirect work'};
 function entryText(x){var st=x.studentId&&student(x.studentId),sc=school(entrySchoolId(x));
-  return [(IKIND[x.kind]||'Indirect work')+(x.start?' at '+fmtTime(x.start):''),sc?(sc.alias||sc.name):'',x.studentId?(st?snameT(st):'Removed student'):'',x.min+' min',x.note||''].filter(Boolean).join(' · ')}
+  var ag=!sc&&x.agencyId?agency(x.agencyId):null;
+  return [(IKIND[x.kind]||'Indirect work')+(x.start?' at '+fmtTime(x.start):''),sc?(sc.alias||sc.name):ag?ag.name+' (no school)':'',x.studentId?(st?snameT(st):'Removed student'):'',x.min+' min',x.note||''].filter(Boolean).join(' · ')}
 function dayTotals(date,P){var out={};
   function b(k){return out[k]||(out[k]={stu:0,trav:0,miles:0,tax:0})}
   var by=dayByAgency(date);Object.keys(by).forEach(function(k){b(k).stu+=by[k]});
@@ -763,12 +798,12 @@ function indirectBlock(P){var list=S.indirect.filter(function(x){return x.date==
   var scSel=f.sc||stopIds[0]||(S.schools[0]&&S.schools[0].id)||'';
   return h+'<div class="panel stack" style="padding:12px"><strong>Add a meeting or indirect time</strong>'+
     '<span class="seg" role="group" style="align-self:flex-start">'+['meeting','indirect'].map(function(k){return '<button type="button" class="'+((f.kind||'meeting')===k?'on':'')+'" data-act="indkind" data-v="'+k+'" aria-pressed="'+((f.kind||'meeting')===k)+'">'+IKIND[k]+'</button>'}).join('')+'</span>'+
-    '<div class="row"><label>School<select id="ind-school">'+S.schools.map(function(sc){return '<option value="'+esc(sc.id)+'"'+(sc.id===scSel?' selected':'')+'>'+esc(sc.alias||sc.name)+'</option>'}).join('')+'</select></label>'+
+    '<div class="row"><label>School<select id="ind-school">'+S.schools.map(function(sc){return '<option value="'+esc(sc.id)+'"'+(sc.id===scSel?' selected':'')+'>'+esc(sc.alias||sc.name)+'</option>'}).join('')+agencyOnlyOptions(scSel)+'</select></label>'+
     '<label>Student (optional)<select id="ind-student"><option value="">Whole school, no student</option>'+activeStudents().map(function(s){return '<option value="'+esc(s.id)+'">'+esc(snameT(s))+' ('+esc(schoolLabel(s))+')</option>'}).join('')+'</select></label></div>'+
     '<div class="row"><label>Started at'+timeField('id="ind-start"',S.date===today()?nowHM():'')+'</label><label>Minutes<input type="number" inputmode="numeric" id="ind-min"></label></div>'+
     '<label>What it was<input id="ind-note" placeholder="IEP meeting, phone call, talking with a para. No real names."></label>'+
     '<div class="row"><button class="btn primary" style="flex:1" data-act="addind">Save</button><button class="btn" data-act="indform">Cancel</button></div>'+
-    '<span class="muted small">Billed to the school\'s agency. For an agency that pays for time on site, the minutes outside your time at the school are paid on top. Picking a student also counts the minutes as that student\'s indirect time.</span></div>'}
+    '<span class="muted small">Billed to the school\'s agency, or pick an agency with no school for agency meetings and training. For an agency that pays for time on site, the minutes outside your time at the school are paid on top. Picking a student also counts the minutes as that student\'s indirect time.</span></div>'}
 /* ---------- submitting hours ----------
    Ticks live on the day document of the period's key (the day, or the Monday for a weekly agency):
    sub {agencyId: {systemId: ISO time}}, and subSig {agencyId: 'hours|miles'} as they were at the last tick. */
@@ -1033,6 +1068,94 @@ function renameActivity(a,nn){var from=String(a.name);nn=nn.trim();
       return ex?S.db.doc('activities/'+a.id).delete():S.db.doc('activities/'+a.id).set({name:to})})}).then(function(){
     var d=S.draft;if(d){var r=renameInSession(d,from,to);d.acts=r.acts||d.acts;if(r.actCounts)d.actCounts=r.actCounts;if(r.actSkip)d.actSkip=r.actSkip}
     S.actRen=null;toast((ex?'Merged into '+to:'Renamed to '+to)+(hit.length?' in '+hit.length+' session'+(hit.length===1?'':'s'):''));render()},function(){})}
+/* ---------- to-dos ----------
+   One-off tasks: {title, notes, due 'YYYY-MM-DD' or '', star, cat, studentId, schoolId, agencyId, created, done (ISO) and doneOn,
+   billId (the meeting or indirect entry made when it was ticked off)}. Categories live in settings/todo {cats:[{id,name}]}. */
+var TD_DEFCATS=[{id:'c_paper',name:'Paperwork'},{id:'c_parent',name:'Parent contact'},{id:'c_equip',name:'Equipment'},{id:'c_meet',name:'Meetings'}];
+function tdCats(){var t=S.settings.todo;return t&&t.cats?t.cats:TD_DEFCATS}
+function tdCat(id){return tdCats().filter(function(c){return c.id===id})[0]||null}
+function tdCatIx(id){var l=tdCats();for(var i=0;i<l.length;i++)if(l[i].id===id)return i%5;return 0}
+function todo(id){return S.todos.filter(function(t){return t.id===id})[0]||null}
+function agencyOnlyOptions(sel){if(!S.agencies.length)return '';
+  return '<optgroup label="Agency, no school">'+S.agencies.map(function(a){var v='ag:'+a.id;return '<option value="'+esc(v)+'"'+(sel===v?' selected':'')+'>'+esc(a.name)+' (no school)</option>'}).join('')+'</optgroup>'}
+/* Who a to-do or its time is for, as a select value: a school id, 'ag:<agency id>', or ''. */
+function tdWhere(o){var st=o.studentId&&student(o.studentId);return st&&st.schoolId?st.schoolId:o.schoolId||(o.agencyId?'ag:'+o.agencyId:'')}
+function tdAgencyFor(where){if(!where)return null;if(where.indexOf('ag:')===0)return agency(where.slice(3));var sc=school(where);return sc&&sc.agencyId?agency(sc.agencyId):null}
+function tdWho(t){var st=t.studentId&&student(t.studentId),w=tdWhere(t),sc=w&&w.indexOf('ag:')<0?school(w):null,ag=w.indexOf('ag:')===0?agency(w.slice(3)):null;
+  return (st?sname(st):'')+(st&&sc?' · ':'')+(sc?esc(sc.alias||sc.name):'')+(ag?esc(ag.name)+' (no school)':'')}
+function tdForFields(pre,o){var where=tdWhere(o),ag=tdAgencyFor(where);
+  return '<div class="row"><label>Student<select id="'+pre+'-stu" data-tdfor="'+pre+'"><option value="">No student</option>'+activeStudents().map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===o.studentId?' selected':'')+'>'+esc(snameT(x))+' ('+esc(schoolLabel(x))+')</option>'}).join('')+'</select></label></div>'+
+    '<div class="row"><label>School<select id="'+pre+'-sc" data-tdfor="'+pre+'"><option value="">No school</option>'+S.schools.map(function(sc){return '<option value="'+esc(sc.id)+'"'+(sc.id===where?' selected':'')+'>'+esc(sc.alias||sc.name)+'</option>'}).join('')+agencyOnlyOptions(where)+'</select></label>'+
+    '<label>Agency<span class="tdag" id="'+pre+'-ag">'+(ag?esc(ag.name):'<span class="muted">none</span>')+'</span></label></div>'}
+/* Reading the student and school selects back: a student sets the school; an agency-only choice drops the student. */
+function tdForRead(pre){var st=val(pre+'-stu'),w=val(pre+'-sc'),o={studentId:'',schoolId:'',agencyId:''},stu=student(st);
+  if(w.indexOf('ag:')===0){o.agencyId=w.slice(3);return o}
+  if(stu){o.studentId=stu.id;o.schoolId=stu.schoolId||w;return o}
+  o.schoolId=w;return o}
+function tdRow(t){var done=!!t.done,c=tdCat(t.cat),bits=[],today0=today();
+  if(c)bits.push('<span class="tdcat k'+tdCatIx(c.id)+'">'+esc(c.name)+'</span>');
+  if(done){var e=t.billId&&S.indirect.filter(function(x){return x.id===t.billId})[0],ea=e&&entryAgency(e);
+    bits.push('<span>Done '+esc(shortDay(t.doneOn||today0))+'</span>');if(e)bits.push('<span class="tdbill">'+e.min+' min billed'+(ea?' · '+esc(ea.name):'')+'</span>')}
+  else if(t.due)bits.push('<span class="'+(t.due<today0?'tdlate':'')+'">'+(t.due<today0?'Due ':'')+esc(t.due===today0?'Today':shortDay(t.due))+'</span>');
+  var who=tdWho(t);if(who)bits.push('<span>'+who+'</span>');
+  var h='<div class="tdrow'+(done?' done':'')+'"><button type="button" class="tdck'+(done?' on':'')+'" data-act="tdtick" data-id="'+esc(t.id)+'" role="checkbox" aria-checked="'+done+'" aria-label="'+(done?'Mark not done: ':'Mark done: ')+esc(t.title)+'">'+(done?TICK:'')+'</button>'+
+    '<button type="button" class="tdmain" data-act="tdopen" data-id="'+esc(t.id)+'"><span class="t">'+(t.star&&!done?'<span class="tdstar">★</span> ':'')+esc(t.title)+'</span>'+(bits.length?'<span class="s">'+bits.join('')+'</span>':'')+'</button></div>';
+  if(S.tdUndo===t.id){var eu=t.billId&&S.indirect.filter(function(x){return x.id===t.billId})[0];
+    h+='<div class="tdundo"><span>Mark this not done?'+(eu?' It billed '+eu.min+' min on '+esc(shortDay(eu.date))+'.':'')+'</span><div class="row">'+
+      (eu?'<button class="btn" data-act="tdreopen" data-id="'+esc(t.id)+'" data-v="rm">Not done, remove the time</button><button class="btn" data-act="tdreopen" data-id="'+esc(t.id)+'">Not done, keep the time</button>':'<button class="btn primary" data-act="tdreopen" data-id="'+esc(t.id)+'">Mark not done</button>')+
+      '<button class="btn" data-act="tdundo" data-id="">Cancel</button></div></div>'}
+  return h}
+function todosView(){
+  if(S.tdOpen)return tdEditor()+tdSheet();
+  var cats=tdCats(),f=S.tdCat||'',G=TD.groups(S.todos,{today:today(),cat:f,q:S.tdQ||''}),c=TD.counts(S.todos,today());
+  var h='<div class="stack"><div class="row spread"><h1>To-dos</h1><span class="muted">'+c.open+' open</span></div>'+
+    '<div class="row"><input id="td-new" placeholder="Add a to-do…" aria-label="New to-do" style="flex:1"><button class="btn primary" data-act="tdadd">Add</button></div>'+
+    '<div class="row" style="gap:6px;flex-wrap:wrap" role="group" aria-label="Category"><button class="chip'+(f?'':' on')+'" data-act="tdfilter" data-v="" aria-pressed="'+!f+'">All</button>'+
+      cats.map(function(k){var on=f===k.id;return '<button class="chip'+(on?' on':'')+'" data-act="tdfilter" data-v="'+esc(k.id)+'" aria-pressed="'+on+'">'+esc(k.name)+'</button>'}).join('')+
+      '<button type="button" class="linkbtn" data-act="tdcats">'+(S.tdCatEdit?'Done editing':'Edit categories')+'</button></div>';
+  if(S.tdCatEdit)h+=tdCatManager();
+  if(S.todos.length>6||S.tdQ)h+='<input id="td-q" type="search" placeholder="Search to-dos" aria-label="Search to-dos" value="'+esc(S.tdQ||'')+'">';
+  h+='</div>';
+  if(!S.todos.length)return h+'<p class="muted" style="margin-top:16px">Nothing yet. Type a to-do above and tap Add.</p>';
+  if(!G.length)return h+'<p class="muted" style="margin-top:16px">Nothing matches.</p>';
+  G.forEach(function(g){
+    var showAll=g.key!=='done'||S.tdShowDone,items=g.key==='done'&&!S.tdShowDone?[]:g.items;
+    h+='<div class="tdgrp'+(g.key==='overdue'?' late':'')+'"><b>'+esc(g.label)+'</b>'+(g.key==='done'?'<button type="button" class="linkbtn" data-act="tdshowdone">'+(S.tdShowDone?'Hide':'Show '+g.items.length)+'</button>':'<span class="muted small">'+g.items.length+'</span>')+'</div>';
+    if(items.length)h+='<div class="list tdlist">'+items.slice(0,showAll?200:0).map(tdRow).join('')+'</div>'});
+  return h+tdSheet()}
+function tdCatManager(){var cats=tdCats();
+  return '<div class="panel stack"><span class="muted small">Renaming changes it on every to-do. Deleting leaves those to-dos with no category.</span>'+cats.map(function(k){
+      if(S.tdCatRen===k.id)return '<div class="actli"><input id="tdc-ren" value="'+esc(k.name)+'" aria-label="New name"><span class="row" style="gap:8px;flex:0 0 auto"><button class="btn primary" data-act="tdcatsave" data-id="'+esc(k.id)+'">Save</button><button class="btn" data-act="tdcatren" data-id="">Cancel</button></span></div>';
+      var sure=S.tdCatDel===k.id,n=S.todos.filter(function(t){return t.cat===k.id}).length;
+      return '<div class="actli"><span style="flex:1;min-width:0"><b>'+esc(k.name)+'</b><br><span class="muted small">'+(n?n+' to-do'+(n===1?'':'s'):'not used yet')+'</span></span><span class="row" style="gap:8px;flex:0 0 auto"><button class="btn" data-act="tdcatren" data-id="'+esc(k.id)+'">Rename</button><button class="btn'+(sure?' danger':'')+'" data-act="tdcatdel" data-id="'+esc(k.id)+'">'+(sure?'Tap again':'Delete')+'</button></span></div>'}).join('')+
+    '<div class="row end"><label>New category<input id="tdc-new" placeholder="e.g. Training"></label><button class="btn primary" data-act="tdcatadd">Add</button></div></div>'}
+function tdEditor(){var t=todo(S.tdOpen);if(!t){S.tdOpen=null;return todosView()}
+  var d=S.tdDraft||(S.tdDraft={title:t.title||'',notes:t.notes||'',due:t.due||'',star:!!t.star,cat:t.cat||'',studentId:t.studentId||'',schoolId:t.schoolId||'',agencyId:t.agencyId||''});
+  var sure=S.tdDel===t.id;
+  return '<div class="stack"><button type="button" class="linkbtn" style="align-self:flex-start" data-act="tdclose">‹ All to-dos</button>'+
+    '<div class="panel stack"><label>What<input id="tde-title" data-tdf="title" value="'+esc(d.title)+'"></label>'+
+    '<label>Notes<textarea id="tde-notes" data-tdf="notes" placeholder="Anything to remember. No real names.">'+esc(d.notes)+'</textarea></label>'+
+    '<div class="row end"><label>Due<input type="date" id="tde-due" data-tdf="due" value="'+esc(d.due)+'"></label>'+
+      '<span class="stack" style="gap:4px;flex:0 0 auto"><span class="small" style="font-weight:600">Important</span><span class="seg" role="group" aria-label="Important"><button type="button" class="'+(d.star?'':'on')+'" data-act="tdstar" data-v="" aria-pressed="'+!d.star+'">No</button><button type="button" class="'+(d.star?'on':'')+'" data-act="tdstar" data-v="1" aria-pressed="'+d.star+'">★ Yes</button></span></span></div>'+
+    '<span class="small" style="font-weight:600">Category</span><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:-4px">'+tdCats().map(function(k){var on=d.cat===k.id;return '<button type="button" class="chip'+(on?' on':'')+'" data-act="tdsetcat" data-v="'+esc(k.id)+'" aria-pressed="'+on+'">'+esc(k.name)+'</button>'}).join('')+'</div></div>'+
+    '<div class="panel stack"><strong>For <span class="muted small" style="font-weight:400">(optional)</span></strong>'+tdForFields('tde',d)+'<span class="muted small">Picking a student fills in the school. The agency comes from the school.</span></div>'+
+    '<div class="row"><button class="btn primary" style="flex:1" data-act="tdsave" data-id="'+esc(t.id)+'">Save</button>'+
+      '<button class="btn" data-act="tdtick" data-id="'+esc(t.id)+'">'+(t.done?'Mark not done':'Mark done')+'</button>'+
+      '<button class="btn'+(sure?' danger':'')+'" data-act="tddel" data-id="'+esc(t.id)+'">'+(sure?'Tap again':'Delete')+'</button></div>'+
+    (sure&&t.billId?'<span class="muted small">Time it billed stays in Today\'s Plan.</span>':'')+'</div>'}
+/* Ticking a to-do off: a sheet to add its billable time, or just mark it done. */
+function tdSheet(){var b=S.tdBill;if(!b)return '';var t=todo(b.id);if(!t)return '';
+  var ag=tdAgencyFor(tdWhere(b));
+  return '<div class="tdsheet-dim" data-act="tbcancel"></div><div class="tdsheet" role="dialog" aria-label="Mark done">'+
+    '<strong style="font-size:18px">Done! Any billable time?</strong><span class="muted small" style="margin-top:-6px">'+esc(t.title)+'</span>'+
+    '<div class="row"><label>Minutes<input type="number" inputmode="numeric" id="tb-min" value="'+esc(b.min||'')+'"></label><label>Date<input type="date" id="tb-date" value="'+esc(b.date)+'"></label></div>'+
+    '<label>Started at (optional)'+timeField('id="tb-start"',b.start||'')+'</label>'+
+    '<span class="seg" role="group" aria-label="Kind" style="align-self:flex-start">'+['indirect','meeting'].map(function(k){return '<button type="button" class="'+(b.kind===k?'on':'')+'" data-act="tbkind" data-v="'+k+'" aria-pressed="'+(b.kind===k)+'">'+IKIND[k]+'</button>'}).join('')+'</span>'+
+    tdForFields('tb',b)+
+    '<div class="prevbox" id="tb-note">'+(ag?'<b>'+esc(ag.name)+'</b>':'<b>Pick a school or agency to bill</b>')+'Shows in Today\'s Plan on '+esc(shortDay(b.date))+' with the to-do as its note.</div>'+
+    '<button class="btn primary" data-act="tbsave">Done + add time</button><button class="btn" data-act="tbjust">Just mark done</button></div>'}
+function tbCapture(){var b=S.tdBill;if(!b)return;b.min=val('tb-min');b.date=val('tb-date')||b.date;b.start=val('tb-start');var f=tdForRead('tb');b.studentId=f.studentId;b.schoolId=f.schoolId;b.agencyId=f.agencyId}
+function tdMarkDone(t,patch){var o=Object.assign({},t,{done:new Date().toISOString(),doneOn:today()},patch||{});delete o.id;return o}
 function minutesPanel(s,d,counting){
   var h='<div class="panel stack"><div class="row"><label>Direct minutes<input type="number" inputmode="numeric" id="e-min" value="'+(num(d.min)?d.min:'')+'"'+(d.absent?' disabled':'')+'></label>'+
     '<label>Indirect minutes<input type="number" inputmode="numeric" id="e-ind" value="'+(num(d.indirect)?d.indirect:'')+'"></label></div>'+billedNote(s,d)+'</div>';
@@ -1856,6 +1979,7 @@ document.addEventListener('click',function(e){
   else if(a==='go'){var v=b.dataset.v;S.menu=false;S.open=null;S.fromStu=null;
     if(v==='today')S.date=today();else if(v==='plan'){S.date=nextWorkDay(today());S.wz={step:1,i:0}}
     if(v==='agencies'){S.agEdit=null;S.agDraft=null;S.agAdding=false}
+    if(v==='todos'){S.tdOpen=null;S.tdDraft=null;S.tdBill=null;S.tdUndo=null;S.tdDel=null;S.tdCatEdit=false}
     if(v==='schools'){S.schoolEdit=null;S.scDraft=null;S.scAdding=false;S.placesOpen=b.dataset.scroll==='places'}
     S.view=v;S.iepEd=null;S.iepPaste=null;S.scrollTo=b.dataset.scroll||null;window.scrollTo(0,0)}
   else if(a==='signout'){if(window.DAPE_SIGNOUT)window.DAPE_SIGNOUT();return}
@@ -1968,6 +2092,49 @@ document.addEventListener('click',function(e){
     if(num(cv))d.actCounts[an]=Math.max(0,cv+(+b.dataset.n));else if(+b.dataset.n>0)d.actCounts[an]=1}
   else if(a==='actskip'){var sn=b.dataset.v;d.actSkip=d.actSkip||[];var si2=d.actSkip.indexOf(sn);if(si2<0){d.actSkip.push(sn);if(d.actCounts)delete d.actCounts[sn]}else d.actSkip.splice(si2,1)}
   else if(a==='actedit'){S.actEdit=!S.actEdit}
+  else if(a==='tdadd'){var tt=val('td-new');if(!tt){toast('Type the to-do first');return}
+    var nt={title:tt,notes:'',due:'',star:false,cat:S.tdCat||'',created:new Date().toISOString(),done:''};
+    write(function(){return S.db.doc('todos/t_'+rid()).set(nt)}).then(function(){toast('Added');render();var x=document.getElementById('td-new');if(x)x.focus()},function(){});return}
+  else if(a==='tdfilter'){S.tdCat=b.dataset.v||''}
+  else if(a==='tdshowdone'){S.tdShowDone=!S.tdShowDone}
+  else if(a==='tdopen'){S.tdOpen=b.dataset.id;S.tdDraft=null;S.tdDel=null;window.scrollTo(0,0)}
+  else if(a==='tdclose'){S.tdOpen=null;S.tdDraft=null;S.tdDel=null}
+  else if(a==='tdstar'){if(S.tdDraft)S.tdDraft.star=!!b.dataset.v}
+  else if(a==='tdsetcat'){if(S.tdDraft)S.tdDraft.cat=S.tdDraft.cat===b.dataset.v?'':b.dataset.v}
+  else if(a==='tdsave'){var te=todo(b.dataset.id),dr=S.tdDraft;if(!te||!dr)return;var fr=tdForRead('tde');
+    if(!dr.title.trim()){toast('Give it a name');return}
+    var to=Object.assign({},te,{title:dr.title.trim(),notes:dr.notes,due:dr.due,star:dr.star,cat:dr.cat},fr);delete to.id;
+    write(function(){return S.db.doc('todos/'+te.id).set(to)}).then(function(){S.tdOpen=null;S.tdDraft=null;toast('Saved');render()},function(){});return}
+  else if(a==='tddel'){var tdl=todo(b.dataset.id);if(!tdl)return;if(S.tdDel!==tdl.id){S.tdDel=tdl.id}else{S.tdDel=null;
+    write(function(){return S.db.doc('todos/'+tdl.id).delete()}).then(function(){S.tdOpen=null;S.tdDraft=null;toast('Deleted');render()},function(){});return}}
+  else if(a==='tdtick'){var tk=todo(b.dataset.id);if(!tk)return;
+    if(tk.done){S.tdUndo=tk.id;if(S.tdOpen){S.tdOpen=null;S.tdDraft=null}}
+    else{var cn=tdCat(tk.cat);S.tdBill={id:tk.id,min:'',date:today(),start:'',kind:cn&&/meet/i.test(cn.name)?'meeting':'indirect',studentId:tk.studentId||'',schoolId:tk.schoolId||'',agencyId:tk.agencyId||''};
+      if(S.tdDraft){var fd=tdForRead('tde');S.tdBill.studentId=fd.studentId;S.tdBill.schoolId=fd.schoolId;S.tdBill.agencyId=fd.agencyId}}}
+  else if(a==='tdundo'){S.tdUndo=b.dataset.id||null}
+  else if(a==='tdreopen'){var tr=todo(b.dataset.id);if(!tr)return;var ro=Object.assign({},tr,{done:'',doneOn:''}),rmId=b.dataset.v==='rm'&&tr.billId;if(rmId)delete ro.billId;delete ro.id;
+    write(function(){return Promise.all([S.db.doc('todos/'+tr.id).set(ro)].concat(rmId?[S.db.doc('indirect/'+rmId).delete()]:[]))}).then(function(){S.tdUndo=null;toast(rmId?'Not done, time removed':'Marked not done');render()},function(){});return}
+  else if(a==='tbcancel'){S.tdBill=null}
+  else if(a==='tbkind'){tbCapture();S.tdBill.kind=b.dataset.v}
+  else if(a==='tbjust'){var tj=todo(S.tdBill&&S.tdBill.id);if(!tj)return;
+    write(function(){return S.db.doc('todos/'+tj.id).set(tdMarkDone(tj))}).then(function(){S.tdBill=null;S.tdOpen=null;S.tdDraft=null;toast('Done');render()},function(){});return}
+  else if(a==='tbsave'){tbCapture();var bb=S.tdBill,tb=todo(bb&&bb.id);if(!tb)return;var bm=+bb.min;
+    if(!(bm>0)){toast('Enter the minutes, or tap Just mark done');return}
+    if(!bb.schoolId&&!bb.agencyId){toast('Pick a school or an agency to bill');return}
+    var eid='i_'+rid(),edoc={kind:bb.kind,date:bb.date||today(),min:bm,note:tb.title,todoId:tb.id};
+    if(bb.agencyId)edoc.agencyId=bb.agencyId;else edoc.schoolId=bb.schoolId;if(bb.studentId&&!bb.agencyId)edoc.studentId=bb.studentId;if(bb.start)edoc.start=bb.start;
+    write(function(){return Promise.all([S.db.doc('indirect/'+eid).set(edoc),S.db.doc('todos/'+tb.id).set(tdMarkDone(tb,{billId:eid}))])}).then(function(){
+      S.tdBill=null;S.tdOpen=null;S.tdDraft=null;toast('Done, '+bm+' min added');render()},function(){});return}
+  else if(a==='tdcats'){S.tdCatEdit=!S.tdCatEdit;S.tdCatRen=null;S.tdCatDel=null}
+  else if(a==='tdcatren'){S.tdCatRen=b.dataset.id||null;S.tdCatDel=null}
+  else if(a==='tdcatsave'){var cnm=val('tdc-ren');if(!cnm){toast('Type the new name');return}
+    var cl=tdCats().map(function(k){return k.id===b.dataset.id?{id:k.id,name:cnm}:k});
+    write(function(){return S.db.doc('settings/todo').set({cats:cl})}).then(function(){S.tdCatRen=null;toast('Renamed');render()},function(){});return}
+  else if(a==='tdcatdel'){if(S.tdCatDel!==b.dataset.id){S.tdCatDel=b.dataset.id;S.tdCatRen=null}else{var cid=b.dataset.id;S.tdCatDel=null;if(S.tdCat===cid)S.tdCat='';
+    write(function(){return S.db.doc('settings/todo').set({cats:tdCats().filter(function(k){return k.id!==cid})})}).then(function(){toast('Category deleted');render()},function(){});return}}
+  else if(a==='tdcatadd'){var cnw=val('tdc-new');if(!cnw){toast('Type the category name');return}
+    if(tdCats().some(function(k){return k.name.toLowerCase()===cnw.toLowerCase()})){toast('That category is already there');return}
+    write(function(){return S.db.doc('settings/todo').set({cats:tdCats().concat([{id:'c_'+rid(),name:cnw}])})}).then(function(){toast('Category added');render()},function(){});return}
   else if(a==='actmanage'){S.actManage=!S.actManage;S.actRen=null;S.actDel=null}
   else if(a==='actren'){S.actRen=b.dataset.id||null;S.actDel=null;if(S.actRen)setTimeout(function(){var x=document.getElementById('act-ren');if(x){x.focus();x.select()}},0)}
   else if(a==='actrensave'){var ar0=S.activities.filter(function(x){return x.id===b.dataset.id})[0];if(ar0)renameActivity(ar0,val('act-ren'));return}
@@ -1985,7 +2152,9 @@ document.addEventListener('click',function(e){
   else if(a==='indkind'){if(S.indForm){S.indForm.sc=val('ind-school');S.indForm.kind=b.dataset.v}}
   else if(a==='addind'){var im=+val('ind-min'),is=val('ind-student'),isc=val('ind-school'),ist=student(is);if(ist&&ist.schoolId)isc=ist.schoolId;
     if(!isc){toast('Pick a school');return} if(!(im>0)){toast('Enter the minutes');return}
-    var idoc={kind:(S.indForm&&S.indForm.kind)||'meeting',schoolId:isc,date:S.date,min:im,note:val('ind-note')};if(is)idoc.studentId=is;if(val('ind-start'))idoc.start=val('ind-start');
+    var idoc={kind:(S.indForm&&S.indForm.kind)||'meeting',date:S.date,min:im,note:val('ind-note')};
+    if(isc.indexOf('ag:')===0)idoc.agencyId=isc.slice(3);else idoc.schoolId=isc;
+    if(is&&!idoc.agencyId)idoc.studentId=is;if(val('ind-start'))idoc.start=val('ind-start');
     write(function(){return S.db.doc('indirect/i_'+rid()).set(idoc)}).then(function(){S.indForm=null;toast((idoc.kind==='meeting'?'Meeting':'Indirect time')+' added');render()},function(){});return}
   else if(a==='rmind'){var iid=b.dataset.id;write(function(){return S.db.doc('indirect/'+iid).delete()}).then(function(){toast('Removed');render()},function(){});return}
   else if(a==='code'){s=student(b.dataset.id);if(!s)return;var cs=(s.codes||'').split('/').filter(Boolean),ci=cs.indexOf(b.dataset.v);
@@ -2104,6 +2273,18 @@ document.addEventListener('copy',function(e){var t=document.activeElement,sel=ge
   e.clipboardData.setData('text/plain',sel.toString());e.preventDefault()});
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.id==='act-ren'){e.preventDefault();var sv=document.querySelector('[data-act=actrensave]');if(sv)sv.click()}
   else if(e.key==='Escape'&&e.target.id==='act-ren'){S.actRen=null;render()}});
+document.addEventListener('input',function(e){var t=e.target;
+  if(t.dataset&&t.dataset.tdf&&S.tdDraft)S.tdDraft[t.dataset.tdf]=t.value;
+  else if(t.id==='td-q'){S.tdQ=t.value;var pos=t.selectionStart;render();var q=document.getElementById('td-q');if(q){q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}}});
+document.addEventListener('change',function(e){var t=e.target,pre=t.dataset&&t.dataset.tdfor;if(!pre)return;
+  var stu=document.getElementById(pre+'-stu'),sc=document.getElementById(pre+'-sc'),st=student(stu.value);
+  if(t===stu&&st&&st.schoolId)sc.value=st.schoolId;
+  if(t===sc&&stu.value&&(sc.value.indexOf('ag:')===0||(st&&st.schoolId!==sc.value)))stu.value='';
+  var ag=tdAgencyFor(sc.value),el=document.getElementById(pre+'-ag');if(el)el.innerHTML=ag?esc(ag.name):'<span class="muted">none</span>';
+  var nb=document.getElementById('tb-note');if(pre==='tb'&&nb&&S.tdBill)nb.innerHTML=(ag?'<b>'+esc(ag.name)+'</b>':'<b>Pick a school or agency to bill</b>')+'Shows in Today\'s Plan on '+esc(shortDay(val('tb-date')||S.tdBill.date))+' with the to-do as its note.'});
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.id==='td-new'){e.preventDefault();var ab=document.querySelector('[data-act=tdadd]');if(ab)ab.click()}
+  else if(e.key==='Enter'&&e.target.id==='tdc-new'){e.preventDefault();var cb=document.querySelector('[data-act=tdcatadd]');if(cb)cb.click()}
+  else if(e.key==='Escape'&&S.tdBill){S.tdBill=null;render()}});
 document.addEventListener('input',iepInput);document.addEventListener('change',function(e){if(e.target.tagName==='SELECT')iepInput(e)});
 document.addEventListener('input',function(e){var t=e.target;if(!t.dataset||!(t.dataset.agf||t.dataset.agr||t.dataset.ags))return;var dd=agD(t.dataset.agw);if(!dd)return;
   if(t.dataset.ags){if(dd.subSys[+t.dataset.ags])dd.subSys[+t.dataset.ags][t.dataset.agk]=t.value;return}
