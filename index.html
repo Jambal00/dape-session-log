@@ -625,7 +625,11 @@ function dayStops(date,keepSkipped){
     var la=agency(st.leg.agencyId);
     if(prev==='home'&&officeStart(la)){var lo=legOf(officeId(la),st.id);st.leg.office=true;st.leg.officeMiles=lo&&num(lo.miles)?lo.miles:null;if(lo&&lo.test)st.leg.test=true}
     legs.push(st.leg);prev=st.id});
-  return {stops:stops,legs:legs,rows:rows,grp:grp};
+  /* The drive home, only for an agency set to pay for it (Pete, 2026-11-11). Billed to the last school's agency. */
+  var homeLeg=null;
+  if(prev!=='home'){var lsc=school(prev),ha=lsc&&agency(lsc.agencyId);
+    if(PAY.paysHome(ha)){var hl=legOf(prev,'home');homeLeg={from:prev,to:'home',miles:hl&&num(hl.miles)?hl.miles:null,min:hl&&num(hl.min)?hl.min:null,test:!!(hl&&hl.test),agencyId:ha.id,home:true};legs.push(homeLeg)}}
+  return {stops:stops,legs:legs,rows:rows,grp:grp,homeLeg:homeLeg};
 }
 /* A time picker that looks and works the same in every browser (Safari on a Mac has no clock for time boxes):
    hour, minutes in 5-minute steps (plus the exact minute already saved) and AM/PM. A hidden input carries the
@@ -851,7 +855,7 @@ function dayPanel(P){
   var missing=P.legs.some(function(l){return l.miles==null}),test=P.legs.some(function(l){return l.test});
   var h='<div class="panel stack"><span class="eyebrow">Day total</span>'+
     '<div class="row" style="gap:22px"><div><div class="stat">'+hrs(m.d+m.i+T.travelMin)+'</div><span class="muted small">total hours<br>'+hrs(m.d+m.i)+(S.indirect.some(function(x){return x.date===S.date})?' students and meetings + ':' students + ')+hrs(T.travelMin)+' travel</span></div>'+
-    '<div><div class="stat">'+r1(T.miles)+'</div><span class="muted small">miles driven<br>'+P.legs.length+' drive'+(P.legs.length===1?'':'s')+' from home</span></div>'+
+    '<div><div class="stat">'+r1(T.miles)+'</div><span class="muted small">miles driven<br>'+P.legs.length+' drive'+(P.legs.length===1?'':'s')+(P.homeLeg?', including home':' from home')+'</span></div>'+
     (r1(T.taxMiles)!==r1(T.miles)?'<div><div class="stat">'+r1(T.taxMiles)+'</div><span class="muted small">miles<br>for taxes</span></div>':'')+'</div>';
   if(ks.length)h+='<div class="split">'+ks.map(function(k){var a=agency(k),x=R.byAgency[k],paid=a&&(x.rates.base!=null||x.rates.travel!=null||x.rates.mile!=null);
       var bits=[hrs(x.studentMin+x.travelMin)+' hrs'+(x.clock==='onsite'?' ('+hrs(x.studentMin-(x.addMin||0))+' on site'+(x.roundedUp?', rounded up from '+hrs(x.onSiteLogged):'')+(x.addMin?', '+hrs(x.addMin)+' outside':'')+')':''),r1(x.miles)+' mi'];
@@ -864,7 +868,8 @@ function dayPanel(P){
   if(missing)h+='<span class="muted small">Some drives have no distance yet. Add them under Schools, in Home and drive distances.</span>';
   else if(test)h+='<span class="muted small">Miles use test distances for now.</span>';
   if(r1(T.taxMiles)!==r1(T.miles))h+='<span class="muted small">Miles for taxes count the miles each agency pays on, and leave out agencies where you chose not to track miles.</span>';
-  h+='<span class="muted small">Student hours count logged sessions only. The drive home after the last school is not counted.</span>';
+  var hla=P.homeLeg&&agency(P.homeLeg.agencyId),hls=P.homeLeg&&school(P.homeLeg.from);
+  h+='<span class="muted small">Student hours count logged sessions only. '+(P.homeLeg?'The drive home from '+esc(hls?(hls.alias||hls.name):'the last school')+' is counted for '+esc(hla?hla.name:'its agency')+'.':'The drive home after the last school is not counted.')+'</span>';
   return h+indirectBlock(P)+'</div>';
 }
 
@@ -1728,7 +1733,7 @@ function agencyOptions(sel){return '<option value="">No agency set</option>'+S.a
    A new agency starts with travel paid at the base rate, mileage reimbursed and miles tracked. */
 function agDraftFrom(a){a=a||{};var rs=PAY.mileRates(a).map(function(r){return{from:r.from,rate:String(r.rate)}});if(!rs.length)rs=[{from:'',rate:''}];
   return{name:a.name||'',rate:num(a.rate)?String(a.rate):'',paysTravel:a.id?paysTravel(a):true,travelOwn:!!(a.travelOwn&&num(a.travelRate)),
-  travelRate:num(a.travelRate)?String(a.travelRate):'',reimburseMiles:a.id?reimburses(a):true,mileRates:rs,office:a.mileFrom==='office',officeAddress:a.officeAddress||'',officeLat:typeof a.officeLat==='number'?a.officeLat:null,officeLon:typeof a.officeLon==='number'?a.officeLon:null,
+  travelRate:num(a.travelRate)?String(a.travelRate):'',payHome:PAY.paysHome(a),reimburseMiles:a.id?reimburses(a):true,mileRates:rs,office:a.mileFrom==='office',officeAddress:a.officeAddress||'',officeLat:typeof a.officeLat==='number'?a.officeLat:null,officeLon:typeof a.officeLon==='number'?a.officeLon:null,
   taxMiles:a.taxMiles!==false,onsite:a.payClock==='onsite',roundTo:String(agencyRound(a)),note:a.note||'',
   subOn:!!(a.submit&&a.submit.on),subDue:a.submit&&a.submit.due||'same',subSince:a.submit&&a.submit.since||'',
   subSys:(a.submit&&a.submit.systems||[]).map(function(y){return{id:y.id,name:y.name||'',url:y.url||''}})}}
@@ -1776,6 +1781,9 @@ function agencyForm(w,d,id){
         '<span class="seg" role="group" aria-label="Mileage starts from">'+[[false,'Your home'],[true,'Agency office']].map(function(o){return '<button type="button" class="'+(d.office===o[0]?'on':'')+'" data-act="agq" data-w="'+w+'" data-f="office" data-v="'+(o[0]?1:0)+'" aria-pressed="'+(d.office===o[0])+'">'+o[1]+'</button>'}).join('')+'</span>'+
         (d.office?'<span class="small muted">Uses the agency address above. When you drive from home to one of this agency\'s schools, the paid miles are the office-to-school distance. Travel time stays your actual drive. Drives between schools use actual miles. Add the office distances under Schools, in Home and drive distances.</span>':'')+'</div>'
       :'<small>Not reimbursed. Miles still show in your day totals.</small>')+'</div>'+
+    '<div class="pl"><b>Drive home</b>'+agSwitch(w,'payHome',d.payHome,'Pays for the drive home')+
+      (d.payHome?'<small>When this agency\'s school is your last stop, the drive home counts like any other drive: travel time and mileage, by the settings above.</small>'
+      :'<small>Not paid. The drive home after your last school isn\'t counted.</small>')+'</div>'+
     '<div class="sect">For your taxes</div>'+
     '<div class="pl"><b>Track these miles</b>'+agSwitch(w,'taxMiles',d.taxMiles,'Track these miles for taxes')+
       '<small>'+(d.taxMiles?'Driving for work can be deductible even when the agency does not reimburse it. Your tax preparer can confirm which miles count.':'These miles are left out of your tax mileage.')+'</small></div></div>';
@@ -1818,7 +1826,7 @@ function agFields(d){
     if(d.office&&!d.officeAddress.trim())return 'Enter the agency address';
   }
   var cur=PAY.mileRateOn({mileRates:rates},today());
-  return{name:d.name.trim(),rate:n(d.rate),paysTravel:d.paysTravel,travelOwn:!!(d.paysTravel&&d.travelOwn),travelRate:d.paysTravel&&d.travelOwn?n(d.travelRate):null,
+  return{name:d.name.trim(),rate:n(d.rate),paysTravel:d.paysTravel,payHome:!!d.payHome,travelOwn:!!(d.paysTravel&&d.travelOwn),travelRate:d.paysTravel&&d.travelOwn?n(d.travelRate):null,
     reimburseMiles:d.reimburseMiles,mileRates:d.reimburseMiles?rates:[],mileRate:d.reimburseMiles&&cur?cur.rate:null,
     mileFrom:d.reimburseMiles&&d.office?'office':'home',payClock:d.onsite?'onsite':'session',roundTo:isFinite(+d.roundTo)?+d.roundTo:15,officeAddress:d.officeAddress.trim(),officeLat:d.officeLat==null?null:d.officeLat,officeLon:d.officeLon==null?null:d.officeLon,taxMiles:d.taxMiles,note:d.note.trim(),
     submit:subFields(d)}}
@@ -1827,7 +1835,7 @@ function subFields(d){var sys=d.subSys.filter(function(y){return y.name.trim()})
   var on=d.subOn&&sys.length>0;return{on:on,due:d.subDue,systems:sys,since:on?(d.subSince||today()):''}}
 function agenciesView(){
   var h='<div class="stack"><span class="eyebrow">Agencies</span><h1>Who pays, and how much</h1>'+
-    '<span class="muted small">Each school belongs to one agency. Hours and miles are split by agency. A drive is billed to the agency of the school you are driving to, and the drive from home to the first school counts.</span></div>';
+    '<span class="muted small">Each school belongs to one agency. Hours and miles are split by agency. A drive is billed to the agency of the school you are driving to, and the drive from home to the first school counts. The drive home counts only for an agency set to pay for it.</span></div>';
   if(!S.loaded)return h+'<div class="list"><div class="empty">Loading agencies…</div></div>';
   h+=S.agencies.length?'<div class="list">'+S.agencies.map(function(a){
     var open=S.agEdit===a.id,ns=S.schools.filter(function(sc){return sc.agencyId===a.id});

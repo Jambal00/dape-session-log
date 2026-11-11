@@ -30,6 +30,9 @@
   function paysTravel(a){return !!a&&a.paysTravel!==false}
   function travelRate(a){return !paysTravel(a)?null:a.travelOwn&&num(a.travelRate)?a.travelRate:num(a.rate)?a.rate:null}
   function reimburses(a){return !!a&&a.reimburseMiles!==false}
+  /* The drive home after the last school of the day (Pete, 2026-11-11): set per agency, off unless turned on.
+     When on, it is billed to the agency of the last school and paid like any other drive (travel time, mileage, tax miles). */
+  function paysHome(a){return !!a&&a.payHome===true}
   function tracksTax(a){return !a||a.taxMiles!==false}
   function officeStart(a){return reimburses(a)&&a.mileFrom==='office'}
   function onSite(a){return !!a&&a.payClock==='onsite'}
@@ -108,7 +111,7 @@
     return{byAgency:out,totals:T};
   }
 
-  var api={cents:cents,paysTravel:paysTravel,travelRate:travelRate,reimburses:reimburses,tracksTax:tracksTax,officeStart:officeStart,onSite:onSite,quarterUp:quarterUp,roundUp:roundUp,
+  var api={cents:cents,paysTravel:paysTravel,paysHome:paysHome,travelRate:travelRate,reimburses:reimburses,tracksTax:tracksTax,officeStart:officeStart,onSite:onSite,quarterUp:quarterUp,roundUp:roundUp,
     mileRates:mileRates,mileRateOn:mileRateOn,paidMiles:paidMiles,dayPay:dayPay};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DAPE_PAY=api;
 })(this);

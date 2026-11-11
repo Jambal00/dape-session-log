@@ -126,6 +126,13 @@ check('On-site agency: indirect time and meetings outside time on site are paid 
   assert.strictEqual(r.studentMin,122);assert.strictEqual(r.addMin,30);assert.strictEqual(r.pay.students,117.93);
 });
 
+check('Drive home: off unless the agency turns it on; when on, paid like any other drive (Pete, 2026-11-11)',function(){
+  assert.strictEqual(P.paysHome({}),false);assert.strictEqual(P.paysHome({payHome:true}),true);
+  // School-to-home drive, 24 mi, 30 min, billed to the last school's agency: travel 0.5 hr x $60 = $30.00, mileage 24 x $0.70 = $16.80.
+  var A={rate:60,payHome:true,mileRates:[{from:'2026-01-01',rate:0.70}]};
+  var r=P.dayPay({date:'2026-11-11',agencies:{A:A},legs:[{from:'sc1',to:'home',agencyId:'A',miles:24,min:30}]}).byAgency.A;
+  assert.strictEqual(r.travelMin,30);assert.strictEqual(r.pay.travel,30);assert.strictEqual(r.pay.mileage,16.8);assert.strictEqual(r.taxMiles,24);
+});
 check('Per-session agency: a meeting logged on its own rounds up like a session (Pete, 2026-11-11)',function(){
   // A 25-min session bills 30; a 20-min meeting entry, passed in the same list, bills 30. 60 min at $62/hr = $62.00.
   var A={rate:62,roundTo:15};
